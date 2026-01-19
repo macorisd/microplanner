@@ -72,10 +72,11 @@ class BoardsProvider extends ChangeNotifier {
       // Create default board if none exist
       if (_boards.isEmpty) {
         await _createDefaultBoard();
+        _loadBoards(); // Reload after creating default
       }
       
-      // Set current board to first one
-      if (_boards.isNotEmpty && _currentBoardId == null) {
+      // Always set current board to first one if not set
+      if (_boards.isNotEmpty) {
         _currentBoardId = _boards.first.id;
       }
     } catch (e) {

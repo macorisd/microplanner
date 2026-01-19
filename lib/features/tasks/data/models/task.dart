@@ -36,6 +36,9 @@ class Task extends HiveObject {
   @HiveField(9)
   String? subjectId;
 
+  @HiveField(10)
+  String? description;
+
   Task({
     required this.id,
     required this.name,
@@ -47,6 +50,7 @@ class Task extends HiveObject {
     required this.createdAt,
     this.boardId,
     this.subjectId,
+    this.description,
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -85,6 +89,7 @@ class Task extends HiveObject {
     required TaskPriority priority,
     String? subjectId,
     String? boardId,
+    String? description,
   }) {
     return Task(
       id: id,
@@ -97,6 +102,7 @@ class Task extends HiveObject {
       createdAt: DateTime.now(),
       boardId: boardId,
       subjectId: subjectId,
+      description: description,
     );
   }
 
@@ -114,6 +120,7 @@ class Task extends HiveObject {
     DateTime? createdAt,
     String? boardId,
     String? subjectId,
+    Object? description = const _Undefined(),
   }) {
     return Task(
       id: id ?? this.id,
@@ -126,6 +133,7 @@ class Task extends HiveObject {
       createdAt: createdAt ?? this.createdAt,
       boardId: boardId ?? this.boardId,
       subjectId: subjectId ?? this.subjectId,
+      description: description is _Undefined ? this.description : description as String?,
     );
   }
 
@@ -133,4 +141,8 @@ class Task extends HiveObject {
   String toString() {
     return 'Task(id: $id, name: $name, boardId: $boardId, subjectId: $subjectId, isCompleted: $isCompleted)';
   }
+}
+
+class _Undefined {
+  const _Undefined();
 }

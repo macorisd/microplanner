@@ -109,18 +109,32 @@ class TasksProvider extends ChangeNotifier {
     required TaskType type,
     required TaskPriority priority,
     String? subjectId,
+    String? description,
   }) async {
     final currentBoardId = _boardsProvider?.currentBoardId;
     if (currentBoardId == null) return;
 
+    // Si la hora es 00:00, usar 23:55 por defecto
+    DateTime finalDeadline = deadline;
+    if (deadline.hour == 0 && deadline.minute == 0) {
+      finalDeadline = DateTime(
+        deadline.year,
+        deadline.month,
+        deadline.day,
+        23,
+        55,
+      );
+    }
+
     final task = Task.create(
       id: _uuid.v4(),
       name: name,
-      deadline: deadline,
+      deadline: finalDeadline,
       type: type,
       priority: priority,
       subjectId: subjectId,
       boardId: currentBoardId,
+      description: description,
     );
 
     await _tasksBox?.put(task.id, task);

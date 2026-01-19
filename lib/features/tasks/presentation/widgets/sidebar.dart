@@ -644,14 +644,15 @@ class _SubjectsView extends StatelessWidget {
   }
 
   void _showAddSubjectDialog(BuildContext context) {
+    final boardsProvider = context.read<BoardsProvider>();
     showDialog(
       context: context,
-      builder: (context) => SubjectDialog(
+      builder: (dialogContext) => SubjectDialog(
         title: 'New Subject',
         initialName: '',
         initialColor: AppColors.subjectColors.first.value,
         onSave: (name, color) {
-          context.read<BoardsProvider>().addSubject(name: name, color: color);
+          boardsProvider.addSubject(name: name, color: color);
         },
       ),
     );
@@ -743,15 +744,16 @@ class _SubjectItemState extends State<_SubjectItem> {
   }
 
   void _showEditDialog(BuildContext context) {
+    final boardsProvider = context.read<BoardsProvider>();
     showDialog(
       context: context,
-      builder: (context) => SubjectDialog(
+      builder: (dialogContext) => SubjectDialog(
         title: 'Edit Subject',
         initialName: widget.subject.name,
         initialColor: widget.subject.color,
         onSave: (name, color) {
           final updated = widget.subject.copyWith(name: name, color: color);
-          context.read<BoardsProvider>().updateSubject(updated);
+          boardsProvider.updateSubject(updated);
         },
       ),
     );

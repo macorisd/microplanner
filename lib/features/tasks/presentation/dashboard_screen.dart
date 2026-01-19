@@ -170,6 +170,7 @@ class DashboardScreen extends StatelessWidget {
           required type,
           required priority,
           String? subjectId,
+          String? description,
         }) async {
           await context.read<TasksProvider>().addTask(
                 name: name,
@@ -177,6 +178,7 @@ class DashboardScreen extends StatelessWidget {
                 type: type,
                 priority: priority,
                 subjectId: subjectId,
+                description: description,
               );
         },
       ),

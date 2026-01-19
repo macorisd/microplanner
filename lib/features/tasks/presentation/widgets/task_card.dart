@@ -121,7 +121,7 @@ class _TaskCardState extends State<TaskCard> {
                   ),
                   const SizedBox(height: AppTheme.spacingSmall),
 
-                  // Second row: Type icon + Deadline
+                  // Second row: Type icon + Deadline with date and time
                   Row(
                     children: [
                         Icon(
@@ -135,16 +135,35 @@ class _TaskCardState extends State<TaskCard> {
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         const SizedBox(width: AppTheme.spacingMedium),
+                        // Calendar icon + date
                         Icon(
-                          Icons.schedule_rounded,
-                          size: 16,
+                          Icons.calendar_today_rounded,
+                          size: 14,
                           color: widget.task.isLate
                               ? AppColors.error
                               : AppColors.textSecondary,
                         ),
-                        const SizedBox(width: AppTheme.spacingXSmall),
+                        const SizedBox(width: 4),
                         Text(
-                          _formatDeadline(widget.task.deadline),
+                          DateFormat('dd/MM/yy').format(widget.task.deadline),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: widget.task.isLate
+                                    ? AppColors.error
+                                    : AppColors.textSecondary,
+                              ),
+                        ),
+                        const SizedBox(width: AppTheme.spacingSmall),
+                        // Clock icon + time
+                        Icon(
+                          Icons.access_time_rounded,
+                          size: 14,
+                          color: widget.task.isLate
+                              ? AppColors.error
+                              : AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          DateFormat('HH:mm').format(widget.task.deadline),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: widget.task.isLate
                                     ? AppColors.error

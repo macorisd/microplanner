@@ -76,21 +76,24 @@ class _SubjectDialogState extends State<SubjectDialog> {
             runSpacing: 8,
             children: AppColors.subjectColors.map((color) {
               final isSelected = color.value == _selectedColor;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedColor = color.value),
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    border: isSelected
-                        ? Border.all(color: AppColors.textPrimary, width: 2)
+              return MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedColor = color.value),
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: isSelected
+                          ? Border.all(color: AppColors.textPrimary, width: 2)
+                          : null,
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check, size: 14, color: Colors.white)
                         : null,
                   ),
-                  child: isSelected
-                      ? const Icon(Icons.check, size: 14, color: Colors.white)
-                      : null,
                 ),
               );
             }).toList(),

@@ -26,8 +26,10 @@ class EditTaskDialog extends StatefulWidget {
 class _EditTaskDialogState extends State<EditTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
+  late TextEditingController _descriptionController;
   
   late DateTime _deadline;
+  late TimeOfDay _deadlineTime;
   late TaskType _type;
   late TaskPriority _priority;
   String? _selectedSubjectId;
@@ -37,7 +39,9 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.task.name);
+    _descriptionController = TextEditingController(text: widget.task.description ?? '');
     _deadline = widget.task.deadline;
+    _deadlineTime = TimeOfDay(hour: widget.task.deadline.hour, minute: widget.task.deadline.minute);
     _type = widget.task.type;
     _priority = widget.task.priority;
     _selectedSubjectId = widget.task.subjectId;
@@ -46,6 +50,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
   @override
   void dispose() {
     _nameController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -54,12 +59,24 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
 
     setState(() => _isLoading = true);
 
+    // Combinar fecha y hora
+    final deadlineWithTime = DateTime(
+      _deadline.year,
+      _deadline.month,
+      _deadline.day,
+      _deadlineTime.hour,
+      _deadlineTime.minute,
+    );
+
     final updatedTask = widget.task.copyWith(
       name: _nameController.text.trim(),
-      deadline: _deadline,
+      deadline: deadlineWithTime,
       type: _type,
       priority: _priority,
       subjectId: _selectedSubjectId,
+      description: _descriptionController.text.trim().isEmpty
+          ? null
+          : _descriptionController.text.trim(),
     );
 
     await widget.onSave(updatedTask);
@@ -133,12 +150,30 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
               ),
               const SizedBox(height: AppTheme.spacingMedium),
 
+              // Description
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                  hintText: 'Add details about this task...',
+                ),
+                maxLines: 3,
+                minLines: 2,
+              ),
+              const SizedBox(height: AppTheme.spacingMedium),
+
               // Subject dropdown
               _buildSubjectDropdown(subjects),
               const SizedBox(height: AppTheme.spacingMedium),
 
-              // Deadline
-              _buildDeadlinePicker(context),
+              // Deadline date and time
+              Row(
+                children: [
+                  Expanded(child: _buildDeadlinePicker(context)),
+                  const SizedBox(width: AppTheme.spacingSmall),
+                  _buildTimePicker(context),
+                ],
+              ),
               const SizedBox(height: AppTheme.spacingMedium),
 
               // Type dropdown
@@ -285,7 +320,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  DateFormat('EEEE, MMMM d, y').format(_deadline),
+                  DateFormat('EEE, MMM d, y').format(_deadline),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
@@ -294,6 +329,55 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
             const Icon(
               Icons.chevron_right_rounded,
               color: AppColors.textTertiary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimePicker(BuildContext context) {
+    return InkWell(
+      onTap: () async {
+        final time = await showTimePicker(
+          context: context,
+          initialTime: _deadlineTime,
+          builder: (context, child) {
+            return Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: const ColorScheme.light(
+                  primary: AppColors.primary,
+                  onPrimary: Colors.white,
+                  surface: AppColors.surface,
+                  onSurface: AppColors.textPrimary,
+                ),
+              ),
+              child: child!,
+            );
+          },
+        );
+        if (time != null) {
+          setState(() => _deadlineTime = time);
+        }
+      },
+      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+      child: Container(
+        padding: const EdgeInsets.all(AppTheme.spacingMedium),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.access_time_rounded,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
+            const SizedBox(width: AppTheme.spacingSmall),
+            Text(
+              _deadlineTime.format(context),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
         ),

@@ -20,7 +20,7 @@ class SubjectAdapter extends TypeAdapter<Subject> {
       id: fields[0] as String,
       name: fields[1] as String,
       boardId: fields[2] as String,
-      color: fields.containsKey(3) ? fields[3] as int : 0xFFCCCCCC,
+      color: (fields[3] as int?) ?? 0xFFCCCCCC,
     );
   }
 
