@@ -48,11 +48,12 @@ class _TaskCardState extends State<TaskCard> {
           borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
           boxShadow: AppTheme.cardShadow,
           border: Border.all(
-            color: _isHovered 
-                ? (widget.hoverBorderColor ?? AppColors.primary.withValues(alpha: 0.3)) 
+            color: _isHovered
+                ? (widget.hoverBorderColor ??
+                      AppColors.primary.withValues(alpha: 0.3))
                 : AppColors.divider,
             width: 1,
-            // Draw outside to prevent layout shift? No, Border.all is inside. 
+            // Draw outside to prevent layout shift? No, Border.all is inside.
             // Just ensure consistent width.
           ),
         ),
@@ -106,7 +107,8 @@ class _TaskCardState extends State<TaskCard> {
                       Expanded(
                         child: Text(
                           widget.task.name,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
                                 decoration: widget.task.isCompleted
                                     ? TextDecoration.lineThrough
                                     : null,
@@ -127,30 +129,41 @@ class _TaskCardState extends State<TaskCard> {
                   Consumer<BoardsProvider>(
                     builder: (context, boardsProvider, _) {
                       // Check if task has a subject
-                      final subject = boardsProvider.getSubjectById(widget.task.subjectId);
+                      final subject = boardsProvider.getSubjectById(
+                        widget.task.subjectId,
+                      );
                       final subjectName = subject?.name ?? widget.task.subject;
                       final hasSubject = subjectName.isNotEmpty;
-                      final hasButtons = widget.onEdit != null || widget.onDelete != null;
-                      
+                      final hasButtons =
+                          widget.onEdit != null || widget.onDelete != null;
+
                       // Check if deadline is within 24 hours or already late
                       final now = DateTime.now();
-                      final hoursUntilDeadline = widget.task.deadline.difference(now).inHours;
-                      final isUrgent = !widget.task.isCompleted && hoursUntilDeadline < 24 && hoursUntilDeadline >= 0;
+                      final hoursUntilDeadline = widget.task.deadline
+                          .difference(now)
+                          .inHours;
+                      final isUrgent =
+                          !widget.task.isCompleted &&
+                          hoursUntilDeadline < 24 &&
+                          hoursUntilDeadline >= 0;
                       final showRed = widget.task.isLate || isUrgent;
-                      
+
                       return Row(
                         children: [
-                          Icon(
-                            widget.task.type.icon,
-                            size: 16,
-                            color: AppColors.textSecondary,
-                          ),
-                          const SizedBox(width: AppTheme.spacingXSmall),
-                          Text(
-                            widget.task.type.label,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          const SizedBox(width: AppTheme.spacingSmall),
+                          // Only show type if it's not unassigned
+                          if (widget.task.type != TaskType.unassigned) ...[
+                            Icon(
+                              widget.task.type.icon,
+                              size: 16,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: AppTheme.spacingXSmall),
+                            Text(
+                              widget.task.type.label,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(width: AppTheme.spacingSmall),
+                          ],
                           // Calendar icon + weekday + date
                           Icon(
                             Icons.calendar_today_rounded,
@@ -161,8 +174,11 @@ class _TaskCardState extends State<TaskCard> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            DateFormat('EEE dd/MM').format(widget.task.deadline),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            DateFormat(
+                              'EEE dd/MM',
+                            ).format(widget.task.deadline),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
                                   color: showRed
                                       ? AppColors.error
                                       : AppColors.textSecondary,
@@ -180,7 +196,8 @@ class _TaskCardState extends State<TaskCard> {
                           const SizedBox(width: 4),
                           Text(
                             DateFormat('HH:mm').format(widget.task.deadline),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
                                   color: showRed
                                       ? AppColors.error
                                       : AppColors.textSecondary,
@@ -192,10 +209,14 @@ class _TaskCardState extends State<TaskCard> {
                             Opacity(
                               opacity: _isHovered ? 1.0 : 0.0,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppColors.surface,
-                                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.radiusSmall,
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -204,14 +225,18 @@ class _TaskCardState extends State<TaskCard> {
                                       _ActionButton(
                                         icon: Icons.edit_outlined,
                                         tooltip: 'Edit',
-                                        onPressed: _isHovered ? widget.onEdit : null,
+                                        onPressed: _isHovered
+                                            ? widget.onEdit
+                                            : null,
                                         color: AppColors.textSecondary,
                                       ),
                                     if (widget.onDelete != null)
                                       _ActionButton(
                                         icon: Icons.delete_outline_rounded,
                                         tooltip: 'Delete',
-                                        onPressed: _isHovered ? widget.onDelete : null,
+                                        onPressed: _isHovered
+                                            ? widget.onDelete
+                                            : null,
                                         color: AppColors.textSecondary,
                                       ),
                                   ],
@@ -226,18 +251,23 @@ class _TaskCardState extends State<TaskCard> {
                   // Third row: Subject chip + Action buttons (only if has subject)
                   Consumer<BoardsProvider>(
                     builder: (context, boardsProvider, _) {
-                      final subject = boardsProvider.getSubjectById(widget.task.subjectId);
+                      final subject = boardsProvider.getSubjectById(
+                        widget.task.subjectId,
+                      );
                       final subjectName = subject?.name ?? widget.task.subject;
                       final hasSubject = subjectName.isNotEmpty;
-                      final hasButtons = widget.onEdit != null || widget.onDelete != null;
-                      
+                      final hasButtons =
+                          widget.onEdit != null || widget.onDelete != null;
+
                       // If no subject, don't show this row (buttons are in 2nd row)
                       if (!hasSubject) {
                         return const SizedBox.shrink();
                       }
-                      
+
                       return Padding(
-                        padding: const EdgeInsets.only(top: AppTheme.spacingSmall),
+                        padding: const EdgeInsets.only(
+                          top: AppTheme.spacingSmall,
+                        ),
                         child: Row(
                           children: [
                             // Subject chip
@@ -247,8 +277,12 @@ class _TaskCardState extends State<TaskCard> {
                                 vertical: AppTheme.spacingXSmall,
                               ),
                               decoration: BoxDecoration(
-                                color: Color(subject?.color ?? 0xFFF0F0F2).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                color: Color(
+                                  subject?.color ?? 0xFFF0F0F2,
+                                ).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.radiusSmall,
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -257,16 +291,21 @@ class _TaskCardState extends State<TaskCard> {
                                     width: 8,
                                     height: 8,
                                     decoration: BoxDecoration(
-                                      color: Color(subject?.color ?? 0xFF9094A6),
+                                      color: Color(
+                                        subject?.color ?? 0xFF9094A6,
+                                      ),
                                       shape: BoxShape.circle,
                                     ),
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     subjectName,
-                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                      color: AppColors.textSecondary,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
                                   ),
                                 ],
                               ),
@@ -277,10 +316,14 @@ class _TaskCardState extends State<TaskCard> {
                               Opacity(
                                 opacity: _isHovered ? 1.0 : 0.0,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: AppColors.surface,
-                                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                    borderRadius: BorderRadius.circular(
+                                      AppTheme.radiusSmall,
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -289,14 +332,18 @@ class _TaskCardState extends State<TaskCard> {
                                         _ActionButton(
                                           icon: Icons.edit_outlined,
                                           tooltip: 'Edit',
-                                          onPressed: _isHovered ? widget.onEdit : null,
+                                          onPressed: _isHovered
+                                              ? widget.onEdit
+                                              : null,
                                           color: AppColors.textSecondary,
                                         ),
                                       if (widget.onDelete != null)
                                         _ActionButton(
                                           icon: Icons.delete_outline_rounded,
                                           tooltip: 'Delete',
-                                          onPressed: _isHovered ? widget.onDelete : null,
+                                          onPressed: _isHovered
+                                              ? widget.onDelete
+                                              : null,
                                           color: AppColors.textSecondary,
                                         ),
                                     ],
@@ -346,11 +393,7 @@ class _ActionButton extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
             ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: color,
-            ),
+            child: Icon(icon, size: 18, color: color),
           ),
         ),
       ),
