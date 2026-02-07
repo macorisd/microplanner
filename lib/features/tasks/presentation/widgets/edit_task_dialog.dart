@@ -278,6 +278,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
           initialDate: _deadline,
           firstDate: DateTime.now().subtract(const Duration(days: 365)),
           lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+          locale: const Locale('en', 'GB'), // Week starts on Monday
           builder: (context, child) {
             return Theme(
               data: Theme.of(context).copyWith(
@@ -374,10 +375,20 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
               color: AppColors.textSecondary,
               size: 20,
             ),
-            const SizedBox(width: AppTheme.spacingSmall),
-            Text(
-              _deadlineTime.format(context),
-              style: Theme.of(context).textTheme.bodyMedium,
+            const SizedBox(width: AppTheme.spacingMedium),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Time',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _deadlineTime.format(context),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
             ),
           ],
         ),
