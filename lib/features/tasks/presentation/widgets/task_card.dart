@@ -123,9 +123,15 @@ class _TaskCardState extends State<TaskCard> {
                   ),
                   const SizedBox(height: AppTheme.spacingSmall),
 
-                  // Second row: Type + Date + Time + Action buttons (on hover)
-                  Builder(
-                    builder: (context) {
+                  // Second row: Type + Date + Time (+ Action buttons if no subject)
+                  Consumer<BoardsProvider>(
+                    builder: (context, boardsProvider, _) {
+                      // Check if task has a subject
+                      final subject = boardsProvider.getSubjectById(widget.task.subjectId);
+                      final subjectName = subject?.name ?? widget.task.subject;
+                      final hasSubject = subjectName.isNotEmpty;
+                      final hasButtons = widget.onEdit != null || widget.onDelete != null;
+                      
                       // Check if deadline is within 24 hours or already late
                       final now = DateTime.now();
                       final hoursUntilDeadline = widget.task.deadline.difference(now).inHours;
@@ -180,9 +186,9 @@ class _TaskCardState extends State<TaskCard> {
                                       : AppColors.textSecondary,
                                 ),
                           ),
-                          const Spacer(),
-                          // Action buttons on the right (always present, visible on hover)
-                          if (widget.onEdit != null || widget.onDelete != null)
+                          // Action buttons only if NO subject (buttons go in 3rd row if has subject)
+                          if (!hasSubject && hasButtons) ...[
+                            const Spacer(),
                             Opacity(
                               opacity: _isHovered ? 1.0 : 0.0,
                               child: Container(
@@ -212,51 +218,92 @@ class _TaskCardState extends State<TaskCard> {
                                 ),
                               ),
                             ),
+                          ],
                         ],
                       );
                     },
                   ),
-                  // Third row: Subject chip only (if exists)
+                  // Third row: Subject chip + Action buttons (only if has subject)
                   Consumer<BoardsProvider>(
                     builder: (context, boardsProvider, _) {
                       final subject = boardsProvider.getSubjectById(widget.task.subjectId);
                       final subjectName = subject?.name ?? widget.task.subject;
+                      final hasSubject = subjectName.isNotEmpty;
+                      final hasButtons = widget.onEdit != null || widget.onDelete != null;
                       
-                      if (subjectName.isEmpty) {
+                      // If no subject, don't show this row (buttons are in 2nd row)
+                      if (!hasSubject) {
                         return const SizedBox.shrink();
                       }
                       
                       return Padding(
                         padding: const EdgeInsets.only(top: AppTheme.spacingSmall),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.spacingSmall,
-                            vertical: AppTheme.spacingXSmall,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Color(subject?.color ?? 0xFFF0F0F2).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: Color(subject?.color ?? 0xFF9094A6),
-                                  shape: BoxShape.circle,
+                        child: Row(
+                          children: [
+                            // Subject chip
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppTheme.spacingSmall,
+                                vertical: AppTheme.spacingXSmall,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Color(subject?.color ?? 0xFFF0F0F2).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: Color(subject?.color ?? 0xFF9094A6),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    subjectName,
+                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            // Action buttons (visible on hover)
+                            if (hasButtons)
+                              Opacity(
+                                opacity: _isHovered ? 1.0 : 0.0,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (widget.onEdit != null)
+                                        _ActionButton(
+                                          icon: Icons.edit_outlined,
+                                          tooltip: 'Edit',
+                                          onPressed: _isHovered ? widget.onEdit : null,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      if (widget.onDelete != null)
+                                        _ActionButton(
+                                          icon: Icons.delete_outline_rounded,
+                                          tooltip: 'Delete',
+                                          onPressed: _isHovered ? widget.onDelete : null,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                subjectName,
-                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
                       );
                     },
