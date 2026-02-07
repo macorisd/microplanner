@@ -65,7 +65,7 @@ class Task extends HiveObject {
   // ─────────────────────────────────────────────────────────────────────────
   // Status helpers
   // ─────────────────────────────────────────────────────────────────────────
-  
+
   /// Returns true if the task is overdue (deadline has passed and not completed)
   bool get isLate {
     if (isCompleted) return false;
@@ -119,7 +119,7 @@ class Task extends HiveObject {
     bool? isCompleted,
     DateTime? createdAt,
     String? boardId,
-    String? subjectId,
+    Object? subjectId = const _Undefined(),
     Object? description = const _Undefined(),
   }) {
     return Task(
@@ -132,8 +132,12 @@ class Task extends HiveObject {
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       boardId: boardId ?? this.boardId,
-      subjectId: subjectId ?? this.subjectId,
-      description: description is _Undefined ? this.description : description as String?,
+      subjectId: subjectId is _Undefined
+          ? this.subjectId
+          : subjectId as String?,
+      description: description is _Undefined
+          ? this.description
+          : description as String?,
     );
   }
 

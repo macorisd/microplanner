@@ -237,34 +237,6 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
   }
 
   Widget _buildSubjectDropdown(List<Subject> subjects) {
-    if (subjects.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(AppTheme.spacingMedium),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.info_outline_rounded,
-              color: AppColors.textTertiary,
-              size: 20,
-            ),
-            const SizedBox(width: AppTheme.spacingSmall),
-            Expanded(
-              child: Text(
-                'No subjects yet. Add subjects in the sidebar.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
       decoration: BoxDecoration(
@@ -272,17 +244,22 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
       ),
       child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
+        child: DropdownButton<String?>(
           value: _selectedSubjectId,
           isExpanded: true,
-          hint: const Text('Select subject'),
           icon: const Icon(Icons.keyboard_arrow_down_rounded),
-          items: subjects.map((subject) {
-            return DropdownMenuItem<String>(
-              value: subject.id,
-              child: Text(subject.name),
-            );
-          }).toList(),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('No Subject'),
+            ),
+            ...subjects.map((subject) {
+              return DropdownMenuItem<String?>(
+                value: subject.id,
+                child: Text(subject.name),
+              );
+            }),
+          ],
           onChanged: (value) {
             setState(() => _selectedSubjectId = value);
           },
