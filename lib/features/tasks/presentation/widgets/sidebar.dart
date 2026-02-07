@@ -31,9 +31,7 @@ class _SidebarState extends State<Sidebar> {
       children: [
         Container(
           width: _sidebarWidth,
-          decoration: const BoxDecoration(
-            color: AppColors.sidebarBackground,
-          ),
+          decoration: const BoxDecoration(color: AppColors.sidebarBackground),
           child: Column(
             children: [
               // Header with logo
@@ -59,8 +57,8 @@ class _SidebarState extends State<Sidebar> {
                       child: Text(
                         'MicroPlanner',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                          fontWeight: FontWeight.w700,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -97,7 +95,9 @@ class _SidebarState extends State<Sidebar> {
                       padding: const EdgeInsets.all(AppTheme.spacingMedium),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.radiusMedium,
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -160,8 +160,10 @@ class _SidebarState extends State<Sidebar> {
           child: GestureDetector(
             onHorizontalDragUpdate: (details) {
               setState(() {
-                _sidebarWidth = (_sidebarWidth + details.delta.dx)
-                    .clamp(_minWidth, _maxWidth);
+                _sidebarWidth = (_sidebarWidth + details.delta.dx).clamp(
+                  _minWidth,
+                  _maxWidth,
+                );
               });
             },
             child: Container(
@@ -195,9 +197,9 @@ class _BoardsSection extends StatelessWidget {
               Text(
                 'Boards',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const Spacer(),
               MouseRegion(
@@ -232,7 +234,9 @@ class _BoardsSection extends StatelessWidget {
                 return AnimatedBuilder(
                   animation: animation,
                   builder: (context, child) {
-                    final animValue = Curves.easeInOut.transform(animation.value);
+                    final animValue = Curves.easeInOut.transform(
+                      animation.value,
+                    );
                     final elevation = lerpDouble(0, 8, animValue)!;
                     final scale = lerpDouble(1.0, 1.03, animValue)!;
                     return Transform.scale(
@@ -240,7 +244,9 @@ class _BoardsSection extends StatelessWidget {
                       child: Material(
                         elevation: elevation,
                         color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.radiusMedium,
+                        ),
                         child: child,
                       ),
                     );
@@ -286,7 +292,9 @@ class _BoardsSection extends StatelessWidget {
           ),
           onSubmitted: (_) {
             if (controller.text.trim().isNotEmpty) {
-              context.read<BoardsProvider>().addBoard(name: controller.text.trim());
+              context.read<BoardsProvider>().addBoard(
+                name: controller.text.trim(),
+              );
               Navigator.of(dialogContext).pop();
             }
           },
@@ -299,7 +307,9 @@ class _BoardsSection extends StatelessWidget {
           FilledButton(
             onPressed: () {
               final name = controller.text.trim();
-              context.read<BoardsProvider>().addBoard(name: name.isEmpty ? null : name);
+              context.read<BoardsProvider>().addBoard(
+                name: name.isEmpty ? null : name,
+              );
               Navigator.of(dialogContext).pop();
             },
             child: const Text('Create'),
@@ -337,8 +347,8 @@ class _BoardCardState extends State<_BoardCard> {
     super.initState();
     _nameController = TextEditingController(text: widget.board.name);
     _nameController.addListener(() {
-       // Rebuild to update width based on text length
-       setState(() {});
+      // Rebuild to update width based on text length
+      setState(() {});
     });
   }
 
@@ -376,7 +386,9 @@ class _BoardCardState extends State<_BoardCard> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Board'),
-        content: Text('Are you sure you want to delete "${widget.board.name}"? This will also delete all subjects in this board.'),
+        content: Text(
+          'Are you sure you want to delete "${widget.board.name}"? This will also delete all subjects in this board.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
@@ -388,8 +400,10 @@ class _BoardCardState extends State<_BoardCard> {
               Navigator.of(dialogContext).pop();
             },
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
             ),
+            autofocus: true,
             child: const Text('Delete'),
           ),
         ],
@@ -413,161 +427,165 @@ class _BoardCardState extends State<_BoardCard> {
           onEnter: (_) => setState(() => _isHovered = true),
           onExit: (_) => setState(() => _isHovered = false),
           child: GestureDetector(
-          onTap: _isEditing ? null : () {
-            context.read<BoardsProvider>().selectBoard(widget.board.id);
-          },
-          child: Container(
-            padding: const EdgeInsets.all(AppTheme.spacingMedium),
-            decoration: BoxDecoration(
-              color: widget.isActive
-                  ? AppColors.sidebarItemActive
-                  : _isHovered
-                      ? AppColors.sidebarItemHover
-                      : Colors.transparent,
-              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-              border: Border.all(
+            onTap: _isEditing
+                ? null
+                : () {
+                    context.read<BoardsProvider>().selectBoard(widget.board.id);
+                  },
+            child: Container(
+              padding: const EdgeInsets.all(AppTheme.spacingMedium),
+              decoration: BoxDecoration(
                 color: widget.isActive
-                    ? AppColors.primary.withValues(alpha: 0.3)
+                    ? AppColors.sidebarItemActive
+                    : _isHovered
+                    ? AppColors.sidebarItemHover
                     : Colors.transparent,
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                border: Border.all(
+                  color: widget.isActive
+                      ? AppColors.primary.withValues(alpha: 0.3)
+                      : Colors.transparent,
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.dashboard_rounded,
-                      size: 18,
-                      color: widget.isActive
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: AppTheme.spacingSmall),
-                    _isEditing
-                        ? Flexible(
-                            fit: FlexFit.loose,
-                            child: Container(
-                              constraints: const BoxConstraints(
-                                minWidth: 100,
-                              ),
-                              width: _nameController.text.length * 10.0 + 40,
-                              child: TextField(
-                                controller: _nameController,
-                                autofocus: true,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                                decoration: InputDecoration(
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 6,
-                                  ),
-                                  filled: true,
-                                  fillColor: AppColors.surface,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide.none,
-                                  ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.dashboard_rounded,
+                        size: 18,
+                        color: widget.isActive
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: AppTheme.spacingSmall),
+                      _isEditing
+                          ? Flexible(
+                              fit: FlexFit.loose,
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minWidth: 100,
                                 ),
-                                onSubmitted: (_) => _finishEditing(),
-                                onEditingComplete: _finishEditing,
+                                width: _nameController.text.length * 10.0 + 40,
+                                child: TextField(
+                                  controller: _nameController,
+                                  autofocus: true,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 6,
+                                    ),
+                                    filled: true,
+                                    fillColor: AppColors.surface,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                  onSubmitted: (_) => _finishEditing(),
+                                  onEditingComplete: _finishEditing,
+                                ),
+                              ),
+                            )
+                          : Expanded(
+                              child: Text(
+                                widget.board.name,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: widget.isActive
+                                          ? AppColors.primary
+                                          : AppColors.textPrimary,
+                                      fontWeight: widget.isActive
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                    ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                          )
-                        : Expanded(
-                            child: Text(
-                              widget.board.name,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: widget.isActive
-                                        ? AppColors.primary
-                                        : AppColors.textPrimary,
-                                    fontWeight: widget.isActive
-                                        ? FontWeight.w600
-                                        : FontWeight.w500,
-                                  ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                      // Action buttons - always present but invisible when not hovered
+                      if (!_isEditing)
+                        Opacity(
+                          opacity: _isHovered ? 1.0 : 0.0,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _BoardActionButton(
+                                icon: Icons.edit_outlined,
+                                onTap: _isHovered ? _startEditing : null,
+                              ),
+                              if (widget.canDelete)
+                                _BoardActionButton(
+                                  icon: Icons.delete_outline_rounded,
+                                  onTap: _isHovered ? _confirmDelete : null,
+                                ),
+                            ],
                           ),
-                    // Action buttons - always present but invisible when not hovered
-                    if (!_isEditing)
-                      Opacity(
-                        opacity: _isHovered ? 1.0 : 0.0,
+                        ),
+                      if (_isEditing) ...[
+                        _BoardActionButton(
+                          icon: Icons.check_rounded,
+                          onTap: _finishEditing,
+                          color: AppColors.success,
+                        ),
+                        _BoardActionButton(
+                          icon: Icons.close_rounded,
+                          onTap: _cancelEditing,
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: AppTheme.spacingXSmall),
+                  // Subjects button with oval hover effect
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    onEnter: (_) => setState(() => _isSubjectsHovered = true),
+                    onExit: (_) => setState(() => _isSubjectsHovered = false),
+                    child: GestureDetector(
+                      onTap: () {
+                        context.read<BoardsProvider>().showSubjectsForBoard(
+                          widget.board.id,
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingSmall,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: _isSubjectsHovered
+                                ? AppColors.textTertiary
+                                : Colors.transparent,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _BoardActionButton(
-                              icon: Icons.edit_outlined,
-                              onTap: _isHovered ? _startEditing : null,
+                            const Icon(
+                              Icons.subject_rounded,
+                              size: 14,
+                              color: AppColors.textTertiary,
                             ),
-                            if (widget.canDelete)
-                              _BoardActionButton(
-                                icon: Icons.delete_outline_rounded,
-                                onTap: _isHovered ? _confirmDelete : null,
-                              ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Subjects',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(color: AppColors.textTertiary),
+                            ),
                           ],
                         ),
                       ),
-                    if (_isEditing) ...[
-                      _BoardActionButton(
-                        icon: Icons.check_rounded,
-                        onTap: _finishEditing,
-                        color: AppColors.success,
-                      ),
-                      _BoardActionButton(
-                        icon: Icons.close_rounded,
-                        onTap: _cancelEditing,
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: AppTheme.spacingXSmall),
-                // Subjects button with oval hover effect
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  onEnter: (_) => setState(() => _isSubjectsHovered = true),
-                  onExit: (_) => setState(() => _isSubjectsHovered = false),
-                  child: GestureDetector(
-                    onTap: () {
-                      context.read<BoardsProvider>().showSubjectsForBoard(widget.board.id);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTheme.spacingSmall,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: _isSubjectsHovered
-                              ? AppColors.textTertiary
-                              : Colors.transparent,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.subject_rounded,
-                            size: 14,
-                            color: AppColors.textTertiary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Subjects',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: AppColors.textTertiary,
-                                ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -582,7 +600,7 @@ class _SubjectsView extends StatelessWidget {
     return Consumer<BoardsProvider>(
       builder: (context, provider, _) {
         final subjects = provider.currentBoardSubjects;
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -620,7 +638,8 @@ class _SubjectsView extends StatelessWidget {
                       children: [
                         Text(
                           'Subjects',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
                                 color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -628,9 +647,8 @@ class _SubjectsView extends StatelessWidget {
                         if (provider.subjectsBoardName != null)
                           Text(
                             provider.subjectsBoardName!,
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: AppColors.textTertiary,
-                                ),
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(color: AppColors.textTertiary),
                           ),
                       ],
                     ),
@@ -664,8 +682,8 @@ class _SubjectsView extends StatelessWidget {
                 child: Text(
                   'No subjects yet.\nTap + to add one.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
+                    color: AppColors.textTertiary,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               )
@@ -760,7 +778,9 @@ class _SubjectItemState extends State<_SubjectItem> {
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
                     onTap: () {
-                      context.read<BoardsProvider>().deleteSubject(widget.subject.id);
+                      context.read<BoardsProvider>().deleteSubject(
+                        widget.subject.id,
+                      );
                     },
                     child: const Icon(
                       Icons.delete_outline_rounded,
@@ -839,8 +859,8 @@ class _SidebarItemState extends State<_SidebarItem> {
               color: widget.isActive
                   ? AppColors.sidebarItemActive
                   : _isHovered
-                      ? AppColors.sidebarItemHover
-                      : Colors.transparent,
+                  ? AppColors.sidebarItemHover
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
             ),
             child: Row(
@@ -856,12 +876,13 @@ class _SidebarItemState extends State<_SidebarItem> {
                 Text(
                   widget.label,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isHighlighted
-                            ? AppColors.primary
-                            : AppColors.textSecondary,
-                        fontWeight:
-                            widget.isActive ? FontWeight.w600 : FontWeight.w500,
-                      ),
+                    color: isHighlighted
+                        ? AppColors.primary
+                        : AppColors.textSecondary,
+                    fontWeight: widget.isActive
+                        ? FontWeight.w600
+                        : FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -878,11 +899,7 @@ class _BoardActionButton extends StatefulWidget {
   final VoidCallback? onTap;
   final Color? color;
 
-  const _BoardActionButton({
-    required this.icon,
-    this.onTap,
-    this.color,
-  });
+  const _BoardActionButton({required this.icon, this.onTap, this.color});
 
   @override
   State<_BoardActionButton> createState() => _BoardActionButtonState();
