@@ -14,20 +14,26 @@ class Board extends HiveObject {
   @HiveField(2)
   final DateTime createdAt;
 
+  @HiveField(3, defaultValue: 0)
+  int sortOrder;
+
   Board({
     required this.id,
     required this.name,
     required this.createdAt,
+    this.sortOrder = 0,
   });
 
   factory Board.create({
     required String id,
     required String name,
+    int sortOrder = 0,
   }) {
     return Board(
       id: id,
       name: name,
       createdAt: DateTime.now(),
+      sortOrder: sortOrder,
     );
   }
 
@@ -35,11 +41,13 @@ class Board extends HiveObject {
     String? id,
     String? name,
     DateTime? createdAt,
+    int? sortOrder,
   }) {
     return Board(
       id: id ?? this.id,
       name: name ?? this.name,
       createdAt: createdAt ?? this.createdAt,
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
 

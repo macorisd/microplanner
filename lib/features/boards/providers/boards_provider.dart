@@ -99,7 +99,12 @@ class BoardsProvider extends ChangeNotifier {
   void _loadBoards() {
     if (_boardsBox != null) {
       _boards = _boardsBox!.values.toList();
-      _boards.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      // Sort by sortOrder (ascending), then by createdAt as fallback
+      _boards.sort((a, b) {
+        final orderCompare = a.sortOrder.compareTo(b.sortOrder);
+        if (orderCompare != 0) return orderCompare;
+        return a.createdAt.compareTo(b.createdAt);
+      });
     }
   }
 
@@ -121,9 +126,14 @@ class BoardsProvider extends ChangeNotifier {
 
   Future<void> addBoard({String? name}) async {
     final boardNumber = _boards.length + 1;
+    // Set sortOrder to be after all existing boards
+    final maxSortOrder = _boards.isEmpty 
+        ? 0 
+        : _boards.map((b) => b.sortOrder).reduce((a, b) => a > b ? a : b);
     final board = Board.create(
       id: _uuid.v4(),
       name: name ?? 'Board $boardNumber',
+      sortOrder: maxSortOrder + 1,
     );
     
     await _boardsBox?.put(board.id, board);
@@ -157,6 +167,27 @@ class BoardsProvider extends ChangeNotifier {
       _currentBoardId = _boards.first.id;
     }
     
+    notifyListeners();
+  }
+
+  /// Reorder boards by moving a board from oldIndex to newIndex
+  Future<void> reorderBoards(int oldIndex, int newIndex) async {
+    // Adjust for ReorderableListView behavior
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+    
+    // Move the board in the list
+    final board = _boards.removeAt(oldIndex);
+    _boards.insert(newIndex, board);
+    
+    // Update sortOrder for all boards
+    for (int i = 0; i < _boards.length; i++) {
+      final updatedBoard = _boards[i].copyWith(sortOrder: i);
+      await _boardsBox?.put(updatedBoard.id, updatedBoard);
+    }
+    
+    _loadBoards();
     notifyListeners();
   }
 

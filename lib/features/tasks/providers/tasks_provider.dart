@@ -32,21 +32,36 @@ class TasksProvider extends ChangeNotifier {
   /// Tasks that have been marked as completed
   List<Task> get completedTasks {
     final completed = tasks.where((task) => task.isCompleted).toList();
-    completed.sort((a, b) => b.deadline.compareTo(a.deadline));
+    completed.sort((a, b) {
+      final dateCompare = b.deadline.compareTo(a.deadline);
+      if (dateCompare != 0) return dateCompare;
+      // Higher priority first (low=0, medium=1, high=2, so compare b to a)
+      return b.priorityIndex.compareTo(a.priorityIndex);
+    });
     return completed;
   }
 
   /// Tasks that are overdue (past deadline, not completed)
   List<Task> get lateTasks {
     final late = tasks.where((task) => task.isLate).toList();
-    late.sort((a, b) => a.deadline.compareTo(b.deadline));
+    late.sort((a, b) {
+      final dateCompare = a.deadline.compareTo(b.deadline);
+      if (dateCompare != 0) return dateCompare;
+      // Higher priority first (low=0, medium=1, high=2, so compare b to a)
+      return b.priorityIndex.compareTo(a.priorityIndex);
+    });
     return late;
   }
 
   /// Tasks with upcoming deadlines (future, not completed)
   List<Task> get upcomingTasks {
     final upcoming = tasks.where((task) => task.isUpcoming).toList();
-    upcoming.sort((a, b) => a.deadline.compareTo(b.deadline));
+    upcoming.sort((a, b) {
+      final dateCompare = a.deadline.compareTo(b.deadline);
+      if (dateCompare != 0) return dateCompare;
+      // Higher priority first (low=0, medium=1, high=2, so compare b to a)
+      return b.priorityIndex.compareTo(a.priorityIndex);
+    });
     return upcoming;
   }
 

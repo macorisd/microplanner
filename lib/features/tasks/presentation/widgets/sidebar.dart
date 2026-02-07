@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -219,17 +221,49 @@ class _BoardsSection extends StatelessWidget {
             ],
           ),
         ),
-        // Board list
+        // Board list - Reorderable with smooth animations
         Consumer<BoardsProvider>(
           builder: (context, provider, _) {
-            return Column(
-              children: provider.boards.map((board) {
-                return _BoardCard(
-                  board: board,
-                  isActive: provider.currentBoardId == board.id,
-                  canDelete: provider.boards.length > 1,
+            return ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles: false,
+              proxyDecorator: (child, index, animation) {
+                return AnimatedBuilder(
+                  animation: animation,
+                  builder: (context, child) {
+                    final animValue = Curves.easeInOut.transform(animation.value);
+                    final elevation = lerpDouble(0, 8, animValue)!;
+                    final scale = lerpDouble(1.0, 1.03, animValue)!;
+                    return Transform.scale(
+                      scale: scale,
+                      child: Material(
+                        elevation: elevation,
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: child,
                 );
-              }).toList(),
+              },
+              onReorder: (oldIndex, newIndex) {
+                provider.reorderBoards(oldIndex, newIndex);
+              },
+              itemCount: provider.boards.length,
+              itemBuilder: (context, index) {
+                final board = provider.boards[index];
+                return ReorderableDragStartListener(
+                  key: ValueKey(board.id),
+                  index: index,
+                  child: _BoardCard(
+                    board: board,
+                    isActive: provider.currentBoardId == board.id,
+                    canDelete: provider.boards.length > 1,
+                  ),
+                );
+              },
             );
           },
         ),

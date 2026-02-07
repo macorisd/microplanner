@@ -20,19 +20,22 @@ class BoardAdapter extends TypeAdapter<Board> {
       id: fields[0] as String,
       name: fields[1] as String,
       createdAt: fields[2] as DateTime,
+      sortOrder: fields[3] == null ? 0 : fields[3] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, Board obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(4)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
       ..write(obj.name)
       ..writeByte(2)
-      ..write(obj.createdAt);
+      ..write(obj.createdAt)
+      ..writeByte(3)
+      ..write(obj.sortOrder);
   }
 
   @override

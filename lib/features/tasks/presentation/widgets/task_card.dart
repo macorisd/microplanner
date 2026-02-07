@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -121,130 +123,144 @@ class _TaskCardState extends State<TaskCard> {
                   ),
                   const SizedBox(height: AppTheme.spacingSmall),
 
-                  // Second row: Type icon + Deadline with date and time
-                  Row(
-                    children: [
-                        Icon(
-                          widget.task.type.icon,
-                          size: 16,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: AppTheme.spacingXSmall),
-                        Text(
-                          widget.task.type.label,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const SizedBox(width: AppTheme.spacingMedium),
-                        // Calendar icon + date
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 14,
-                          color: widget.task.isLate
-                              ? AppColors.error
-                              : AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          DateFormat('dd/MM/yy').format(widget.task.deadline),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: widget.task.isLate
-                                    ? AppColors.error
-                                    : AppColors.textSecondary,
+                  // Second row: Type + Date + Time + Action buttons (on hover)
+                  Builder(
+                    builder: (context) {
+                      // Check if deadline is within 24 hours or already late
+                      final now = DateTime.now();
+                      final hoursUntilDeadline = widget.task.deadline.difference(now).inHours;
+                      final isUrgent = !widget.task.isCompleted && hoursUntilDeadline < 24 && hoursUntilDeadline >= 0;
+                      final showRed = widget.task.isLate || isUrgent;
+                      
+                      return Row(
+                        children: [
+                          Icon(
+                            widget.task.type.icon,
+                            size: 16,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: AppTheme.spacingXSmall),
+                          Text(
+                            widget.task.type.label,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(width: AppTheme.spacingSmall),
+                          // Calendar icon + weekday + date
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            size: 14,
+                            color: showRed
+                                ? AppColors.error
+                                : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            DateFormat('EEE dd/MM').format(widget.task.deadline),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: showRed
+                                      ? AppColors.error
+                                      : AppColors.textSecondary,
+                                ),
+                          ),
+                          const SizedBox(width: AppTheme.spacingSmall),
+                          // Clock icon + time
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 14,
+                            color: showRed
+                                ? AppColors.error
+                                : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            DateFormat('HH:mm').format(widget.task.deadline),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: showRed
+                                      ? AppColors.error
+                                      : AppColors.textSecondary,
+                                ),
+                          ),
+                          const Spacer(),
+                          // Action buttons on the right (always present, visible on hover)
+                          if (widget.onEdit != null || widget.onDelete != null)
+                            Opacity(
+                              opacity: _isHovered ? 1.0 : 0.0,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (widget.onEdit != null)
+                                      _ActionButton(
+                                        icon: Icons.edit_outlined,
+                                        tooltip: 'Edit',
+                                        onPressed: _isHovered ? widget.onEdit : null,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    if (widget.onDelete != null)
+                                      _ActionButton(
+                                        icon: Icons.delete_outline_rounded,
+                                        tooltip: 'Delete',
+                                        onPressed: _isHovered ? widget.onDelete : null,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                  ],
+                                ),
                               ),
-                        ),
-                        const SizedBox(width: AppTheme.spacingSmall),
-                        // Clock icon + time
-                        Icon(
-                          Icons.access_time_rounded,
-                          size: 14,
-                          color: widget.task.isLate
-                              ? AppColors.error
-                              : AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          DateFormat('HH:mm').format(widget.task.deadline),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: widget.task.isLate
-                                    ? AppColors.error
-                                    : AppColors.textSecondary,
-                              ),
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: AppTheme.spacingSmall),
-
-                  // Third row: Subject chip + Action buttons (on hover)
-                  Row(
-                    children: [
-                        Consumer<BoardsProvider>(
-                          builder: (context, boardsProvider, _) {
-                            final subject = boardsProvider.getSubjectById(widget.task.subjectId);
-                            final subjectName = subject?.name ?? widget.task.subject;
-                            if (subjectName.isEmpty) {
-                              return const SizedBox.shrink();
-                            }
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppTheme.spacingSmall,
-                                vertical: AppTheme.spacingXSmall,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Color(subject?.color ?? 0xFFF0F0F2).withValues(alpha: 0.2), // Use subject color bg transparent
-                                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: Color(subject?.color ?? 0xFF9094A6), // Subject color dot
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    subjectName,
-                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                      color:  AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                        const Spacer(),
-                        // Action buttons in bottom right corner
-                        AnimatedOpacity(
-                          opacity: _isHovered ? 1.0 : 0.0,
-                          duration: const Duration(milliseconds: 150),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                  // Third row: Subject chip only (if exists)
+                  Consumer<BoardsProvider>(
+                    builder: (context, boardsProvider, _) {
+                      final subject = boardsProvider.getSubjectById(widget.task.subjectId);
+                      final subjectName = subject?.name ?? widget.task.subject;
+                      
+                      if (subjectName.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      
+                      return Padding(
+                        padding: const EdgeInsets.only(top: AppTheme.spacingSmall),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.spacingSmall,
+                            vertical: AppTheme.spacingXSmall,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Color(subject?.color ?? 0xFFF0F0F2).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (widget.onEdit != null)
-                                _ActionButton(
-                                  icon: Icons.edit_outlined,
-                                  tooltip: 'Edit',
-                                  onPressed: _isHovered ? widget.onEdit : null,
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: Color(subject?.color ?? 0xFF9094A6),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                subjectName,
+                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
                                   color: AppColors.textSecondary,
                                 ),
-                              if (widget.onDelete != null) ...[
-                                const SizedBox(width: AppTheme.spacingXSmall),
-                                _ActionButton(
-                                  icon: Icons.delete_outline_rounded,
-                                  tooltip: 'Delete',
-                                  onPressed: _isHovered ? widget.onDelete : null,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ],
+                              ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -252,27 +268,6 @@ class _TaskCardState extends State<TaskCard> {
         ),
       ),
     );
-  }
-
-  String _formatDeadline(DateTime deadline) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final deadlineDate = DateTime(deadline.year, deadline.month, deadline.day);
-    final difference = deadlineDate.difference(today).inDays;
-
-    if (difference == 0) {
-      return 'Today';
-    } else if (difference == 1) {
-      return 'Tomorrow';
-    } else if (difference == -1) {
-      return 'Yesterday';
-    } else if (difference < -1) {
-      return '${-difference} days ago';
-    } else if (difference <= 7) {
-      return 'In $difference days';
-    } else {
-      return DateFormat('MMM d').format(deadline);
-    }
   }
 }
 

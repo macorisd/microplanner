@@ -13,7 +13,7 @@ class Subject {
   @HiveField(2)
   final String boardId;
 
-  @HiveField(3)
+  @HiveField(3, defaultValue: 0xFFCCCCCC)
   final int color; // Store color as int (0xAARRGGBB)
 
   const Subject({
