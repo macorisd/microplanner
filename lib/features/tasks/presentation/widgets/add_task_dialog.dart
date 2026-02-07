@@ -17,12 +17,10 @@ class AddTaskDialog extends StatefulWidget {
     required TaskPriority priority,
     String? subjectId,
     String? description,
-  }) onSave;
+  })
+  onSave;
 
-  const AddTaskDialog({
-    super.key,
-    required this.onSave,
-  });
+  const AddTaskDialog({super.key, required this.onSave});
 
   @override
   State<AddTaskDialog> createState() => _AddTaskDialogState();
@@ -32,7 +30,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
+
   DateTime _deadline = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _deadlineTime = const TimeOfDay(hour: 23, minute: 55);
   TaskType _type = TaskType.homework;
@@ -138,6 +136,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   return null;
                 },
                 autofocus: true,
+                onFieldSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: AppTheme.spacingMedium),
 
@@ -225,9 +224,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             Expanded(
               child: Text(
                 'No subjects yet. Add subjects in the sidebar.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textTertiary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
               ),
             ),
           ],
@@ -370,10 +369,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Time',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
+                Text('Time', style: Theme.of(context).textTheme.labelMedium),
                 const SizedBox(height: 2),
                 Text(
                   _deadlineTime.format(context),
@@ -425,10 +421,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Priority',
-          style: Theme.of(context).textTheme.labelMedium,
-        ),
+        Text('Priority', style: Theme.of(context).textTheme.labelMedium),
         const SizedBox(height: AppTheme.spacingSmall),
         Row(
           children: TaskPriority.values.map((priority) {
@@ -437,7 +430,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             // Use gray colors for selected state but slightly darker/distinct
             // Actually user wants gray exclamation marks.
             // Let's use subtle backgrounds for selection to keep it clean.
-            
+
             switch (priority) {
               case TaskPriority.low:
                 text = '!';
@@ -466,12 +459,16 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       vertical: AppTheme.spacingMedium,
                     ),
                     decoration: BoxDecoration(
-                      color: isSelected 
-                          ? AppColors.textSecondary.withValues(alpha: 0.1) 
+                      color: isSelected
+                          ? AppColors.textSecondary.withValues(alpha: 0.1)
                           : AppColors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.radiusMedium,
+                      ),
                       border: Border.all(
-                        color: isSelected ? AppColors.textSecondary : AppColors.divider,
+                        color: isSelected
+                            ? AppColors.textSecondary
+                            : AppColors.divider,
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -480,7 +477,9 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                         Text(
                           text,
                           style: TextStyle(
-                            color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                            color: isSelected
+                                ? AppColors.textPrimary
+                                : AppColors.textSecondary,
                             fontWeight: FontWeight.w900,
                             fontSize: 14,
                             letterSpacing: 1,
@@ -489,9 +488,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                         const SizedBox(height: AppTheme.spacingXSmall),
                         Text(
                           priority.label,
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                color: isSelected 
-                                    ? AppColors.textPrimary 
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: isSelected
+                                    ? AppColors.textPrimary
                                     : AppColors.textSecondary,
                                 fontWeight: isSelected
                                     ? FontWeight.w600

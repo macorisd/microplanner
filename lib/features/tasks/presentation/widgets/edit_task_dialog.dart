@@ -13,11 +13,7 @@ class EditTaskDialog extends StatefulWidget {
   final Task task;
   final Future<void> Function(Task updatedTask) onSave;
 
-  const EditTaskDialog({
-    super.key,
-    required this.task,
-    required this.onSave,
-  });
+  const EditTaskDialog({super.key, required this.task, required this.onSave});
 
   @override
   State<EditTaskDialog> createState() => _EditTaskDialogState();
@@ -27,7 +23,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
-  
+
   late DateTime _deadline;
   late TimeOfDay _deadlineTime;
   late TaskType _type;
@@ -39,9 +35,14 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.task.name);
-    _descriptionController = TextEditingController(text: widget.task.description ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.task.description ?? '',
+    );
     _deadline = widget.task.deadline;
-    _deadlineTime = TimeOfDay(hour: widget.task.deadline.hour, minute: widget.task.deadline.minute);
+    _deadlineTime = TimeOfDay(
+      hour: widget.task.deadline.hour,
+      minute: widget.task.deadline.minute,
+    );
     _type = widget.task.type;
     _priority = widget.task.priority;
     _selectedSubjectId = widget.task.subjectId;
@@ -147,6 +148,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
                   return null;
                 },
                 autofocus: true,
+                onFieldSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: AppTheme.spacingMedium),
 
@@ -234,9 +236,9 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
             Expanded(
               child: Text(
                 'No subjects yet. Add subjects in the sidebar.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textTertiary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
               ),
             ),
           ],
@@ -379,10 +381,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Time',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
+                Text('Time', style: Theme.of(context).textTheme.labelMedium),
                 const SizedBox(height: 2),
                 Text(
                   _deadlineTime.format(context),
@@ -434,16 +433,13 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Priority',
-          style: Theme.of(context).textTheme.labelMedium,
-        ),
+        Text('Priority', style: Theme.of(context).textTheme.labelMedium),
         const SizedBox(height: AppTheme.spacingSmall),
         Row(
           children: TaskPriority.values.map((priority) {
             final isSelected = _priority == priority;
             String text = '';
-            
+
             switch (priority) {
               case TaskPriority.low:
                 text = '!';
@@ -472,12 +468,16 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
                       vertical: AppTheme.spacingMedium,
                     ),
                     decoration: BoxDecoration(
-                      color: isSelected 
-                          ? AppColors.textSecondary.withValues(alpha: 0.1) 
+                      color: isSelected
+                          ? AppColors.textSecondary.withValues(alpha: 0.1)
                           : AppColors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.radiusMedium,
+                      ),
                       border: Border.all(
-                        color: isSelected ? AppColors.textSecondary : AppColors.divider,
+                        color: isSelected
+                            ? AppColors.textSecondary
+                            : AppColors.divider,
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -486,7 +486,9 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
                         Text(
                           text,
                           style: TextStyle(
-                            color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                            color: isSelected
+                                ? AppColors.textPrimary
+                                : AppColors.textSecondary,
                             fontWeight: FontWeight.w900,
                             fontSize: 14,
                             letterSpacing: 1,
@@ -495,9 +497,10 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
                         const SizedBox(height: AppTheme.spacingXSmall),
                         Text(
                           priority.label,
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                color: isSelected 
-                                    ? AppColors.textPrimary 
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: isSelected
+                                    ? AppColors.textPrimary
                                     : AppColors.textSecondary,
                                 fontWeight: isSelected
                                     ? FontWeight.w600
