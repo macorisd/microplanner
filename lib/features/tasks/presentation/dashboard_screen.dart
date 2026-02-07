@@ -91,7 +91,7 @@ class DashboardScreen extends StatelessWidget {
                                     provider.toggleTaskCompletion(task.id);
                                   },
                                   onDeleteTask: (task) {
-                                    provider.deleteTask(task.id);
+                                    _showDeleteConfirmDialog(context, task);
                                   },
                                   onEditTask: (task) {
                                     _showEditTaskDialog(context, task);
@@ -112,7 +112,7 @@ class DashboardScreen extends StatelessWidget {
                                     provider.toggleTaskCompletion(task.id);
                                   },
                                   onDeleteTask: (task) {
-                                    provider.deleteTask(task.id);
+                                    _showDeleteConfirmDialog(context, task);
                                   },
                                   onEditTask: (task) {
                                     _showEditTaskDialog(context, task);
@@ -133,7 +133,7 @@ class DashboardScreen extends StatelessWidget {
                                     provider.toggleTaskCompletion(task.id);
                                   },
                                   onDeleteTask: (task) {
-                                    provider.deleteTask(task.id);
+                                    _showDeleteConfirmDialog(context, task);
                                   },
                                   onEditTask: (task) {
                                     _showEditTaskDialog(context, task);
@@ -193,6 +193,32 @@ class DashboardScreen extends StatelessWidget {
         onSave: (updatedTask) async {
           await context.read<TasksProvider>().updateTask(updatedTask);
         },
+      ),
+    );
+  }
+
+  void _showDeleteConfirmDialog(BuildContext context, Task task) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Task'),
+        content: Text('Are you sure you want to delete "${task.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<TasksProvider>().deleteTask(task.id);
+              Navigator.of(dialogContext).pop();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }
