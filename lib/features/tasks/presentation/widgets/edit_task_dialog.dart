@@ -51,6 +51,21 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Validate that the selected subject still exists
+    if (_selectedSubjectId != null) {
+      final boardsProvider = context.read<BoardsProvider>();
+      final subjectExists = boardsProvider.currentBoardSubjects.any(
+        (s) => s.id == _selectedSubjectId,
+      );
+      if (!subjectExists) {
+        _selectedSubjectId = null;
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();

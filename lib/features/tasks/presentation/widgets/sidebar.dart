@@ -777,11 +777,7 @@ class _SubjectItemState extends State<_SubjectItem> {
                 MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
-                    onTap: () {
-                      context.read<BoardsProvider>().deleteSubject(
-                        widget.subject.id,
-                      );
-                    },
+                    onTap: () => _confirmDeleteSubject(),
                     child: const Icon(
                       Icons.delete_outline_rounded,
                       size: 18,
@@ -793,6 +789,36 @@ class _SubjectItemState extends State<_SubjectItem> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmDeleteSubject() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Subject'),
+        content: Text(
+          'Are you sure you want to delete "${widget.subject.name}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              context.read<BoardsProvider>().deleteSubject(widget.subject.id);
+              Navigator.of(dialogContext).pop();
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
+            ),
+            autofocus: true,
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }
