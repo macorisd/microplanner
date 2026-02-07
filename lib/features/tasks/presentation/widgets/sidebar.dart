@@ -43,19 +43,18 @@ class _SidebarState extends State<Sidebar> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
-                        Icons.event_note_rounded,
-                        color: Colors.white,
-                        size: 22,
+                      clipBehavior: Clip.antiAlias,
+                      child: Image.asset(
+                        'assets/images/microplanner_logo.png',
+                        fit: BoxFit.cover,
                       ),
                     ),
                     const SizedBox(width: AppTheme.spacingMedium),
                     Expanded(
                       child: Text(
-                        'MicroPlanner',
+                        'microplanner',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
