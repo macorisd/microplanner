@@ -39,7 +39,8 @@ class DashboardScreen extends StatelessWidget {
                       children: [
                         Consumer<BoardsProvider>(
                           builder: (context, boardsProvider, _) {
-                            final boardName = boardsProvider.currentBoard?.name ?? 'My Tasks';
+                            final boardName =
+                                boardsProvider.currentBoard?.name ?? 'My Tasks';
                             return Text(
                               boardName,
                               style: Theme.of(context).textTheme.displaySmall,
@@ -85,7 +86,8 @@ class DashboardScreen extends StatelessWidget {
                                   title: 'Complete',
                                   tasks: provider.completedTasks,
                                   headerColor: AppColors.completeHeader,
-                                  headerBackgroundColor: AppColors.completeHeaderLight,
+                                  headerBackgroundColor:
+                                      AppColors.completeHeaderLight,
                                   icon: Icons.check_circle_rounded,
                                   onToggleComplete: (task) {
                                     provider.toggleTaskCompletion(task.id);
@@ -106,7 +108,8 @@ class DashboardScreen extends StatelessWidget {
                                   title: 'Late',
                                   tasks: provider.lateTasks,
                                   headerColor: AppColors.lateHeader,
-                                  headerBackgroundColor: AppColors.lateHeaderLight,
+                                  headerBackgroundColor:
+                                      AppColors.lateHeaderLight,
                                   icon: Icons.warning_rounded,
                                   onToggleComplete: (task) {
                                     provider.toggleTaskCompletion(task.id);
@@ -127,7 +130,8 @@ class DashboardScreen extends StatelessWidget {
                                   title: 'Upcoming',
                                   tasks: provider.upcomingTasks,
                                   headerColor: AppColors.upcomingHeader,
-                                  headerBackgroundColor: AppColors.upcomingHeaderLight,
+                                  headerBackgroundColor:
+                                      AppColors.upcomingHeaderLight,
                                   icon: Icons.schedule_rounded,
                                   onToggleComplete: (task) {
                                     provider.toggleTaskCompletion(task.id);
@@ -164,15 +168,16 @@ class DashboardScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AddTaskDialog(
-        onSave: ({
-          required String name,
-          required DateTime deadline,
-          required type,
-          required priority,
-          String? subjectId,
-          String? description,
-        }) async {
-          await context.read<TasksProvider>().addTask(
+        onSave:
+            ({
+              required String name,
+              required DateTime deadline,
+              required type,
+              required priority,
+              String? subjectId,
+              String? description,
+            }) async {
+              await context.read<TasksProvider>().addTask(
                 name: name,
                 deadline: deadline,
                 type: type,
@@ -180,7 +185,7 @@ class DashboardScreen extends StatelessWidget {
                 subjectId: subjectId,
                 description: description,
               );
-        },
+            },
       ),
     );
   }
@@ -208,14 +213,16 @@ class DashboardScreen extends StatelessWidget {
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () {
               context.read<TasksProvider>().deleteTask(task.id);
               Navigator.of(dialogContext).pop();
             },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.error,
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
             ),
+            autofocus: true,
             child: const Text('Delete'),
           ),
         ],
