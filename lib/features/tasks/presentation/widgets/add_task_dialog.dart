@@ -85,7 +85,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
     return Dialog(
       child: Focus(
-        autofocus: true,
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent &&
               event.logicalKey == LogicalKeyboardKey.enter) {
