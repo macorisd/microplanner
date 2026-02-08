@@ -223,6 +223,9 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                      ),
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: AppTheme.spacingSmall),
