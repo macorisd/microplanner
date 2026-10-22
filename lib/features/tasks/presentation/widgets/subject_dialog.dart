@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../boards/providers/boards_provider.dart';
+import 'save_status.dart';
 
 class SubjectDialog extends StatefulWidget {
   final String title;
   final String initialName;
   final int initialColor;
-  final Function(String name, int color) onSave;
+  final Future<bool> Function(String name, int color) onSave;
 
   const SubjectDialog({
     super.key,
@@ -25,6 +24,7 @@ class SubjectDialog extends StatefulWidget {
 class _SubjectDialogState extends State<SubjectDialog> {
   late TextEditingController _controller;
   late int _selectedColor;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -39,10 +39,20 @@ class _SubjectDialogState extends State<SubjectDialog> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
+    if (_saving) return;
     if (_controller.text.trim().isNotEmpty) {
-      widget.onSave(_controller.text.trim(), _selectedColor);
-      Navigator.of(context).pop();
+      setState(() => _saving = true);
+      final saved = await widget.onSave(
+        _controller.text.trim(),
+        _selectedColor,
+      );
+      if (!mounted) return;
+      if (saved) {
+        Navigator.of(context).pop();
+      } else {
+        setState(() => _saving = false);
+      }
     }
   }
 
@@ -64,22 +74,24 @@ class _SubjectDialogState extends State<SubjectDialog> {
             onSubmitted: (_) => _save(),
           ),
           const SizedBox(height: AppTheme.spacingMedium),
+          const SaveStatus(),
           Text(
             'Color',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppTheme.spacingSmall),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: AppColors.subjectColors.map((color) {
-              final isSelected = color.value == _selectedColor;
+              final isSelected = color.toARGB32() == _selectedColor;
               return MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
-                  onTap: () => setState(() => _selectedColor = color.value),
+                  onTap: () =>
+                      setState(() => _selectedColor = color.toARGB32()),
                   child: Container(
                     width: 24,
                     height: 24,
@@ -103,13 +115,11 @@ class _SubjectDialogState extends State<SubjectDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.red.shade700,
-          ),
+          style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _save,
+          onPressed: _saving ? null : _save,
           child: const Text('Save'),
         ),
       ],

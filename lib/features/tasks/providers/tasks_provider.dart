@@ -1,124 +1,37 @@
 import 'package:flutter/foundation.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
-import 'package:microplanner/core/constants/app_constants.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/data/workspace_controller.dart';
 import '../../boards/providers/boards_provider.dart';
 import '../data/models/task.dart';
 
-/// Provider for task management with Hive persistence
 class TasksProvider extends ChangeNotifier {
-  static const String _boxName = 'tasks';
-  static const String _defaultBoardId = 'default-board';
-  final Uuid _uuid = const Uuid();
-  
-  Box<Task>? _tasksBox;
-  List<Task> _allTasks = [];
-  BoardsProvider? _boardsProvider;
-  bool _isLoading = false;
-
-  bool get isLoading => _isLoading;
-
-  /// All tasks in the current board
-  List<Task> get tasks {
-    final currentBoardId = _boardsProvider?.currentBoardId;
-    if (currentBoardId == null) return [];
-    return _allTasks.where((t) => t.boardId == currentBoardId).toList();
+  final WorkspaceController workspace;
+  final BoardsProvider boards;
+  TasksProvider(this.workspace, this.boards) {
+    workspace.addListener(_changed);
+    boards.addListener(_changed);
+  }
+  void _changed() => notifyListeners();
+  bool get isLoading => workspace.isLoading || workspace.isSaving;
+  List<Task> get tasks => workspace.snapshot.tasks
+      .where((t) => t.boardId == boards.currentBoardId)
+      .toList();
+  int _compare(Task a, Task b) {
+    final comparison = a.deadline.compareTo(b.deadline);
+    return comparison != 0
+        ? comparison
+        : b.priorityIndex.compareTo(a.priorityIndex);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Filtered task getters (filtered by current board)
-  // ─────────────────────────────────────────────────────────────────────────
-  
-  /// Tasks that have been marked as completed
-  List<Task> get completedTasks {
-    final completed = tasks.where((task) => task.isCompleted).toList();
-    completed.sort((a, b) {
-      final dateCompare = b.deadline.compareTo(a.deadline);
-      if (dateCompare != 0) return dateCompare;
-      // Higher priority first (low=0, medium=1, high=2, so compare b to a)
-      return b.priorityIndex.compareTo(a.priorityIndex);
-    });
-    return completed;
-  }
-
-  /// Tasks that are overdue (past deadline, not completed)
-  List<Task> get lateTasks {
-    final late = tasks.where((task) => task.isLate).toList();
-    late.sort((a, b) {
-      final dateCompare = a.deadline.compareTo(b.deadline);
-      if (dateCompare != 0) return dateCompare;
-      // Higher priority first (low=0, medium=1, high=2, so compare b to a)
-      return b.priorityIndex.compareTo(a.priorityIndex);
-    });
-    return late;
-  }
-
-  /// Tasks with upcoming deadlines (future, not completed)
-  List<Task> get upcomingTasks {
-    final upcoming = tasks.where((task) => task.isUpcoming).toList();
-    upcoming.sort((a, b) {
-      final dateCompare = a.deadline.compareTo(b.deadline);
-      if (dateCompare != 0) return dateCompare;
-      // Higher priority first (low=0, medium=1, high=2, so compare b to a)
-      return b.priorityIndex.compareTo(a.priorityIndex);
-    });
-    return upcoming;
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Initialization
-  // ─────────────────────────────────────────────────────────────────────────
-  
-  /// Initialize Hive and load tasks
-  Future<void> init(BoardsProvider boardsProvider) async {
-    _boardsProvider = boardsProvider;
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      _tasksBox = await Hive.openBox<Task>(_boxName);
-      _loadTasks();
-      
-      // Migrate tasks without boardId to default board
-      await _migrateTasksToDefaultBoard();
-      
-      // Listen to board changes
-      _boardsProvider?.addListener(_onBoardChanged);
-    } catch (e) {
-      debugPrint('Error initializing tasks: $e');
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  void _onBoardChanged() {
-    notifyListeners();
-  }
-
-  Future<void> _migrateTasksToDefaultBoard() async {
-    final tasksWithoutBoard = _allTasks.where((t) => t.boardId == null).toList();
-    for (final task in tasksWithoutBoard) {
-      task.boardId = _defaultBoardId;
-      await task.save();
-    }
-    if (tasksWithoutBoard.isNotEmpty) {
-      _loadTasks();
-    }
-  }
-
-  void _loadTasks() {
-    if (_tasksBox != null) {
-      _allTasks = _tasksBox!.values.toList();
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // CRUD Operations
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /// Create a new task
-  Future<void> addTask({
+  List<Task> get completedTasks =>
+      tasks.where((t) => t.isCompleted).toList()
+        ..sort((a, b) => _compare(b, a));
+  List<Task> get lateTasks =>
+      tasks.where((t) => t.isLate).toList()..sort(_compare);
+  List<Task> get upcomingTasks =>
+      tasks.where((t) => t.isUpcoming).toList()..sort(_compare);
+  Future<bool> addTask({
     required String name,
     required DateTime deadline,
     required TaskType type,
@@ -126,76 +39,43 @@ class TasksProvider extends ChangeNotifier {
     String? subjectId,
     String? description,
   }) async {
-    final currentBoardId = _boardsProvider?.currentBoardId;
-    if (currentBoardId == null) return;
-
-    // Si la hora es 00:00, usar 23:55 por defecto
-    DateTime finalDeadline = deadline;
-    if (deadline.hour == 0 && deadline.minute == 0) {
-      finalDeadline = DateTime(
-        deadline.year,
-        deadline.month,
-        deadline.day,
-        23,
-        55,
-      );
-    }
-
+    final boardId = boards.currentBoardId;
+    if (boardId == null) return false;
+    final finalDeadline = deadline.hour == 0 && deadline.minute == 0
+        ? DateTime(deadline.year, deadline.month, deadline.day, 23, 55)
+        : deadline;
     final task = Task.create(
-      id: _uuid.v4(),
+      id: const Uuid().v4(),
       name: name,
       deadline: finalDeadline,
       type: type,
       priority: priority,
       subjectId: subjectId,
-      boardId: currentBoardId,
+      boardId: boardId,
       description: description,
     );
-
-    await _tasksBox?.put(task.id, task);
-    _loadTasks();
-    notifyListeners();
+    return workspace.mutate((s) => s.copyWith(tasks: [...s.tasks, task]));
   }
 
-  /// Update an existing task
-  Future<void> updateTask(Task task) async {
-    await _tasksBox?.put(task.id, task);
-    _loadTasks();
-    notifyListeners();
-  }
-
-  /// Delete a task
-  Future<void> deleteTask(String taskId) async {
-    await _tasksBox?.delete(taskId);
-    _loadTasks();
-    notifyListeners();
-  }
-
-  /// Toggle task completion status
-  Future<void> toggleTaskCompletion(String taskId) async {
-    final task = _tasksBox?.get(taskId);
-    if (task != null) {
-      task.isCompleted = !task.isCompleted;
-      await task.save();
-      _loadTasks();
-      notifyListeners();
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Cleanup
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /// Clear all tasks (for testing or logout)
-  Future<void> clearAllTasks() async {
-    await _tasksBox?.clear();
-    _loadTasks();
-    notifyListeners();
-  }
-
+  Future<bool> updateTask(Task task) => workspace.mutate(
+    (s) => s.copyWith(
+      tasks: s.tasks.map((t) => t.id == task.id ? task : t).toList(),
+    ),
+  );
+  Future<bool> deleteTask(String id) => workspace.mutate(
+    (s) => s.copyWith(tasks: s.tasks.where((t) => t.id != id).toList()),
+  );
+  Future<bool> toggleTaskCompletion(String id) => workspace.mutate(
+    (s) => s.copyWith(
+      tasks: s.tasks
+          .map((t) => t.id == id ? t.copyWith(isCompleted: !t.isCompleted) : t)
+          .toList(),
+    ),
+  );
   @override
   void dispose() {
-    _boardsProvider?.removeListener(_onBoardChanged);
+    workspace.removeListener(_changed);
+    boards.removeListener(_changed);
     super.dispose();
   }
 }

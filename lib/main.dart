@@ -1,8 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
-
 import 'app.dart';
+import 'core/constants/app_config.dart';
+import 'core/data/api_client.dart';
+import 'core/data/private_storage.dart';
+import 'core/data/workspace_controller.dart';
+import 'core/data/workspace_storage.dart';
 import 'features/auth/data/auth_service.dart';
 import 'features/boards/data/models/board.dart';
 import 'features/boards/data/models/subject.dart';
@@ -12,32 +17,31 @@ import 'features/tasks/providers/tasks_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Hive for local storage
   await Hive.initFlutter();
-  
-  // Register Hive adapters
   Hive.registerAdapter(TaskAdapter());
   Hive.registerAdapter(BoardAdapter());
   Hive.registerAdapter(SubjectAdapter());
-
-  // Create providers
-  final authService = AuthService();
-  final boardsProvider = BoardsProvider();
-  final tasksProvider = TasksProvider();
-
-  // Initialize providers (loads from Hive)
-  await boardsProvider.init();
-  await tasksProvider.init(boardsProvider);
-
+  final api = ApiClient(AppConfig.apiUrl);
+  const storage = SecurePrivateStorage();
+  final auth = AuthService(api: api, storage: storage);
+  final workspace = WorkspaceController(
+    auth: auth,
+    api: api,
+    cache: EncryptedWorkspaceCache(storage),
+    legacy: HiveLegacyWorkspace(),
+  );
+  final boards = BoardsProvider(workspace);
+  final tasks = TasksProvider(workspace, boards);
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: authService),
-        ChangeNotifierProvider.value(value: boardsProvider),
-        ChangeNotifierProvider.value(value: tasksProvider),
+        ChangeNotifierProvider.value(value: auth),
+        ChangeNotifierProvider.value(value: workspace),
+        ChangeNotifierProvider.value(value: boards),
+        ChangeNotifierProvider.value(value: tasks),
       ],
       child: const MicroPlannerApp(),
     ),
   );
+  unawaited(auth.initialize());
 }
