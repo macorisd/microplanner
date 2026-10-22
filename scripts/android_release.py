@@ -47,6 +47,7 @@ def release_for(tag):
     except urllib.error.HTTPError as error:
         if error.code != 404:
             raise
+        error.close()
         return None
 
 
@@ -138,7 +139,10 @@ def verify_apk(apk, tag):
     if version != tag[1:] or json.loads(Path('server/package.json').read_text())['version'] != version:
         raise ValueError('Version manifests do not match the release tag')
     tools = Path(os.environ['ANDROID_HOME']) / 'build-tools'
-    versions = sorted((p for p in tools.iterdir() if p.is_dir()), key=lambda p: tuple(map(int, p.name.split('.'))))
+    versions = sorted((p for p in tools.iterdir() if p.is_dir() and re.fullmatch(r'\d+\.\d+\.\d+', p.name)),
+                      key=lambda p: tuple(map(int, p.name.split('.'))))
+    if not versions:
+        raise ValueError('Stable Android SDK build tools are missing')
     tool = versions[-1]
     suffix = '.bat' if os.name == 'nt' else ''
     certificate = subprocess.check_output([str(tool / ('apksigner' + suffix)), 'verify', '--print-certs', str(apk)], text=True)

@@ -135,4 +135,5 @@ rollback. Real Google login is additionally checked on Windows and Android.
 Regenerate Android launcher PNGs/adaptive resources with Python/Pillow:
 `python scripts/generate_android_icons.py`. They reuse
 `assets/images/microplanner_logo.png`, matching Windows's existing ICO artwork,
-with padding for launcher masks. Windows's icon remains unchanged.
+with transparency and no added white background or decorative border. Android
+may apply its launcher mask. Windows's icon remains unchanged.
