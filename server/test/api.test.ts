@@ -4,10 +4,11 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { MongoClient } from 'mongodb';
 import type { TokenPayload } from 'google-auth-library';
-import { buildApp } from '../src/app.js';
+import { buildApp } from '../src/application.js';
 import { readConfig } from '../src/config.js';
 import { Repository } from '../src/repository.js';
 import type { Workspace } from '../src/domain.js';
+import { createRuntime } from '../src/runtime.js';
 
 let mongo: MongoMemoryReplSet;
 let client: MongoClient;
@@ -187,4 +188,59 @@ test('missing desktop configuration fails before opening a Google consent flow',
   assert.equal(response.statusCode, 503);
   assert.equal(response.json().code, 'google_not_configured');
   await unconfigured.close();
+});
+
+test('Vercel rate limits span instances and ignore a spoofed external proxy header', async () => {
+  const hosted = readConfig({ MONGODB_URI: mongo.getUri(), MONGODB_DB: 'microplanner_test', VERCEL: '1' });
+  const first = await buildApp(repo, hosted);
+  const second = await buildApp(new Repository(client, 'microplanner_test'), hosted);
+  try {
+    // Two instances must share the same twenty-request authentication allowance.
+    const results = await Promise.all(Array.from({ length: 21 }, (_, i) =>
+      (i % 2 ? first : second).inject({ method: 'POST', url: '/auth/google', payload: {}, headers: {
+        'x-vercel-forwarded-for': '203.0.113.100', 'x-forwarded-for': `198.51.100.${i}`,
+      } })));
+    assert.equal(results.filter(r => r.statusCode === 429).length, 1);
+    assert.equal(results.filter(r => r.statusCode === 400).length, 20);
+    const independent = await first.inject({ method: 'POST', url: '/auth/google', payload: {},
+      headers: { 'x-vercel-forwarded-for': '203.0.113.101' } });
+    assert.equal(independent.statusCode, 400);
+    assert.equal(independent.headers['cache-control'], 'no-store');
+  } finally { await first.close(); await second.close(); }
+});
+
+test('oversized saves and merged imports roll back without losing prior cloud data', async () => {
+  const { token } = await login();
+  const original = await state(token);
+  const task = { id: 'large', name: 'Task', boardId: 'default-board', subjectId: null,
+    description: 'a'.repeat(19000), deadline: '2026-11-01T12:00:00.000Z',
+    createdAt: '2026-10-20T12:00:00.000Z', isCompleted: false, typeIndex: 0, priorityIndex: 1 };
+  original.tasks = Array.from({ length: 211 }, (_, i) => ({ ...task, id: `large-${i}` }));
+  assert.equal((await save(token, original)).statusCode, 413);
+  assert.equal((await state(token)).revision, 0);
+  original.tasks = original.tasks.slice(0, 110);
+  assert.equal((await save(token, original)).statusCode, 200);
+  const { revision, ...data } = await state(token);
+  const imported = await app.inject({ method: 'POST', url: '/workspace/import', headers: headers(token),
+    payload: { revision, data, sourceId: randomUUID(), operationId: randomUUID() } });
+  assert.equal(imported.statusCode, 413);
+  assert.equal((await state(token)).tasks.length, 110);
+  assert.equal((await state(token)).revision, revision);
+});
+
+test('runtime retries initialization failures and shares initialization across warm requests', async t => {
+  let initializations = 0;
+  const original = Repository.prototype.initialize;
+  t.mock.method(Repository.prototype, 'initialize', async function (this: Repository) {
+    if (++initializations === 1) throw new Error('Temporary initialization failure');
+    return original.call(this);
+  });
+  const runtime = await createRuntime(readConfig({ MONGODB_URI: mongo.getUri(), MONGODB_DB: 'runtime_test' }));
+  try {
+    assert.equal((await runtime.inject('/health/live')).statusCode, 200);
+    assert.equal((await runtime.inject('/health/ready')).statusCode, 503);
+    const responses = await Promise.all(Array.from({ length: 8 }, () => runtime.inject('/health/ready')));
+    assert.ok(responses.every(r => r.statusCode === 200));
+    assert.equal(initializations, 2);
+  } finally { await runtime.close(); t.mock.restoreAll(); }
 });

@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import { OAuth2Client, type TokenPayload } from 'google-auth-library';
 import { z } from 'zod';
+import { isIP } from 'node:net';
 import type { Config } from './config.js';
 import { ApiError, importSchema, saveSchema } from './domain.js';
 import type { Repository } from './repository.js';
@@ -14,11 +15,38 @@ export type VerifyGoogle = (idToken: string, audience: string) => Promise<TokenP
 export async function buildApp(repo: Repository, config: Config, options: {
   verifyGoogle?: VerifyGoogle;
   exchangeCode?: (code: string, verifier: string, redirectUri: string) => Promise<string>;
+  prepare?: () => Promise<void>;
+  factory?: typeof Fastify;
 } = {}) {
   // No request-body or credential logging. Errors below return only fixed messages.
-  const app = Fastify({ bodyLimit: 4 * 1024 * 1024, logger: false });
+  const app = (options.factory ?? Fastify)({ bodyLimit: 4 * 1024 * 1024, logger: false });
   app.decorateRequest('ownerId', null);
-  await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
+  if (!config.VERCEL) await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
+  app.addHook('onRequest', async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    reply.header('X-Content-Type-Options', 'nosniff');
+    if (request.url.split('?')[0] === '/health/live') return;
+    await options.prepare?.();
+    if (config.VERCEL) {
+      // Vercel supplies this header; never trust forwarded headers on local servers.
+      const forwarded = request.headers['x-vercel-forwarded-for'];
+      const ip = typeof forwarded === 'string' && isIP(forwarded.trim())
+        ? forwarded.trim() : request.ip;
+      const auth = ['/auth/google', '/auth/windows/start', '/auth/windows/complete'].includes(request.url.split('?')[0]!);
+      if (!await repo.allowRequest(`requests:${ip}`, 300) ||
+          (auth && !await repo.allowRequest(`auth:${ip}`, 20))) {
+        reply.header('Retry-After', '60');
+        throw new ApiError(429, 'rate_limit', 'Too many requests. Try again shortly.');
+      }
+    }
+  });
+  app.addHook('onSend', async (_request, reply, payload) => {
+    if (typeof payload === 'string' && Buffer.byteLength(payload) > 4_400_000) {
+      reply.code(413);
+      return JSON.stringify({ code: 'too_large', message: 'The workspace is too large.' });
+    }
+    return payload;
+  });
   const google = new OAuth2Client();
   const verify = options.verifyGoogle ?? (async (idToken, audience) => {
     const ticket = await google.verifyIdToken({ idToken, audience });

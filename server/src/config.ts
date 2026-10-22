@@ -6,6 +6,7 @@ export const windowsClientId = '853649790752-s8t10u7gj5u3b4m8gd0paqhsabshv131.ap
 export const webClientId = '853649790752-vm13udq65n5ul6o3vferd10a8gora651.apps.googleusercontent.com';
 
 const environment = z.object({
+  VERCEL: z.literal('1').optional(),
   MONGODB_URI: z.string().startsWith('mongodb'),
   MONGODB_DB: z.string().regex(/^[\w-]+$/),
   HOST: z.string().default('127.0.0.1'),

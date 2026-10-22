@@ -1,5 +1,3 @@
-import 'dart:io';
-
 class AppConfig {
   AppConfig._();
   static const bool enableAuthentication = true;
@@ -14,11 +12,9 @@ class AppConfig {
         '853649790752-vm13udq65n5ul6o3vferd10a8gora651.apps.googleusercontent.com',
   );
   static String get apiUrl {
-    const configured = String.fromEnvironment('API_BASE_URL');
-    return configured.isNotEmpty
-        ? configured
-        : Platform.isAndroid
-        ? 'http://10.0.2.2:3000'
-        : 'http://127.0.0.1:3000';
+    return const String.fromEnvironment(
+      'API_BASE_URL',
+      defaultValue: 'https://microplanner-api.vercel.app',
+    );
   }
 }

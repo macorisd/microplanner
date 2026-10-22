@@ -1,11 +1,16 @@
 # microplanner
 
 Flutter planner for **Windows and Android**, with Google sign-in, a local Node.js
-API and private per-user data in MongoDB Atlas.
+API and private per-user data in MongoDB Atlas. Both platforms now default to
+`https://microplanner-api.vercel.app`, independently of the laptop/USB connection.
+
+Download signed Android APKs from [GitHub Releases](https://github.com/macorisd/microplanner/releases).
+See [cloud hosting and Android releases](docs/cloud-and-releases.md) for installation,
+signing, the development-app transition, deployment, backups and release recovery.
 
 ## Run locally
 
-Requirements: Flutter 3.38 / Dart 3.10 or compatible, Node.js 22+, a configured
+Requirements: Flutter 3.38.6 / Dart 3.10.7, Node.js 24, a configured
 Google OAuth project, and an Atlas replica set (Atlas Free works).
 
 1. Keep `server.env` in the repository root, using `server.env.example` as a
@@ -22,17 +27,17 @@ Google OAuth project, and an Atlas replica set (Atlas Free works).
 
    ```powershell
    flutter pub get
-   flutter run -d windows
+   flutter run -d windows --dart-define=API_BASE_URL=http://127.0.0.1:3000
    ```
 
 For Android, use a debug build while testing the local HTTP API:
 
 ```powershell
-flutter run -d <android-device-id>
+flutter run -d <android-device-id> --dart-define=API_BASE_URL=http://10.0.2.2:3000
 ```
 
-The standard emulator defaults to `http://10.0.2.2:3000`. Windows defaults to
-`http://127.0.0.1:3000`.
+Local development requires an explicit `API_BASE_URL` override. The standard
+emulator reaches the host at `http://10.0.2.2:3000`; Windows uses `http://127.0.0.1:3000`.
 
 For a physical phone over USB, enable USB debugging, connect the phone and
 authorize the computer on the phone. Use `flutter devices` to find its ID.
@@ -81,10 +86,9 @@ identifier. Local development and production may override Client IDs using:
 - Flutter Android: `--dart-define=GOOGLE_WEB_CLIENT_ID=...`.
 
 When distributing Android with a different signing key or Play App Signing,
-register the SHA-1 of the delivered app certificate. The current release Gradle
-configuration still signs with the debug key and is for development, not store
-publication. For public deployment configure HTTPS and use
-`--dart-define=API_BASE_URL=https://your-api.example`. Android release builds do
+register the SHA-1 of the delivered app certificate. Release builds now require
+the persistent release keystore; debug signing is never a release fallback.
+The hosted HTTPS API is the default. Android release builds do
 not permit unencrypted HTTP; the exception exists only in the debug manifest.
 
 ## MongoDB and local data
