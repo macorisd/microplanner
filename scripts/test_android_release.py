@@ -95,11 +95,11 @@ class ReleaseTests(unittest.TestCase):
             directory = Path(temporary)
             apk, checksum = release.names('v0.2.0')
             (directory / apk).write_bytes(b'new-apk')
-            (directory / checksum).write_text(hashlib.sha256(b'new-apk').hexdigest() + f'  {apk}\n')
+            (directory / checksum).write_text(hashlib.sha256(b'new-apk').hexdigest() + f'  {apk}\n', newline='\n')
             draft = {'id': 1, 'draft': True, 'assets': [{'name': apk, 'digest': 'sha256:other'}]}
             with patch.object(release, 'verified_commit', return_value='a' * 40), \
                     patch.object(release, 'release_for', return_value=draft), \
-                    patch.object(release, 'api') as api, self.assertRaises(ValueError):
+                    patch.object(release, 'api') as api, self.assertRaisesRegex(ValueError, 'Different asset'):
                 release.publish('v0.2.0', directory)
             api.assert_not_called()
 
@@ -140,7 +140,7 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
             (directory / apk).write_bytes(b'original-apk')
-            (directory / checksum).write_text(hashlib.sha256(b'original-apk').hexdigest() + f'  {apk}\n')
+            (directory / checksum).write_text(hashlib.sha256(b'original-apk').hexdigest() + f'  {apk}\n', newline='\n')
             with patch.object(release, 'verified_commit', return_value='a' * 40), \
                     patch.object(release, 'release_for', side_effect=lambda tag: record()), \
                     patch.object(release, 'api', api):
@@ -154,7 +154,7 @@ class ReleaseTests(unittest.TestCase):
                 self.assertEqual(state['uploads'].count(checksum), 2)
                 # A successful publication is immutable even if a later build differs.
                 (directory / apk).write_bytes(b'different-rebuild')
-                (directory / checksum).write_text(hashlib.sha256(b'different-rebuild').hexdigest() + f'  {apk}\n')
+                (directory / checksum).write_text(hashlib.sha256(b'different-rebuild').hexdigest() + f'  {apk}\n', newline='\n')
                 release.publish('v0.2.0', directory)
                 self.assertEqual(state['files'][apk], b'original-apk')
                 self.assertEqual(len(state['uploads']), 3)
