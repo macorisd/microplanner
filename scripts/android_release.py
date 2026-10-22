@@ -132,9 +132,9 @@ def resolve(event):
 
 
 def verify_certificate(output):
-    # apksigner uses SDK ranges instead of signer numbers for v3.1 signatures.
+    # apksigner labels vary by SDK: numbered, SDK ranges, or "V2 Signer:".
     # Source stamps and public-key fingerprints are not APK signing identities.
-    records = re.findall(r'^(Signer [^\r\n]+?) certificate SHA-1 digest: ([^\r\n]*)$',
+    records = re.findall(r'^((?:V\d+(?:\.\d+)? )?Signer[^\r\n]*?) certificate SHA-1 digest: ([^\r\n]*)$',
                          output, re.M | re.I)
     if not records or any(digest.strip().lower() != SHA1 for _, digest in records):
         observed = ', '.join(digest.strip().lower() for _, digest in records) or 'none'

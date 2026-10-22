@@ -38,8 +38,9 @@ class ReleaseTests(unittest.TestCase):
     def setUp(self):
         self.calls = []
 
-    def test_numbered_and_sdk_range_certificate_formats_are_accepted(self):
-        for signer in ('Signer #1', 'Signer (minSdkVersion=24, maxSdkVersion=32)',
+    def test_sdk_36_and_37_certificate_formats_are_accepted(self):
+        for signer in ('Signer #1', 'V2 Signer:', 'V3 Signer:', 'V3.1 Signer:',
+                       'Signer (minSdkVersion=24, maxSdkVersion=32)',
                        'Signer (minSdkVersion=33, maxSdkVersion=2147483647)',
                        'Signer (minSdkVersion=33 (dev release=true), maxSdkVersion=2147483647)'):
             for digest in (release.SHA1, release.SHA1.upper()):
@@ -52,6 +53,7 @@ class ReleaseTests(unittest.TestCase):
         for output in ('', f'Signer #1 certificate SHA-1 digest: {wrong}\n',
                        expected + f'Signer #2 certificate SHA-1 digest: {wrong}\n',
                        expected + 'Signer #2 certificate SHA-1 digest: malformed\n',
+                       expected + f'V2 Signer: certificate SHA-1 digest: {wrong}\n',
                        expected + f'Signer (minSdkVersion=33, maxSdkVersion=2147483647) certificate SHA-1 digest: {wrong}\n',
                        f'Source Stamp Signer certificate SHA-1 digest: {release.SHA1}\n',
                        f'Signer #1 public key SHA-1 digest: {release.SHA1}\n'):
