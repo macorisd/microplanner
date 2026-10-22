@@ -1,148 +1,36 @@
 name: Publish Android APK
 on:
-  workflow_run:
-    workflows: ["Release version on merge"]
-    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing annotated version tag on main
+        description: Version under investigation
         required: true
         type: string
-permissions:
-  contents: read
-concurrency:
-  group: android-release
-  cancel-in-progress: false
+permissions: {}
 jobs:
-  resolve:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+  diagnose:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      contents: read
-      actions: read
-      pull-requests: read
-    outputs:
-      skip: ${{ steps.release.outputs.skip }}
-      tag: ${{ steps.release.outputs.tag }}
-      sha: ${{ steps.release.outputs.sha }}
-      version: ${{ steps.release.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          persist-credentials: false
-      - name: Resolve annotated tag and verify merged source
-        id: release
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python3 scripts/android_release.py resolve
-  build:
-    needs: resolve
-    if: needs.resolve.outputs.skip == 'false'
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.resolve.outputs.sha }}
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: server/package-lock.json
-      - name: Check API
-        working-directory: server
-        run: |
-          npm ci
-          npm run build
-          npm test
-      - name: Check release safeguards
-        run: python3 -m unittest discover -s scripts -p 'test_*.py'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install pinned Flutter SDK
-        run: |
-          git clone --depth 1 --branch 3.38.6 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
-          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
-      - name: Check Flutter
-        run: |
-          flutter pub get
-          flutter analyze
-          flutter test
-      - name: Restore persistent release key
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      - name: Inspect Android verification tools without signing secrets
         run: |
           python3 - <<'PY'
-          import base64, os
+          import os, re, subprocess
           from pathlib import Path
-          value = os.environ['ANDROID_KEYSTORE_BASE64']
-          if not value:
-              raise SystemExit('Release signing secret is missing')
-          key = Path(os.environ['RUNNER_TEMP']) / 'microplanner-release.jks'
-          key.write_bytes(base64.b64decode(value, validate=True))
-          key.chmod(0o600)
+          tools = Path(os.environ['ANDROID_HOME']) / 'build-tools'
+          versions = sorted((p for p in tools.iterdir() if p.is_dir() and re.fullmatch(r'\d+\.\d+\.\d+', p.name)), key=lambda p: tuple(map(int, p.name.split('.'))))
+          for directory in versions:
+              executable = directory / 'apksigner'
+              print('SDK build tools:', directory.name, flush=True)
+              if not executable.exists():
+                  print('apksigner missing')
+                  continue
+              for args in (['--version'], ['verify', '--print-certs', '/tmp/does-not-exist.apk']):
+                  result = subprocess.run([str(executable), *args], capture_output=True, text=True)
+                  print('Arguments:', args, 'exit:', result.returncode, 'stdout:', repr(result.stdout), 'stderr:', repr(result.stderr))
+              print('Launcher:', executable.read_text()[:6000])
           PY
-      - name: Build signed release APK
-        env:
-          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/microplanner-release.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: flutter build apk --release
-      - name: Verify package, version and signing identity
-        env:
-          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
-        run: |
-          python3 scripts/android_release.py verify-apk --tag "$RELEASE_TAG" --apk build/app/outputs/flutter-apk/app-release.apk
-          python3 - <<'PY'
-          from pathlib import Path
-          import hashlib, os
-          version = os.environ['RELEASE_TAG'][1:]
-          name = f'microplanner-{version}-android.apk'
-          directory = Path('release-assets')
-          directory.mkdir()
-          data = Path('build/app/outputs/flutter-apk/app-release.apk').read_bytes()
-          (directory / name).write_bytes(data)
-          (directory / (name + '.sha256')).write_text(hashlib.sha256(data).hexdigest() + '  ' + name + '\n', encoding='ascii')
-          PY
-      - name: Remove temporary signing key
-        if: always()
-        run: |
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-          (Path(os.environ['RUNNER_TEMP']) / 'microplanner-release.jks').unlink(missing_ok=True)
-          PY
-      - uses: actions/upload-artifact@v4
-        with:
-          name: android-release
-          path: release-assets/
-          retention-days: 7
-          if-no-files-found: error
-  publish:
-    needs: [resolve, build]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.resolve.outputs.sha }}
-          persist-credentials: false
-      - uses: actions/download-artifact@v4
-        with:
-          name: android-release
-          path: release-assets
-      - name: Publish APK and checksum as an immutable prerelease
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
-          RELEASE_SHA: ${{ needs.resolve.outputs.sha }}
-        run: python3 scripts/android_release.py publish --tag "$RELEASE_TAG"
