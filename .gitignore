@@ -59,6 +59,7 @@ unlinked_spec.ds
 **/android/**/*.iml
 **/android/**/gradle-wrapper.jar
 .gradle/
+.kotlin/
 **/android/captures/
 **/android/gradlew
 **/android/gradlew.bat
