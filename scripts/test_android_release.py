@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
+from urllib.parse import parse_qs, urlparse
 import android_release as release
 
 
@@ -101,6 +102,68 @@ class ReleaseTests(unittest.TestCase):
                     patch.object(release, 'api') as api, self.assertRaises(ValueError):
                 release.publish('v0.2.0', directory)
             api.assert_not_called()
+
+    def test_failed_upload_stays_draft_and_retry_only_uploads_missing_asset(self):
+        state = {'release': None, 'files': {}, 'uploads': [], 'fail_checksum': True}
+        apk, checksum = release.names('v0.2.0')
+
+        def record():
+            if state['release'] is None:
+                return None
+            return {**state['release'], 'assets': [
+                {'name': name, 'id': index, 'digest': 'sha256:' + hashlib.sha256(data).hexdigest()}
+                for index, (name, data) in enumerate(state['files'].items(), 1)]}
+
+        def api(method, path, data=None, binary=False):
+            if method == 'POST' and path == '/releases':
+                self.assertTrue(data['draft'])
+                state['release'] = {'id': 1, 'draft': True, 'prerelease': True,
+                                    'upload_url': 'https://uploads.github.com/release{?name}'}
+                return record()
+            if method == 'POST' and path.startswith('https://uploads.github.com/'):
+                name = parse_qs(urlparse(path).query)['name'][0]
+                state['uploads'].append(name)
+                if name == checksum and state['fail_checksum']:
+                    state['fail_checksum'] = False
+                    raise RuntimeError('Interrupted checksum upload')
+                state['files'][name] = data
+                return {}
+            if method == 'GET' and path.startswith('/releases/assets/'):
+                index = int(path.rsplit('/', 1)[1]) - 1
+                return list(state['files'].values())[index]
+            if method == 'PATCH':
+                self.assertEqual(set(state['files']), {apk, checksum})
+                state['release'].update(data)
+                return record()
+            raise AssertionError((method, path))
+
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            (directory / apk).write_bytes(b'original-apk')
+            (directory / checksum).write_text(hashlib.sha256(b'original-apk').hexdigest() + f'  {apk}\n')
+            with patch.object(release, 'verified_commit', return_value='a' * 40), \
+                    patch.object(release, 'release_for', side_effect=lambda tag: record()), \
+                    patch.object(release, 'api', api):
+                with self.assertRaisesRegex(RuntimeError, 'Interrupted'):
+                    release.publish('v0.2.0', directory)
+                self.assertTrue(state['release']['draft'])
+                self.assertEqual(set(state['files']), {apk})
+                release.publish('v0.2.0', directory)
+                self.assertFalse(state['release']['draft'])
+                self.assertEqual(state['uploads'].count(apk), 1)
+                self.assertEqual(state['uploads'].count(checksum), 2)
+                # A successful publication is immutable even if a later build differs.
+                (directory / apk).write_bytes(b'different-rebuild')
+                (directory / checksum).write_text(hashlib.sha256(b'different-rebuild').hexdigest() + f'  {apk}\n')
+                release.publish('v0.2.0', directory)
+                self.assertEqual(state['files'][apk], b'original-apk')
+                self.assertEqual(len(state['uploads']), 3)
+
+    def test_tag_change_between_resolution_and_publication_is_rejected(self):
+        with patch.object(release, 'verified_commit', return_value='b' * 40), \
+                patch.dict('os.environ', {'RELEASE_SHA': 'a' * 40}), \
+                self.assertRaisesRegex(ValueError, 'tag changed'):
+            release.publish('v0.2.0', Path('unused'))
 
 
 if __name__ == '__main__':
