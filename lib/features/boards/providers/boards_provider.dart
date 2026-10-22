@@ -1,267 +1,161 @@
 import 'package:flutter/foundation.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/data/workspace_controller.dart';
 import '../data/models/board.dart';
 import '../data/models/subject.dart';
 
-/// Provider for board and subject management with Hive persistence
 class BoardsProvider extends ChangeNotifier {
-  static const String _boardsBoxName = 'boards';
-  static const String _subjectsBoxName = 'subjects';
-  static const String _defaultBoardId = 'default-board';
-  
-  final Uuid _uuid = const Uuid();
-  
-  Box<Board>? _boardsBox;
-  Box<Subject>? _subjectsBox;
-  List<Board> _boards = [];
-  List<Subject> _subjects = [];
+  final WorkspaceController workspace;
   String? _currentBoardId;
-  String? _subjectsBoardId; // Board ID for subjects view (may differ from current)
-  bool _isLoading = false;
+  String? _subjectsBoardId;
+  String? _owner;
   bool _showSubjectsView = false;
-
-  List<Board> get boards => _boards;
-  List<Subject> get subjects => _subjects;
-  bool get isLoading => _isLoading;
+  BoardsProvider(this.workspace) {
+    workspace.addListener(_changed);
+  }
+  List<Board> get boards => List.unmodifiable(workspace.snapshot.boards);
+  List<Subject> get subjects => List.unmodifiable(workspace.snapshot.subjects);
+  bool get isLoading => workspace.isLoading;
   bool get showSubjectsView => _showSubjectsView;
-  
-  String? get currentBoardId => _currentBoardId;
-  
-  Board? get currentBoard {
-    if (_currentBoardId == null) return null;
-    try {
-      return _boards.firstWhere((b) => b.id == _currentBoardId);
-    } catch (_) {
-      return null;
+  String? get currentBoardId => boards.any((b) => b.id == _currentBoardId)
+      ? _currentBoardId
+      : boards.firstOrNull?.id;
+  Board? get currentBoard =>
+      boards.where((b) => b.id == currentBoardId).firstOrNull;
+  List<Subject> get currentBoardSubjects => subjects
+      .where((s) => s.boardId == (_subjectsBoardId ?? currentBoardId))
+      .toList();
+  String? get subjectsBoardName => boards
+      .where((b) => b.id == (_subjectsBoardId ?? currentBoardId))
+      .firstOrNull
+      ?.name;
+  void _changed() {
+    if (_owner != workspace.ownerId) {
+      _owner = workspace.ownerId;
+      _currentBoardId = null;
+      _subjectsBoardId = null;
+      _showSubjectsView = false;
     }
-  }
-
-  /// Subjects for the board being viewed in subjects panel
-  List<Subject> get currentBoardSubjects {
-    final boardId = _subjectsBoardId ?? _currentBoardId;
-    if (boardId == null) return [];
-    return _subjects.where((s) => s.boardId == boardId).toList();
-  }
-
-  /// Name of board being viewed in subjects panel
-  String? get subjectsBoardName {
-    final boardId = _subjectsBoardId ?? _currentBoardId;
-    if (boardId == null) return null;
-    try {
-      return _boards.firstWhere((b) => b.id == boardId).name;
-    } catch (_) {
-      return null;
+    if (_subjectsBoardId != null &&
+        !boards.any((b) => b.id == _subjectsBoardId)) {
+      _subjectsBoardId = null;
+      _showSubjectsView = false;
     }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Initialization
-  // ─────────────────────────────────────────────────────────────────────────
-  
-  Future<void> init() async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      _boardsBox = await Hive.openBox<Board>(_boardsBoxName);
-      _subjectsBox = await Hive.openBox<Subject>(_subjectsBoxName);
-      _loadBoards();
-      _loadSubjects();
-      
-      // Create default board if none exist
-      if (_boards.isEmpty) {
-        await _createDefaultBoard();
-        _loadBoards(); // Reload after creating default
-      }
-      
-      // Always set current board to first one if not set
-      if (_boards.isNotEmpty) {
-        _currentBoardId = _boards.first.id;
-      }
-    } catch (e) {
-      debugPrint('Error initializing boards: $e');
-    }
-
-    _isLoading = false;
     notifyListeners();
   }
 
-  Future<void> _createDefaultBoard() async {
-    final defaultBoard = Board.create(
-      id: _defaultBoardId,
-      name: 'Board 1',
-    );
-    await _boardsBox?.put(defaultBoard.id, defaultBoard);
-    _loadBoards();
-  }
-
-  void _loadBoards() {
-    if (_boardsBox != null) {
-      _boards = _boardsBox!.values.toList();
-      // Sort by sortOrder (ascending), then by createdAt as fallback
-      _boards.sort((a, b) {
-        final orderCompare = a.sortOrder.compareTo(b.sortOrder);
-        if (orderCompare != 0) return orderCompare;
-        return a.createdAt.compareTo(b.createdAt);
-      });
-    }
-  }
-
-  void _loadSubjects() {
-    if (_subjectsBox != null) {
-      _subjects = _subjectsBox!.values.toList();
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Board Operations
-  // ─────────────────────────────────────────────────────────────────────────
-
-  void selectBoard(String boardId) {
-    _currentBoardId = boardId;
+  void selectBoard(String id) {
+    _currentBoardId = id;
     _showSubjectsView = false;
     notifyListeners();
   }
 
-  Future<void> addBoard({String? name}) async {
-    final boardNumber = _boards.length + 1;
-    // Set sortOrder to be after all existing boards
-    final maxSortOrder = _boards.isEmpty 
-        ? 0 
-        : _boards.map((b) => b.sortOrder).reduce((a, b) => a > b ? a : b);
+  Future<bool> addBoard({String? name}) async {
     final board = Board.create(
-      id: _uuid.v4(),
-      name: name ?? 'Board $boardNumber',
-      sortOrder: maxSortOrder + 1,
+      id: const Uuid().v4(),
+      name: name ?? 'Board ${boards.length + 1}',
+      sortOrder:
+          boards.fold<int>(
+            -1,
+            (max, b) => b.sortOrder > max ? b.sortOrder : max,
+          ) +
+          1,
     );
-    
-    await _boardsBox?.put(board.id, board);
-    _loadBoards();
-    _currentBoardId = board.id;
-    notifyListeners();
+    final owner = workspace.ownerId;
+    final success = await workspace.mutate(
+      (s) => s.copyWith(boards: [...s.boards, board]),
+    );
+    if (success && owner == workspace.ownerId) {
+      _currentBoardId = board.id;
+      notifyListeners();
+    }
+    return success;
   }
 
-  Future<void> updateBoard(Board board) async {
-    await _boardsBox?.put(board.id, board);
-    _loadBoards();
-    notifyListeners();
+  Future<bool> updateBoard(Board board) => workspace.mutate(
+    (s) => s.copyWith(
+      boards: s.boards.map((b) => b.id == board.id ? board : b).toList(),
+    ),
+  );
+  Future<bool> deleteBoard(String id) async {
+    if (boards.length <= 1) return false;
+    return workspace.mutate(
+      (s) => s.copyWith(
+        boards: s.boards.where((b) => b.id != id).toList(),
+        subjects: s.subjects.where((sub) => sub.boardId != id).toList(),
+        tasks: s.tasks.where((t) => t.boardId != id).toList(),
+      ),
+    );
   }
 
-  Future<void> deleteBoard(String boardId) async {
-    // Don't allow deleting the last board
-    if (_boards.length <= 1) return;
-    
-    // Delete all subjects in this board
-    final boardSubjects = _subjects.where((s) => s.boardId == boardId).toList();
-    for (final subject in boardSubjects) {
-      await _subjectsBox?.delete(subject.id);
-    }
-    
-    await _boardsBox?.delete(boardId);
-    _loadBoards();
-    _loadSubjects();
-    
-    // Switch to another board if current was deleted
-    if (_currentBoardId == boardId && _boards.isNotEmpty) {
-      _currentBoardId = _boards.first.id;
-    }
-    
-    notifyListeners();
-  }
-
-  /// Reorder boards by moving a board from oldIndex to newIndex
-  Future<void> reorderBoards(int oldIndex, int newIndex) async {
-    // Adjust for ReorderableListView behavior
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
-    }
-    
-    // Move the board in the list
-    final board = _boards.removeAt(oldIndex);
-    _boards.insert(newIndex, board);
-    
-    // Update sortOrder for all boards
-    for (int i = 0; i < _boards.length; i++) {
-      final updatedBoard = _boards[i].copyWith(sortOrder: i);
-      await _boardsBox?.put(updatedBoard.id, updatedBoard);
-    }
-    
-    _loadBoards();
-    notifyListeners();
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Subject Operations
-  // ─────────────────────────────────────────────────────────────────────────
-
+  Future<bool> reorderBoards(int oldIndex, int newIndex) =>
+      workspace.mutate((s) {
+        final ordered = [...s.boards];
+        if (newIndex > oldIndex) newIndex--;
+        ordered.insert(newIndex, ordered.removeAt(oldIndex));
+        return s.copyWith(
+          boards: [
+            for (var i = 0; i < ordered.length; i++)
+              ordered[i].copyWith(sortOrder: i),
+          ],
+        );
+      });
   void toggleSubjectsView() {
     _showSubjectsView = !_showSubjectsView;
-    if (!_showSubjectsView) {
-      _subjectsBoardId = null;
-    }
+    if (!_showSubjectsView) _subjectsBoardId = null;
     notifyListeners();
   }
 
-  void showSubjectsForBoard(String boardId) {
-    _subjectsBoardId = boardId;
+  void showSubjectsForBoard(String id) {
+    _subjectsBoardId = id;
     _showSubjectsView = true;
     notifyListeners();
   }
 
   void hideSubjectsView() {
-    _showSubjectsView = false;
     _subjectsBoardId = null;
+    _showSubjectsView = false;
     notifyListeners();
   }
 
-  Future<void> addSubject({required String name, int? color}) async {
-    final boardId = _subjectsBoardId ?? _currentBoardId;
-    if (boardId == null) return;
-    
-    final subject = Subject(
-      id: _uuid.v4(),
-      name: name,
-      boardId: boardId,
-      color: color ?? 0xFFCCCCCC,
+  Future<bool> addSubject({required String name, int? color}) async {
+    final boardId = _subjectsBoardId ?? currentBoardId;
+    if (boardId == null) return false;
+    return workspace.mutate(
+      (s) => s.copyWith(
+        subjects: [
+          ...s.subjects,
+          Subject(
+            id: const Uuid().v4(),
+            name: name,
+            boardId: boardId,
+            color: color ?? 0xffcccccc,
+          ),
+        ],
+      ),
     );
-    
-    await _subjectsBox?.put(subject.id, subject);
-    _loadSubjects();
-    notifyListeners();
   }
 
-  Future<void> updateSubject(Subject subject) async {
-    await _subjectsBox?.put(subject.id, subject);
-    _loadSubjects();
-    notifyListeners();
-  }
-
-  Future<void> deleteSubject(String subjectId) async {
-    await _subjectsBox?.delete(subjectId);
-    _loadSubjects();
-    notifyListeners();
-  }
-
-  /// Get subject by ID
-  Subject? getSubjectById(String? id) {
-    if (id == null) return null;
-    try {
-      return _subjects.firstWhere((s) => s.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Cleanup
-  // ─────────────────────────────────────────────────────────────────────────
-
-  Future<void> clearAll() async {
-    await _boardsBox?.clear();
-    await _subjectsBox?.clear();
-    _loadBoards();
-    _loadSubjects();
-    notifyListeners();
+  Future<bool> updateSubject(Subject subject) => workspace.mutate(
+    (s) => s.copyWith(
+      subjects: s.subjects
+          .map((item) => item.id == subject.id ? subject : item)
+          .toList(),
+    ),
+  );
+  Future<bool> deleteSubject(String id) => workspace.mutate(
+    (s) => s.copyWith(
+      subjects: s.subjects.where((item) => item.id != id).toList(),
+      tasks: s.tasks
+          .map((t) => t.subjectId == id ? t.copyWith(subjectId: null) : t)
+          .toList(),
+    ),
+  );
+  Subject? getSubjectById(String? id) =>
+      subjects.where((s) => s.id == id).firstOrNull;
+  @override
+  void dispose() {
+    workspace.removeListener(_changed);
+    super.dispose();
   }
 }

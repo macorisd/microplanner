@@ -8,6 +8,7 @@ import '../../../auth/data/auth_service.dart';
 import '../../../boards/data/models/board.dart';
 import '../../../boards/providers/boards_provider.dart';
 import 'subject_dialog.dart';
+import 'save_status.dart';
 
 /// Resizable sidebar navigation widget
 /// Contains Boards section with subjects management and Sign Out
@@ -282,21 +283,29 @@ class _BoardsSection extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('New Board'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Board name',
-            hintText: 'Enter board name',
-          ),
-          onSubmitted: (_) {
-            if (controller.text.trim().isNotEmpty) {
-              context.read<BoardsProvider>().addBoard(
-                name: controller.text.trim(),
-              );
-              Navigator.of(dialogContext).pop();
-            }
-          },
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Board name',
+                hintText: 'Enter board name',
+              ),
+              onSubmitted: (_) async {
+                if (controller.text.trim().isNotEmpty) {
+                  final saved = await context.read<BoardsProvider>().addBoard(
+                    name: controller.text.trim(),
+                  );
+                  if (saved && dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop();
+                  }
+                }
+              },
+            ),
+            const SaveStatus(),
+          ],
         ),
         actions: [
           TextButton(
@@ -304,12 +313,14 @@ class _BoardsSection extends StatelessWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               final name = controller.text.trim();
-              context.read<BoardsProvider>().addBoard(
+              final saved = await context.read<BoardsProvider>().addBoard(
                 name: name.isEmpty ? null : name,
               );
-              Navigator.of(dialogContext).pop();
+              if (saved && dialogContext.mounted) {
+                Navigator.of(dialogContext).pop();
+              }
             },
             child: const Text('Create'),
           ),
@@ -386,7 +397,7 @@ class _BoardCardState extends State<_BoardCard> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Board'),
         content: Text(
-          'Are you sure you want to delete "${widget.board.name}"? This will also delete all subjects in this board.',
+          'Are you sure you want to delete "${widget.board.name}"? This will also delete all subjects and tasks in this board.',
         ),
         actions: [
           TextButton(
@@ -394,9 +405,13 @@ class _BoardCardState extends State<_BoardCard> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
-              context.read<BoardsProvider>().deleteBoard(widget.board.id);
-              Navigator.of(dialogContext).pop();
+            onPressed: () async {
+              final saved = await context.read<BoardsProvider>().deleteBoard(
+                widget.board.id,
+              );
+              if (saved && dialogContext.mounted) {
+                Navigator.of(dialogContext).pop();
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red.shade700,
@@ -701,10 +716,9 @@ class _SubjectsView extends StatelessWidget {
       builder: (dialogContext) => SubjectDialog(
         title: 'New Subject',
         initialName: '',
-        initialColor: AppColors.subjectColors.first.value,
-        onSave: (name, color) {
-          boardsProvider.addSubject(name: name, color: color);
-        },
+        initialColor: AppColors.subjectColors.first.toARGB32(),
+        onSave: (name, color) =>
+            boardsProvider.addSubject(name: name, color: color),
       ),
     );
   }
@@ -806,9 +820,13 @@ class _SubjectItemState extends State<_SubjectItem> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
-              context.read<BoardsProvider>().deleteSubject(widget.subject.id);
-              Navigator.of(dialogContext).pop();
+            onPressed: () async {
+              final saved = await context.read<BoardsProvider>().deleteSubject(
+                widget.subject.id,
+              );
+              if (saved && dialogContext.mounted) {
+                Navigator.of(dialogContext).pop();
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red.shade700,
@@ -832,7 +850,7 @@ class _SubjectItemState extends State<_SubjectItem> {
         initialColor: widget.subject.color,
         onSave: (name, color) {
           final updated = widget.subject.copyWith(name: name, color: color);
-          boardsProvider.updateSubject(updated);
+          return boardsProvider.updateSubject(updated);
         },
       ),
     );

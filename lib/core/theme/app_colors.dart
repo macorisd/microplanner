@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Cashew-inspired color palette for MicroPlanner
+/// Cashew-inspired color palette for microplanner
 /// Soft, muted tones with gentle contrast for a friendly, minimalist feel
 class AppColors {
   AppColors._();

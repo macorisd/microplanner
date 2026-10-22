@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/data/workspace_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../boards/providers/boards_provider.dart';
@@ -10,144 +11,77 @@ import 'widgets/edit_task_dialog.dart';
 import 'widgets/sidebar.dart';
 import 'widgets/task_column.dart';
 
-/// Main dashboard screen with 3-column task board
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 850;
+    final workspace = context.watch<WorkspaceController>();
     return Scaffold(
+      appBar: compact ? AppBar(title: const Text('microplanner')) : null,
+      drawer: compact ? const Drawer(child: SafeArea(child: Sidebar())) : null,
       body: Row(
         children: [
-          // Sidebar
-          const Sidebar(),
-
-          // Main content area
+          if (!compact) const Sidebar(),
           Expanded(
             child: Container(
               color: AppColors.background,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Header
-                  Container(
+                  Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppTheme.spacingLarge,
                       vertical: AppTheme.spacingMedium,
                     ),
                     child: Row(
                       children: [
-                        Consumer<BoardsProvider>(
-                          builder: (context, boardsProvider, _) {
-                            final boardName =
-                                boardsProvider.currentBoard?.name ?? 'My Tasks';
-                            return Text(
-                              boardName,
-                              style: Theme.of(context).textTheme.displaySmall,
-                            );
-                          },
+                        Expanded(
+                          child: Text(
+                            context
+                                    .watch<BoardsProvider>()
+                                    .currentBoard
+                                    ?.name ??
+                                'My Tasks',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.displaySmall,
+                          ),
                         ),
-                        const Spacer(),
-                        // Refresh indicator
-                        Consumer<TasksProvider>(
-                          builder: (context, provider, _) {
-                            if (provider.isLoading) {
-                              return const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
+                        if (workspace.isLoading || workspace.isSaving)
+                          const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        IconButton(
+                          tooltip: 'Refresh cloud data',
+                          onPressed: workspace.isLoading || workspace.isSaving
+                              ? null
+                              : workspace.refresh,
+                          icon: const Icon(Icons.refresh),
                         ),
                       ],
                     ),
                   ),
-
-                  // Task columns
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppTheme.spacingLarge,
-                        0,
-                        AppTheme.spacingLarge,
-                        AppTheme.spacingLarge,
-                      ),
-                      child: Consumer<TasksProvider>(
-                        builder: (context, provider, _) {
-                          return Row(
-                            children: [
-                              // Complete column
-                              Expanded(
-                                child: TaskColumn(
-                                  title: 'Complete',
-                                  tasks: provider.completedTasks,
-                                  headerColor: AppColors.completeHeader,
-                                  headerBackgroundColor:
-                                      AppColors.completeHeaderLight,
-                                  icon: Icons.check_circle_rounded,
-                                  onToggleComplete: (task) {
-                                    provider.toggleTaskCompletion(task.id);
-                                  },
-                                  onDeleteTask: (task) {
-                                    _showDeleteConfirmDialog(context, task);
-                                  },
-                                  onEditTask: (task) {
-                                    _showEditTaskDialog(context, task);
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: AppTheme.spacingMedium),
-
-                              // Late column
-                              Expanded(
-                                child: TaskColumn(
-                                  title: 'Late',
-                                  tasks: provider.lateTasks,
-                                  headerColor: AppColors.lateHeader,
-                                  headerBackgroundColor:
-                                      AppColors.lateHeaderLight,
-                                  icon: Icons.warning_rounded,
-                                  onToggleComplete: (task) {
-                                    provider.toggleTaskCompletion(task.id);
-                                  },
-                                  onDeleteTask: (task) {
-                                    _showDeleteConfirmDialog(context, task);
-                                  },
-                                  onEditTask: (task) {
-                                    _showEditTaskDialog(context, task);
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: AppTheme.spacingMedium),
-
-                              // Upcoming column
-                              Expanded(
-                                child: TaskColumn(
-                                  title: 'Upcoming',
-                                  tasks: provider.upcomingTasks,
-                                  headerColor: AppColors.upcomingHeader,
-                                  headerBackgroundColor:
-                                      AppColors.upcomingHeaderLight,
-                                  icon: Icons.schedule_rounded,
-                                  onToggleComplete: (task) {
-                                    provider.toggleTaskCompletion(task.id);
-                                  },
-                                  onDeleteTask: (task) {
-                                    _showDeleteConfirmDialog(context, task);
-                                  },
-                                  onEditTask: (task) {
-                                    _showEditTaskDialog(context, task);
-                                  },
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final width = constraints.maxWidth < 900
+                            ? 900.0
+                            : constraints.maxWidth;
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: SizedBox(
+                            width: width,
+                            height: constraints.maxHeight,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(24, 0, 24, 80),
+                              child: _columns(context),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -157,52 +91,82 @@ class DashboardScreen extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddTaskDialog(context),
+        onPressed: workspace.canWrite ? () => _add(context) : null,
         icon: const Icon(Icons.add_rounded),
         label: const Text('New Task'),
       ),
     );
   }
 
-  void _showAddTaskDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AddTaskDialog(
-        onSave:
-            ({
-              required String name,
-              required DateTime deadline,
-              required type,
-              required priority,
-              String? subjectId,
-              String? description,
-            }) async {
-              await context.read<TasksProvider>().addTask(
-                name: name,
-                deadline: deadline,
-                type: type,
-                priority: priority,
-                subjectId: subjectId,
-                description: description,
-              );
-            },
+  Widget _columns(BuildContext context) {
+    final provider = context.watch<TasksProvider>();
+    Widget column(
+      String title,
+      List<Task> tasks,
+      Color color,
+      Color background,
+      IconData icon,
+    ) => Expanded(
+      child: TaskColumn(
+        title: title,
+        tasks: tasks,
+        headerColor: color,
+        headerBackgroundColor: background,
+        icon: icon,
+        onToggleComplete: (task) => provider.toggleTaskCompletion(task.id),
+        onDeleteTask: (task) => _delete(context, task),
+        onEditTask: (task) => _edit(context, task),
       ),
+    );
+    return Row(
+      children: [
+        column(
+          'Complete',
+          provider.completedTasks,
+          AppColors.completeHeader,
+          AppColors.completeHeaderLight,
+          Icons.check_circle_rounded,
+        ),
+        const SizedBox(width: AppTheme.spacingMedium),
+        column(
+          'Late',
+          provider.lateTasks,
+          AppColors.lateHeader,
+          AppColors.lateHeaderLight,
+          Icons.warning_rounded,
+        ),
+        const SizedBox(width: AppTheme.spacingMedium),
+        column(
+          'Upcoming',
+          provider.upcomingTasks,
+          AppColors.upcomingHeader,
+          AppColors.upcomingHeaderLight,
+          Icons.schedule_rounded,
+        ),
+      ],
     );
   }
 
-  void _showEditTaskDialog(BuildContext context, Task task) {
+  void _add(BuildContext context) {
+    final provider = context.read<TasksProvider>();
     showDialog(
       context: context,
-      builder: (dialogContext) => EditTaskDialog(
-        task: task,
-        onSave: (updatedTask) async {
-          await context.read<TasksProvider>().updateTask(updatedTask);
-        },
-      ),
+      builder: (_) => AddTaskDialog(onSave: provider.addTask),
     );
   }
 
-  void _showDeleteConfirmDialog(BuildContext context, Task task) {
+  void _edit(BuildContext context, Task task) {
+    if (!context.read<WorkspaceController>().canWrite) return;
+    final provider = context.read<TasksProvider>();
+    showDialog(
+      context: context,
+      builder: (_) => EditTaskDialog(task: task, onSave: provider.updateTask),
+    );
+  }
+
+  void _delete(BuildContext context, Task task) {
+    if (!context.read<WorkspaceController>().canWrite) return;
+    final provider = context.read<TasksProvider>();
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -210,13 +174,14 @@ class DashboardScreen extends StatelessWidget {
         content: Text('Are you sure you want to delete "${task.name}"?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
-              context.read<TasksProvider>().deleteTask(task.id);
-              Navigator.of(dialogContext).pop();
+            onPressed: () async {
+              if (await provider.deleteTask(task.id) && dialogContext.mounted) {
+                Navigator.pop(dialogContext);
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red.shade700,

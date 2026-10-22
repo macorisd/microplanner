@@ -7,11 +7,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../boards/data/models/subject.dart';
 import '../../../boards/providers/boards_provider.dart';
+import 'save_status.dart';
 
 /// Dialog for creating a new task
 /// All fields are displayed in a clean, Cashew-inspired form
 class AddTaskDialog extends StatefulWidget {
-  final Future<void> Function({
+  final Future<bool> Function({
     required String name,
     required DateTime deadline,
     required TaskType type,
@@ -49,11 +50,12 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   }
 
   Future<void> _submit() async {
+    if (_isLoading) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    // Combinar fecha y hora
+    // Combine date and time
     final deadlineWithTime = DateTime(
       _deadline.year,
       _deadline.month,
@@ -62,7 +64,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       _deadlineTime.minute,
     );
 
-    await widget.onSave(
+    final saved = await widget.onSave(
       name: _nameController.text.trim(),
       deadline: deadlineWithTime,
       type: _type,
@@ -73,8 +75,11 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           : _descriptionController.text.trim(),
     );
 
-    if (mounted) {
+    if (!mounted) return;
+    if (saved) {
       Navigator.of(context).pop();
+    } else {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -82,6 +87,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   Widget build(BuildContext context) {
     final boardsProvider = context.watch<BoardsProvider>();
     final subjects = boardsProvider.currentBoardSubjects;
+    if (_selectedSubjectId != null &&
+        !subjects.any((s) => s.id == _selectedSubjectId)) {
+      _selectedSubjectId = null;
+    }
 
     return Dialog(
       child: Focus(
@@ -95,130 +104,144 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
           }
           return KeyEventResult.ignored;
         },
-        child: Container(
-          width: 480,
-          padding: const EdgeInsets.all(AppTheme.spacingLarge),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(10),
+        child: SingleChildScrollView(
+          child: Container(
+            width: 480,
+            padding: const EdgeInsets.all(AppTheme.spacingLarge),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.add_task_rounded,
+                          color: AppColors.primary,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.add_task_rounded,
-                        color: AppColors.primary,
+                      const SizedBox(width: AppTheme.spacingMedium),
+                      Expanded(
+                        child: Text(
+                          'New Task',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: AppTheme.spacingMedium),
-                    Text(
-                      'New Task',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                      style: IconButton.styleFrom(
-                        foregroundColor: AppColors.textSecondary,
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close_rounded),
+                        style: IconButton.styleFrom(
+                          foregroundColor: AppColors.textSecondary,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppTheme.spacingLarge),
-
-                // Task name
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Task name',
-                    hintText: 'e.g., Math homework chapter 5',
+                    ],
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter a task name';
-                    }
-                    return null;
-                  },
-                  autofocus: true,
-                  onFieldSubmitted: (_) => _submit(),
-                ),
-                const SizedBox(height: AppTheme.spacingMedium),
+                  const SizedBox(height: AppTheme.spacingLarge),
 
-                // Description
-                TextFormField(
-                  controller: _descriptionController,
-                  focusNode: _descriptionFocusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Description (optional)',
-                    hintText: 'Add details about this task...',
-                  ),
-                  maxLines: 3,
-                  minLines: 2,
-                ),
-                const SizedBox(height: AppTheme.spacingMedium),
-
-                // Subject dropdown
-                _buildSubjectDropdown(subjects),
-                const SizedBox(height: AppTheme.spacingMedium),
-
-                // Deadline date and time
-                Row(
-                  children: [
-                    Expanded(child: _buildDeadlinePicker(context)),
-                    const SizedBox(width: AppTheme.spacingSmall),
-                    _buildTimePicker(context),
-                  ],
-                ),
-                const SizedBox(height: AppTheme.spacingMedium),
-
-                // Type dropdown
-                _buildTypeDropdown(),
-                const SizedBox(height: AppTheme.spacingMedium),
-
-                // Priority selector
-                _buildPrioritySelector(),
-                const SizedBox(height: AppTheme.spacingLarge),
-
-                // Actions
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.red.shade700,
-                      ),
-                      child: const Text('Cancel'),
+                  // Task name
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Task name',
+                      hintText: 'e.g., Math homework chapter 5',
                     ),
-                    const SizedBox(width: AppTheme.spacingSmall),
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(
-                                  Colors.white,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter a task name';
+                      }
+                      return null;
+                    },
+                    autofocus: true,
+                    onFieldSubmitted: (_) => _submit(),
+                  ),
+                  const SizedBox(height: AppTheme.spacingMedium),
+
+                  // Description
+                  TextFormField(
+                    controller: _descriptionController,
+                    focusNode: _descriptionFocusNode,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (optional)',
+                      hintText: 'Add details about this task...',
+                    ),
+                    maxLines: 3,
+                    minLines: 2,
+                  ),
+                  const SizedBox(height: AppTheme.spacingMedium),
+
+                  // Subject dropdown
+                  _buildSubjectDropdown(subjects),
+                  const SizedBox(height: AppTheme.spacingMedium),
+
+                  // Deadline date and time
+                  if (MediaQuery.sizeOf(context).width < 600) ...[
+                    _buildDeadlinePicker(context),
+                    const SizedBox(height: AppTheme.spacingSmall),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildTimePicker(context),
+                    ),
+                  ] else
+                    Row(
+                      children: [
+                        Expanded(child: _buildDeadlinePicker(context)),
+                        const SizedBox(width: AppTheme.spacingSmall),
+                        _buildTimePicker(context),
+                      ],
+                    ),
+                  const SizedBox(height: AppTheme.spacingMedium),
+
+                  // Type dropdown
+                  _buildTypeDropdown(),
+                  const SizedBox(height: AppTheme.spacingMedium),
+
+                  // Priority selector
+                  _buildPrioritySelector(),
+                  const SizedBox(height: AppTheme.spacingLarge),
+
+                  // Actions
+                  const SaveStatus(),
+                  OverflowBar(
+                    alignment: MainAxisAlignment.end,
+                    spacing: AppTheme.spacingSmall,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red.shade700,
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _submit,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white,
+                                  ),
                                 ),
-                              ),
-                            )
-                          : const Text('Create Task'),
-                    ),
-                  ],
-                ),
-              ],
+                              )
+                            : const Text('Create Task'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -300,21 +323,24 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               size: 20,
             ),
             const SizedBox(width: AppTheme.spacingMedium),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Deadline',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  DateFormat('EEE, MMM d, y').format(_deadline),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Deadline',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    DateFormat('EEE, MMM d, y').format(_deadline),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
             ),
-            const Spacer(),
             const Icon(
               Icons.chevron_right_rounded,
               color: AppColors.textTertiary,

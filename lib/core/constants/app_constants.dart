@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Task types available in MicroPlanner
+/// Task types available in microplanner
 enum TaskType {
   unassigned('No type', Icons.remove_rounded),
   homework('Homework', Icons.menu_book_rounded),
