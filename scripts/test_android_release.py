@@ -33,10 +33,31 @@ class ReleaseTests(unittest.TestCase):
             return {'merge_base_commit': {'sha': 'a' * 40}}
         if path == '/releases/tags/v0.2.0':
             raise HTTPError(path, 404, 'Not found', {}, None)
+        if path == '/releases?per_page=100&page=1':
+            return []
         raise AssertionError((method, path))
 
     def setUp(self):
         self.calls = []
+
+    def test_draft_lookup_uses_paginated_list_when_tag_endpoint_returns_404(self):
+        draft = {'id': 42, 'tag_name': 'v0.2.0', 'draft': True}
+        def api(method, path, *args, **kwargs):
+            if path == '/releases?per_page=100&page=1':
+                return [{'tag_name': 'v0.1.0'}] * 100
+            if path == '/releases?per_page=100&page=2':
+                return [draft]
+            return self.fake_api(method, path, *args, **kwargs)
+        with patch.object(release, 'api', api):
+            self.assertEqual(release.release_for('v0.2.0'), draft)
+
+    def test_ambiguous_draft_retry_is_rejected(self):
+        def api(method, path, *args, **kwargs):
+            if path.startswith('/releases?'):
+                return [{'tag_name': 'v0.2.0', 'draft': True}] * 2
+            return self.fake_api(method, path, *args, **kwargs)
+        with patch.object(release, 'api', api), self.assertRaisesRegex(ValueError, 'Multiple releases'):
+            release.release_for('v0.2.0')
 
     def test_sdk_36_and_37_certificate_formats_are_accepted(self):
         for signer in ('Signer #1', 'V2 Signer:', 'V3 Signer:', 'V3.1 Signer:',
@@ -137,9 +158,16 @@ class ReleaseTests(unittest.TestCase):
                 for index, (name, data) in enumerate(state['files'].items(), 1)]}
 
         def api(method, path, data=None, binary=False):
+            # The real tag endpoint hides drafts, even after their assets upload.
+            if method == 'GET' and path == '/releases/tags/v0.2.0':
+                if state['release'] is None or state['release']['draft']:
+                    raise HTTPError(path, 404, 'Not found', {}, None)
+                return record()
+            if method == 'GET' and path.startswith('/releases?'):
+                return [] if state['release'] is None else [record()]
             if method == 'POST' and path == '/releases':
                 self.assertTrue(data['draft'])
-                state['release'] = {'id': 1, 'draft': True, 'prerelease': True,
+                state['release'] = {'id': 1, 'tag_name': data['tag_name'], 'draft': True, 'prerelease': True,
                                     'upload_url': 'https://uploads.github.com/release{?name}'}
                 return record()
             if method == 'POST' and path.startswith('https://uploads.github.com/'):
@@ -153,6 +181,8 @@ class ReleaseTests(unittest.TestCase):
             if method == 'GET' and path.startswith('/releases/assets/'):
                 index = int(path.rsplit('/', 1)[1]) - 1
                 return list(state['files'].values())[index]
+            if method == 'GET' and path == '/releases/1':
+                return record()
             if method == 'PATCH':
                 self.assertEqual(set(state['files']), {apk, checksum})
                 state['release'].update(data)
@@ -164,7 +194,6 @@ class ReleaseTests(unittest.TestCase):
             (directory / apk).write_bytes(b'original-apk')
             (directory / checksum).write_text(hashlib.sha256(b'original-apk').hexdigest() + f'  {apk}\n', newline='\n')
             with patch.object(release, 'verified_commit', return_value='a' * 40), \
-                    patch.object(release, 'release_for', side_effect=lambda tag: record()), \
                     patch.object(release, 'api', api):
                 with self.assertRaisesRegex(RuntimeError, 'Interrupted'):
                     release.publish('v0.2.0', directory)

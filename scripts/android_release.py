@@ -48,7 +48,19 @@ def release_for(tag):
         if error.code != 404:
             raise
         error.close()
-        return None
+    # GitHub's tag endpoint omits drafts. Authenticated release listings include
+    # them, which is necessary to resume an interrupted first publication.
+    page = 1
+    matches = []
+    while True:
+        records = api('GET', f'/releases?per_page=100&page={page}')
+        matches.extend(record for record in records if record['tag_name'] == tag)
+        if len(records) < 100:
+            break
+        page += 1
+    if len(matches) > 1:
+        raise ValueError('Multiple releases use this tag; refusing an ambiguous retry')
+    return matches[0] if matches else None
 
 
 def names(tag):
@@ -199,7 +211,7 @@ def publish(tag, directory):
             continue
         api('POST', release['upload_url'].split('{')[0] + '?name=' + urllib.parse.quote(name), content)
     # Publish only after both files have uploaded and their digests are verified.
-    complete = release_for(tag)
+    complete = api('GET', f'/releases/{release["id"]}')
     verify_published(complete, tag)
     api('PATCH', f'/releases/{release["id"]}', {'draft': False, 'prerelease': True})
     print(f'Published {tag}: APK and checksum')
