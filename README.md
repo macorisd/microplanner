@@ -32,8 +32,23 @@ flutter run -d <android-device-id>
 ```
 
 The standard emulator defaults to `http://10.0.2.2:3000`. Windows defaults to
-`http://127.0.0.1:3000`. For a physical phone, put it on the same network as the
-computer, set `HOST=0.0.0.0` in `server.env`, restart the API and set its LAN address:
+`http://127.0.0.1:3000`.
+
+For a physical phone over USB, enable USB debugging, connect the phone and
+authorize the computer on the phone. Use `flutter devices` to find its ID.
+With `adb` from the Android SDK's `platform-tools` on your PATH, run:
+
+```powershell
+adb -s <android-device-id> reverse tcp:3000 tcp:3000
+flutter run -d <android-device-id> --dart-define=API_BASE_URL=http://127.0.0.1:3000
+```
+
+Keep the USB cable connected. Restore the reverse mapping if the phone disconnects
+or restarts. The API can keep listening on `127.0.0.1`; no LAN listener is needed.
+This is a development connection, not a way to distribute the app to friends.
+
+For a physical phone over Wi-Fi, put it on the same network as the computer,
+set `HOST=0.0.0.0` in `server.env`, restart the API and set its LAN address:
 
 ```powershell
 flutter run -d <android-device-id> --dart-define=API_BASE_URL=http://192.168.1.20:3000
