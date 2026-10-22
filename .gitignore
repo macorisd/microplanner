@@ -141,3 +141,4 @@ app.*.symbols
 server/node_modules/
 server/dist/
 !server/package-lock.json
+!pubspec.lock

@@ -160,7 +160,7 @@ class WorkspaceController extends ChangeNotifier {
           'revision': _snapshot.revision,
           'operationId': const Uuid().v4(),
           'data': data.data,
-          if (sourceId != null) 'sourceId': sourceId,
+          'sourceId': ?sourceId,
         },
       );
       if (!_current(generation, owner)) return false;
