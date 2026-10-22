@@ -18,7 +18,7 @@ jobs:
         shell: python3 {0}
         run: |
           """Embedded into the project workflow. Standard library only; no checkout.
-          
+
           PR text is parsed as data. This code never executes a command from a PR, changes
           branches, moves a tag or merges a PR. Tests inject a fake API with no network.
           """
@@ -28,17 +28,17 @@ jobs:
           import urllib.error
           import urllib.parse
           import urllib.request
-          
+
           VERSION = re.compile(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z')
           MARKER = re.compile(r'<!-- md-method-release (\{[^\r\n]*\}) -->')
-          
-          
+
+
           def version(value):
               if not isinstance(value, str) or not VERSION.fullmatch(value):
                   raise ValueError('Expected major.minor.patch')
               return tuple(map(int, value.split('.')))
-          
-          
+
+
           def increment(value, kind):
               major, minor, patch = version(value)
               if kind == 'major':
@@ -48,8 +48,8 @@ jobs:
               if kind == 'patch':
                   return f'{major}.{minor}.{patch+1}'
               raise ValueError('Unsupported release kind')
-          
-          
+
+
           def peel(api, repo, obj):
               for _ in range(8):
                   if obj['type'] == 'commit':
@@ -58,8 +58,8 @@ jobs:
                       break
                   obj = api('GET', f'/repos/{repo}/git/tags/{obj["sha"]}')['object']
               raise ValueError('Tag must resolve to a commit')
-          
-          
+
+
           def find_tag(api, repo, tag):
               try:
                   ref = api('GET', f'/repos/{repo}/git/ref/tags/{urllib.parse.quote(tag, safe="")}')
@@ -68,8 +68,8 @@ jobs:
                       return None
                   raise
               return peel(api, repo, ref['object'])
-          
-          
+
+
           def release(event, api):
               pr = event.get('pull_request', {})
               if not pr.get('merged'):
@@ -144,13 +144,13 @@ jobs:
               if find_tag(api, repo, tag) != sha:
                   raise ValueError('Tag publication could not be verified')
               return {'status': 'published', 'tag': tag, 'commit': sha}
-          
-          
+
+
           def main():
               api_url = os.environ.get('GITHUB_API_URL', 'https://api.github.com').rstrip('/')
               with open(os.environ['GITHUB_EVENT_PATH'], encoding='utf-8') as stream:
                   event = json.load(stream)
-          
+
               def api(method, path, payload=None):
                   request = urllib.request.Request(api_url + path, method=method,
                             data=None if payload is None else json.dumps(payload).encode('utf-8'),
@@ -160,7 +160,7 @@ jobs:
                   with urllib.request.urlopen(request, timeout=30) as response:
                       return json.load(response)
               print(json.dumps(release(event, api)))
-          
-          
+
+
           if __name__ == '__main__':
               main()
