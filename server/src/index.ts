@@ -9,11 +9,11 @@ if (!config.VERCEL) {
     process.once(signal, () => { void app.close(); });
   }
 }
-try {
-  await app.listen({ host: config.VERCEL ? '0.0.0.0' : config.HOST, port: config.PORT });
+// Finish module evaluation so Vercel's listener adapter can finish bootstrapping.
+void app.listen({ host: config.VERCEL ? '0.0.0.0' : config.HOST, port: config.PORT }).then(() => {
   console.log('microplanner API started');
-} catch {
+}).catch(async () => {
   console.error('API startup failed. Check the server configuration.');
   await app.close();
   process.exitCode = 1;
-}
+});
