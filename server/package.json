@@ -1,12 +1,14 @@
 {
   "name": "microplanner-api",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
-    "dev": "node --env-file=../server.env --import tsx src/main.ts",
-    "start": "node --env-file=../server.env dist/main.js",
+    "dev": "node --env-file=../server.env --import tsx src/index.ts",
+    "start": "node --env-file-if-exists=../server.env dist/index.js",
     "build": "tsc -p tsconfig.json",
     "test": "tsx --test --test-concurrency=1 test/*.test.ts",
     "check:atlas": "node --env-file=../server.env --import tsx src/check-atlas.ts"

@@ -42,6 +42,14 @@ export type WorkspaceData = z.infer<typeof dataSchema>;
 export type Workspace = WorkspaceData & { revision: number };
 export type Profile = { id: string; email: string; displayName: string; photoUrl: string | null };
 
+// Leave headroom for the transport envelope below Vercel's 4.5 MB payload limit.
+export const MAX_WORKSPACE_BYTES = 4_000_000;
+export function assertWorkspaceSize(workspace: Workspace) {
+  if (Buffer.byteLength(JSON.stringify(workspace)) > MAX_WORKSPACE_BYTES) {
+    throw new ApiError(413, 'too_large', 'The workspace is too large. Reduce its size before saving.');
+  }
+}
+
 export class ApiError extends Error {
   constructor(public statusCode: number, public code: string, message: string) { super(message); }
 }

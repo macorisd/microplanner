@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { MongoClient, type ClientSession, type Collection } from 'mongodb';
-import { ApiError, dataSchema, type Profile, type Workspace, type WorkspaceData } from './domain.js';
+import { ApiError, assertWorkspaceSize, dataSchema, type Profile, type Workspace, type WorkspaceData } from './domain.js';
 
 type User = Profile & { _id: string; googleSub: string; revision: number; operations: string[] };
 type Session = { _id: string; ownerId: string; expiresAt: Date };
@@ -26,10 +26,27 @@ export class Repository {
     await this.users.createIndex({ googleSub: 1 }, { unique: true });
     await this.sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
     await this.challenges.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+    await this.db.collection('requestLimits').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
     for (const kind of ['boards', 'subjects', 'tasks']) {
       await this.db.collection(kind).createIndex({ ownerId: 1, id: 1 }, { unique: true });
       await this.db.collection(kind).createIndex({ ownerId: 1, boardId: 1 });
     }
+  }
+
+  async allowRequest(key: string, max: number, now = Date.now()) {
+    // Hash IPs and share fixed-minute counters across cold starts and instances.
+    const bucket = Math.floor(now / 60000);
+    const collection = this.db.collection<{ _id: string; count: number; expiresAt: Date }>('requestLimits');
+    const filter = { _id: `${bucket}:${hash(key)}` };
+    const update = { $inc: { count: 1 }, $setOnInsert: { expiresAt: new Date((bucket + 2) * 60000) } };
+    let row;
+    try {
+      row = await collection.findOneAndUpdate(filter, update, { upsert: true, returnDocument: 'after' });
+    } catch (error) {
+      if (!(error instanceof Error && 'code' in error && error.code === 11000)) throw error;
+      row = await collection.findOneAndUpdate(filter, { $inc: { count: 1 } }, { returnDocument: 'after' });
+    }
+    return row !== null && row.count <= max;
   }
 
   private collection<K extends keyof WorkspaceData>(kind: K) {
@@ -112,6 +129,7 @@ export class Repository {
       Object.assign(result, { [kind]: rows });
     }
     result.boards.sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));
+    assertWorkspaceSize(result);
     return result;
   }
   async workspace(ownerId: string) {
@@ -156,6 +174,7 @@ export class Repository {
           .insertOne({ _id: sourceId, ownerId }, { session });
       }
       dataSchema.parse(next);
+      assertWorkspaceSize({ ...next, revision: revision + 1 });
       const updated = await this.users.updateOne({ _id: ownerId, revision }, {
         $inc: { revision: 1 }, $push: { operations: { $each: [operationId], $slice: -50 } },
       }, { session });
