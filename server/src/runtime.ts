@@ -1,9 +1,10 @@
 import { MongoClient } from 'mongodb';
+import Fastify from 'fastify';
 import { buildApp } from './application.js';
 import { configureDns, readConfig, type Config } from './config.js';
 import { Repository } from './repository.js';
 
-export async function createRuntime(config: Config = readConfig()) {
+export async function createRuntime(config: Config = readConfig(), factory = Fastify) {
   configureDns(config);
   const client = new MongoClient(config.MONGODB_URI, {
     maxPoolSize: 5, minPoolSize: 0, maxIdleTimeMS: 60000,
@@ -11,7 +12,7 @@ export async function createRuntime(config: Config = readConfig()) {
   });
   const repo = new Repository(client, config.MONGODB_DB);
   let ready: Promise<void> | undefined;
-  const app = await buildApp(repo, config, { prepare: () => {
+  const app = await buildApp(repo, config, { factory, prepare: () => {
     // One initialization per warm instance; failed starts may retry next request.
     ready ??= client.connect().then(() => repo.initialize()).catch(() => {
       ready = undefined;

@@ -1,8 +1,9 @@
+import Fastify from 'fastify';
 import { createRuntime } from './runtime.js';
 import { readConfig } from './config.js';
 
 const config = readConfig();
-const app = await createRuntime(config);
+const app = await createRuntime(config, Fastify);
 if (!config.VERCEL) {
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => { void app.close(); });

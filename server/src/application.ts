@@ -16,9 +16,10 @@ export async function buildApp(repo: Repository, config: Config, options: {
   verifyGoogle?: VerifyGoogle;
   exchangeCode?: (code: string, verifier: string, redirectUri: string) => Promise<string>;
   prepare?: () => Promise<void>;
+  factory?: typeof Fastify;
 } = {}) {
   // No request-body or credential logging. Errors below return only fixed messages.
-  const app = Fastify({ bodyLimit: 4 * 1024 * 1024, logger: false });
+  const app = (options.factory ?? Fastify)({ bodyLimit: 4 * 1024 * 1024, logger: false });
   app.decorateRequest('ownerId', null);
   if (!config.VERCEL) await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
   app.addHook('onRequest', async (request, reply) => {
