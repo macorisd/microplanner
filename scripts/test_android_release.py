@@ -38,6 +38,26 @@ class ReleaseTests(unittest.TestCase):
     def setUp(self):
         self.calls = []
 
+    def test_numbered_and_sdk_range_certificate_formats_are_accepted(self):
+        for signer in ('Signer #1', 'Signer (minSdkVersion=24, maxSdkVersion=32)',
+                       'Signer (minSdkVersion=33, maxSdkVersion=2147483647)',
+                       'Signer (minSdkVersion=33 (dev release=true), maxSdkVersion=2147483647)'):
+            for digest in (release.SHA1, release.SHA1.upper()):
+                with self.subTest(signer=signer, digest=digest):
+                    release.verify_certificate(f'{signer} certificate SHA-1 digest: {digest}\n')
+
+    def test_every_apk_signer_must_match_the_persistent_identity(self):
+        expected = f'Signer #1 certificate SHA-1 digest: {release.SHA1}\n'
+        wrong = '0' * 40
+        for output in ('', f'Signer #1 certificate SHA-1 digest: {wrong}\n',
+                       expected + f'Signer #2 certificate SHA-1 digest: {wrong}\n',
+                       expected + 'Signer #2 certificate SHA-1 digest: malformed\n',
+                       expected + f'Signer (minSdkVersion=33, maxSdkVersion=2147483647) certificate SHA-1 digest: {wrong}\n',
+                       f'Source Stamp Signer certificate SHA-1 digest: {release.SHA1}\n',
+                       f'Signer #1 public key SHA-1 digest: {release.SHA1}\n'):
+            with self.subTest(output=output), self.assertRaisesRegex(ValueError, 'signing certificate'):
+                release.verify_certificate(output)
+
     def test_workflow_run_builds_merge_commit_instead_of_source_head(self):
         event = {'repository': {'full_name': release.REPO}, 'workflow_run': {'id': 1}}
         with patch.object(release, 'api', self.fake_api):
