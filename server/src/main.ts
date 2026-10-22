@@ -17,7 +17,7 @@ try {
     process.once(signal, () => { void app.close(); });
   }
   await app.listen({ host: config.HOST, port: config.PORT });
-  console.log(`MicroPlanner API listening on ${config.HOST}:${config.PORT}`);
+  console.log(`microplanner API listening on ${config.HOST}:${config.PORT}`);
 } catch {
   console.error('API startup failed. Check server.env, Atlas credentials, network access and MongoDB availability. No credentials were logged.');
   await client?.close();

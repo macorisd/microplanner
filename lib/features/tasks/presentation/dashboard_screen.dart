@@ -18,7 +18,7 @@ class DashboardScreen extends StatelessWidget {
     final compact = MediaQuery.sizeOf(context).width < 850;
     final workspace = context.watch<WorkspaceController>();
     return Scaffold(
-      appBar: compact ? AppBar(title: const Text('MicroPlanner')) : null,
+      appBar: compact ? AppBar(title: const Text('microplanner')) : null,
       drawer: compact ? const Drawer(child: SafeArea(child: Sidebar())) : null,
       body: Row(
         children: [

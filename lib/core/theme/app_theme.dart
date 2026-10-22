@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-/// Cashew-inspired theme for MicroPlanner
+/// Cashew-inspired theme for microplanner
 /// Features rounded corners, soft shadows, and clean typography
 class AppTheme {
   AppTheme._();

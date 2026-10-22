@@ -55,7 +55,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
 
     setState(() => _isLoading = true);
 
-    // Combinar fecha y hora
+    // Combine date and time
     final deadlineWithTime = DateTime(
       _deadline.year,
       _deadline.month,

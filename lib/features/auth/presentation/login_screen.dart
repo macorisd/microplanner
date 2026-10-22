@@ -25,7 +25,7 @@ class LoginScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'MicroPlanner',
+                    'microplanner',
                     style: Theme.of(context).textTheme.displayMedium,
                   ),
                   const SizedBox(height: 12),

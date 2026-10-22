@@ -40,7 +40,7 @@ void main() async {
         ChangeNotifierProvider.value(value: boards),
         ChangeNotifierProvider.value(value: tasks),
       ],
-      child: const MicroPlannerApp(),
+      child: const PlannerApp(),
     ),
   );
   unawaited(auth.initialize());

@@ -1,4 +1,4 @@
-name: md-method release on merge
+name: Release version on merge
 on:
   pull_request_target:
     types: [closed]
@@ -30,7 +30,7 @@ jobs:
           import urllib.request
 
           VERSION = re.compile(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z')
-          MARKER = re.compile(r'<!-- md-method-release (\{[^\r\n]*\}) -->')
+          MARKER = re.compile(r'<!-- release-metadata (\{[^\r\n]*\}) -->')
 
 
           def version(value):
@@ -79,7 +79,7 @@ jobs:
                   return {'status': 'skipped', 'reason': 'Only same-repository branches are supported'}
               matches = MARKER.findall(pr.get('body') or '')
               if not matches:
-                  return {'status': 'skipped', 'reason': 'No md-method release marker'}
+                  return {'status': 'skipped', 'reason': 'No release metadata'}
               if len(matches) != 1:
                   raise ValueError('Expected exactly one release marker')
               data = json.loads(matches[0])
@@ -87,8 +87,8 @@ jobs:
                   raise ValueError('Invalid release metadata')
               if data.get('mainBranch') != pr['base']['ref'] or data.get('branch') != pr['head']['ref']:
                   raise ValueError('Release branch metadata does not match merged PR')
-              if not re.fullmatch(r'md-method/(plan|patch)-[A-Za-z0-9._/-]+', data['branch']):
-                  raise ValueError('Expected an md-method temporary branch')
+              if not re.fullmatch(r'(feature|feat|fix|bugfix|chore|docs|refactor|test|ci|perf|build|release)/[A-Za-z0-9][A-Za-z0-9._/-]*', data['branch']):
+                  raise ValueError('Expected a descriptive feature or fix branch')
               if data.get('kind') not in ('patch', 'minor', 'major'):
                   raise ValueError('Invalid release kind')
               if data['kind'] != 'patch' and not re.fullmatch(
@@ -134,7 +134,7 @@ jobs:
               if data['version'] != increment(base, data['kind']):
                   raise ValueError('Release version is stale or out of order; revise the release explicitly')
               obj = api('POST', f'/repos/{repo}/git/tags', {
-                  'tag': tag, 'message': f'Release {data["version"]} (md-method, PR #{pr["number"]})',
+                  'tag': tag, 'message': f'Release {data["version"]} (PR #{pr["number"]})',
                   'object': sha, 'type': 'commit'})
               try:
                   api('POST', f'/repos/{repo}/git/refs', {'ref': 'refs/tags/' + tag, 'sha': obj['sha']})
@@ -156,7 +156,7 @@ jobs:
                             data=None if payload is None else json.dumps(payload).encode('utf-8'),
                             headers={'Authorization': 'Bearer ' + os.environ['GITHUB_TOKEN'],
                                      'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json',
-                                     'User-Agent': 'md-method-release'})
+                                     'User-Agent': 'version-release'})
                   with urllib.request.urlopen(request, timeout=30) as response:
                       return json.load(response)
               print(json.dumps(release(event, api)))

@@ -77,15 +77,15 @@ class PlatformGoogleAuthenticator implements GoogleAuthenticator {
       } else if (request.uri.queryParameters['state'] != state) {
         request.response.statusCode = HttpStatus.badRequest;
         request.response.write(
-          'Invalid sign-in state. Return to MicroPlanner and try again.',
+          'Invalid sign-in state. Return to microplanner and try again.',
         );
       } else {
         request.response.headers.contentType = ContentType.html;
         request.response.headers.set('Cache-Control', 'no-store');
         request.response.headers.set('Referrer-Policy', 'no-referrer');
         request.response.write(
-          '<!doctype html><html><head><title>MicroPlanner</title></head>'
-          '<body><p>You can close this tab and return to MicroPlanner.</p></body></html>',
+          '<!doctype html><html><head><title>microplanner</title></head>'
+          '<body><p>You can close this tab and return to microplanner.</p></body></html>',
         );
         if (!callback.isCompleted) {
           callback.complete(request.uri.queryParameters['code']);

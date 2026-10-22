@@ -1,4 +1,4 @@
-# MicroPlanner
+# microplanner
 
 Flutter planner for **Windows and Android**, with Google sign-in, a local Node.js
 API and private per-user data in MongoDB Atlas.
