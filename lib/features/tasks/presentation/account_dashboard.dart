@@ -58,10 +58,14 @@ class _AccountDashboardState extends State<AccountDashboard>
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(dialogContext).colorScheme.onSurface,
+            ),
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
+            style: _importButtonStyle(dialogContext),
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Import'),
           ),
@@ -73,9 +77,18 @@ class _AccountDashboardState extends State<AccountDashboard>
     }
   }
 
+  ButtonStyle _importButtonStyle(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return FilledButton.styleFrom(
+      backgroundColor: colors.onPrimaryContainer,
+      foregroundColor: colors.primaryContainer,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final workspace = context.watch<WorkspaceController>();
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -112,7 +125,7 @@ class _AccountDashboardState extends State<AccountDashboard>
               ),
             if (workspace.canImport)
               Material(
-                color: Theme.of(context).colorScheme.primaryContainer,
+                color: colors.primaryContainer,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -122,14 +135,19 @@ class _AccountDashboardState extends State<AccountDashboard>
                     crossAxisAlignment: WrapCrossAlignment.center,
                     spacing: 8,
                     children: [
-                      const Text(
+                      Text(
                         'Local data from before sign-in are available.',
+                        style: TextStyle(color: colors.onPrimaryContainer),
                       ),
-                      TextButton(
+                      FilledButton(
+                        style: _importButtonStyle(context),
                         onPressed: _confirmImport,
                         child: const Text('Import…'),
                       ),
                       TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: colors.onPrimaryContainer,
+                        ),
                         onPressed: workspace.dismissImport,
                         child: const Text('Not now'),
                       ),

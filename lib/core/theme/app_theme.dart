@@ -7,6 +7,19 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
+  static const lightColorScheme = ColorScheme.light(
+    primary: AppColors.primary,
+    onPrimary: Colors.white,
+    primaryContainer: AppColors.primaryLight,
+    onPrimaryContainer: AppColors.textPrimary,
+    secondary: AppColors.primaryLight,
+    onSecondary: AppColors.primary,
+    surface: AppColors.surface,
+    onSurface: AppColors.textPrimary,
+    error: AppColors.error,
+    onError: Colors.white,
+  );
+
   // ─────────────────────────────────────────────────────────────────────────
   // Border Radius Constants
   // ─────────────────────────────────────────────────────────────────────────
@@ -39,16 +52,7 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.background,
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.primary,
-        onPrimary: Colors.white,
-        secondary: AppColors.primaryLight,
-        onSecondary: AppColors.primary,
-        surface: AppColors.surface,
-        onSurface: AppColors.textPrimary,
-        error: AppColors.error,
-        onError: Colors.white,
-      ),
+      colorScheme: lightColorScheme,
       textTheme: _textTheme,
       cardTheme: _cardTheme,
       elevatedButtonTheme: _elevatedButtonTheme,
@@ -183,10 +187,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
-        textStyle: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -203,10 +204,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
         side: const BorderSide(color: AppColors.primary, width: 1.5),
-        textStyle: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -222,10 +220,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
-        textStyle: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     );
   }
