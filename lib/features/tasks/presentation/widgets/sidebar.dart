@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/input_mode.dart';
 import '../../../auth/data/auth_service.dart';
 import '../../../boards/data/models/board.dart';
 import '../../../boards/providers/boards_provider.dart';
@@ -13,7 +14,9 @@ import 'save_status.dart';
 /// Resizable sidebar navigation widget
 /// Contains Boards section with subjects management and Sign Out
 class Sidebar extends StatefulWidget {
-  const Sidebar({super.key});
+  final bool inDrawer;
+
+  const Sidebar({super.key, this.inDrawer = false});
 
   @override
   State<Sidebar> createState() => _SidebarState();
@@ -27,152 +30,160 @@ class _SidebarState extends State<Sidebar> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: _sidebarWidth,
-          decoration: const BoxDecoration(color: AppColors.sidebarBackground),
-          child: Column(
-            children: [
-              // Header with logo
-              Container(
-                padding: const EdgeInsets.all(AppTheme.spacingLarge),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Image.asset(
-                        'assets/images/microplanner_logo.png',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    const SizedBox(width: AppTheme.spacingMedium),
-                    Expanded(
-                      child: Text(
-                        'microplanner',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+    return LayoutBuilder(
+      builder: (context, constraints) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: widget.inDrawer ? constraints.maxWidth : _sidebarWidth,
+            decoration: const BoxDecoration(color: AppColors.sidebarBackground),
+            child: Column(
+              children: [
+                // Header with logo
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spacingLarge),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        overflow: TextOverflow.ellipsis,
+                        clipBehavior: Clip.antiAlias,
+                        child: Image.asset(
+                          'assets/images/microplanner_logo.png',
+                          fit: BoxFit.cover,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              const SizedBox(height: AppTheme.spacingSmall),
-
-              // Boards section
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Consumer<BoardsProvider>(
-                    builder: (context, boardsProvider, _) {
-                      if (boardsProvider.showSubjectsView) {
-                        return const _SubjectsView();
-                      }
-                      return const _BoardsSection();
-                    },
+                      const SizedBox(width: AppTheme.spacingMedium),
+                      Expanded(
+                        child: Text(
+                          'microplanner',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+                const Divider(height: 1),
+                const SizedBox(height: AppTheme.spacingSmall),
 
-              // User info
-              Consumer<AuthService>(
-                builder: (context, authService, _) {
-                  final user = authService.currentUser;
-                  if (user == null) return const SizedBox.shrink();
+                // Boards section
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Consumer<BoardsProvider>(
+                      builder: (context, boardsProvider, _) {
+                        if (boardsProvider.showSubjectsView) {
+                          return const _SubjectsView();
+                        }
+                        return const _BoardsSection();
+                      },
+                    ),
+                  ),
+                ),
 
-                  return MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: Container(
-                      margin: const EdgeInsets.all(AppTheme.spacingMedium),
-                      padding: const EdgeInsets.all(AppTheme.spacingMedium),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.radiusMedium,
+                // User info
+                Consumer<AuthService>(
+                  builder: (context, authService, _) {
+                    final user = authService.currentUser;
+                    if (user == null) return const SizedBox.shrink();
+
+                    return MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: Container(
+                        margin: const EdgeInsets.all(AppTheme.spacingMedium),
+                        padding: const EdgeInsets.all(AppTheme.spacingMedium),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusMedium,
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: AppColors.primaryLight,
-                            child: Text(
-                              user.displayName.isNotEmpty
-                                  ? user.displayName[0].toUpperCase()
-                                  : 'U',
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: AppColors.primaryLight,
+                              child: Text(
+                                user.displayName.isNotEmpty
+                                    ? user.displayName[0].toUpperCase()
+                                    : 'U',
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: AppTheme.spacingSmall),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user.displayName,
-                                  style: Theme.of(context).textTheme.titleSmall,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  user.email,
-                                  style: Theme.of(context).textTheme.labelSmall,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                            const SizedBox(width: AppTheme.spacingSmall),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    user.displayName,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    user.email,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.labelSmall,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                ),
 
-              // Sign out button
-              _SidebarItem(
-                icon: Icons.logout_rounded,
-                label: 'Sign out',
-                isActive: false,
-                onTap: () {
-                  context.read<AuthService>().signOut();
-                },
-              ),
-              const SizedBox(height: AppTheme.spacingMedium),
-            ],
-          ),
-        ),
-        // Resize handle
-        MouseRegion(
-          cursor: SystemMouseCursors.resizeColumn,
-          onEnter: (_) => setState(() => _isResizeHovered = true),
-          onExit: (_) => setState(() => _isResizeHovered = false),
-          child: GestureDetector(
-            onHorizontalDragUpdate: (details) {
-              setState(() {
-                _sidebarWidth = (_sidebarWidth + details.delta.dx).clamp(
-                  _minWidth,
-                  _maxWidth,
-                );
-              });
-            },
-            child: Container(
-              width: 4,
-              color: _isResizeHovered ? AppColors.primary : AppColors.divider,
+                // Sign out button
+                _SidebarItem(
+                  icon: Icons.logout_rounded,
+                  label: 'Sign out',
+                  isActive: false,
+                  onTap: () {
+                    context.read<AuthService>().signOut();
+                  },
+                ),
+                const SizedBox(height: AppTheme.spacingMedium),
+              ],
             ),
           ),
-        ),
-      ],
+          // Resize handle
+          if (!widget.inDrawer)
+            MouseRegion(
+              cursor: SystemMouseCursors.resizeColumn,
+              onEnter: (_) => setState(() => _isResizeHovered = true),
+              onExit: (_) => setState(() => _isResizeHovered = false),
+              child: GestureDetector(
+                onHorizontalDragUpdate: (details) {
+                  setState(() {
+                    _sidebarWidth = (_sidebarWidth + details.delta.dx).clamp(
+                      _minWidth,
+                      _maxWidth,
+                    );
+                  });
+                },
+                child: Container(
+                  width: 4,
+                  color: _isResizeHovered
+                      ? AppColors.primary
+                      : AppColors.divider,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -202,23 +213,11 @@ class _BoardsSection extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  onTap: () => _showAddBoardDialog(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Icon(
-                      Icons.add_rounded,
-                      size: 18,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
+              _BoardActionButton(
+                icon: Icons.add_rounded,
+                tooltip: 'New board',
+                color: AppColors.primary,
+                onTap: () => _showAddBoardDialog(context),
               ),
             ],
           ),
@@ -260,14 +259,22 @@ class _BoardsSection extends StatelessWidget {
               itemCount: provider.boards.length,
               itemBuilder: (context, index) {
                 final board = provider.boards[index];
+                final card = _BoardCard(
+                  board: board,
+                  isActive: provider.currentBoardId == board.id,
+                  canDelete: provider.boards.length > 1,
+                );
+                if (usesTouchControls(context)) {
+                  return ReorderableDelayedDragStartListener(
+                    key: ValueKey(board.id),
+                    index: index,
+                    child: card,
+                  );
+                }
                 return ReorderableDragStartListener(
                   key: ValueKey(board.id),
                   index: index,
-                  child: _BoardCard(
-                    board: board,
-                    isActive: provider.currentBoardId == board.id,
-                    canDelete: provider.boards.length > 1,
-                  ),
+                  child: card,
                 );
               },
             );
@@ -427,6 +434,7 @@ class _BoardCardState extends State<_BoardCard> {
 
   @override
   Widget build(BuildContext context) {
+    final showActions = usesTouchControls(context) || _isHovered;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppTheme.spacingMedium,
@@ -445,6 +453,10 @@ class _BoardCardState extends State<_BoardCard> {
                 ? null
                 : () {
                     context.read<BoardsProvider>().selectBoard(widget.board.id);
+                    final scaffold = Scaffold.maybeOf(context);
+                    if (scaffold?.isDrawerOpen ?? false) {
+                      scaffold!.closeDrawer();
+                    }
                   },
             child: Container(
               padding: const EdgeInsets.all(AppTheme.spacingMedium),
@@ -522,18 +534,20 @@ class _BoardCardState extends State<_BoardCard> {
                       // Action buttons - always present but invisible when not hovered
                       if (!_isEditing)
                         Opacity(
-                          opacity: _isHovered ? 1.0 : 0.0,
+                          opacity: showActions ? 1.0 : 0.0,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _BoardActionButton(
                                 icon: Icons.edit_outlined,
-                                onTap: _isHovered ? _startEditing : null,
+                                tooltip: 'Rename board',
+                                onTap: showActions ? _startEditing : null,
                               ),
                               if (widget.canDelete)
                                 _BoardActionButton(
                                   icon: Icons.delete_outline_rounded,
-                                  onTap: _isHovered ? _confirmDelete : null,
+                                  tooltip: 'Delete board',
+                                  onTap: showActions ? _confirmDelete : null,
                                 ),
                             ],
                           ),
@@ -541,11 +555,13 @@ class _BoardCardState extends State<_BoardCard> {
                       if (_isEditing) ...[
                         _BoardActionButton(
                           icon: Icons.check_rounded,
+                          tooltip: 'Save board name',
                           onTap: _finishEditing,
                           color: AppColors.success,
                         ),
                         _BoardActionButton(
                           icon: Icons.close_rounded,
+                          tooltip: 'Cancel renaming',
                           onTap: _cancelEditing,
                         ),
                       ],
@@ -564,6 +580,9 @@ class _BoardCardState extends State<_BoardCard> {
                         );
                       },
                       child: Container(
+                        constraints: BoxConstraints(
+                          minHeight: usesTouchControls(context) ? 48 : 0,
+                        ),
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppTheme.spacingSmall,
                           vertical: 4,
@@ -627,23 +646,10 @@ class _SubjectsView extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      onTap: () => provider.hideSubjectsView(),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceVariant,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_rounded,
-                          size: 18,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
+                  _BoardActionButton(
+                    icon: Icons.arrow_back_rounded,
+                    tooltip: 'Back to boards',
+                    onTap: provider.hideSubjectsView,
                   ),
                   const SizedBox(width: AppTheme.spacingSmall),
                   Expanded(
@@ -667,23 +673,11 @@ class _SubjectsView extends StatelessWidget {
                       ],
                     ),
                   ),
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      onTap: () => _showAddSubjectDialog(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.add_rounded,
-                          size: 18,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
+                  _BoardActionButton(
+                    icon: Icons.add_rounded,
+                    tooltip: 'New subject',
+                    color: AppColors.primary,
+                    onTap: () => _showAddSubjectDialog(context),
                   ),
                 ],
               ),
@@ -774,29 +768,16 @@ class _SubjectItemState extends State<_SubjectItem> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (_isHovered) ...[
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () => _showEditDialog(context),
-                    child: const Icon(
-                      Icons.edit_outlined,
-                      size: 18,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+              if (usesTouchControls(context) || _isHovered) ...[
+                _BoardActionButton(
+                  icon: Icons.edit_outlined,
+                  tooltip: 'Edit subject',
+                  onTap: () => _showEditDialog(context),
                 ),
-                const SizedBox(width: AppTheme.spacingSmall),
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () => _confirmDeleteSubject(),
-                    child: const Icon(
-                      Icons.delete_outline_rounded,
-                      size: 18,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                _BoardActionButton(
+                  icon: Icons.delete_outline_rounded,
+                  tooltip: 'Delete subject',
+                  onTap: _confirmDeleteSubject,
                 ),
               ],
             ],
@@ -937,40 +918,29 @@ class _SidebarItemState extends State<_SidebarItem> {
 }
 
 /// Action button for board cards with hover effect
-class _BoardActionButton extends StatefulWidget {
+class _BoardActionButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
   final Color? color;
+  final String? tooltip;
 
-  const _BoardActionButton({required this.icon, this.onTap, this.color});
-
-  @override
-  State<_BoardActionButton> createState() => _BoardActionButtonState();
-}
-
-class _BoardActionButtonState extends State<_BoardActionButton> {
-  bool _isHovered = false;
+  const _BoardActionButton({
+    required this.icon,
+    this.onTap,
+    this.color,
+    this.tooltip,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: _isHovered ? AppColors.surfaceVariant : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Icon(
-            widget.icon,
-            size: 16,
-            color: widget.color ?? AppColors.textSecondary,
-          ),
-        ),
+    return SizedBox.square(
+      dimension: usesTouchControls(context) ? 48 : 24,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onTap,
+        padding: EdgeInsets.zero,
+        hoverColor: AppColors.surfaceVariant,
+        icon: Icon(icon, size: 16, color: color ?? AppColors.textSecondary),
       ),
     );
   }
