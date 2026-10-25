@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
+import 'system_bars.dart';
 
 /// Cashew-inspired theme for microplanner
 /// Features rounded corners, soft shadows, and clean typography
@@ -67,6 +68,7 @@ class AppTheme {
         space: 1,
       ),
       appBarTheme: AppBarTheme(
+        systemOverlayStyle: appSystemBars,
         elevation: 0,
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.textPrimary,

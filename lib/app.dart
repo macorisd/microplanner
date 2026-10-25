@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/system_bars.dart';
 import 'features/auth/data/auth_service.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/tasks/presentation/account_dashboard.dart';
@@ -16,6 +18,10 @@ class PlannerApp extends StatelessWidget {
       title: 'microplanner',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: appSystemBars,
+        child: child!,
+      ),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

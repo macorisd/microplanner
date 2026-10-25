@@ -194,7 +194,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
                       }
                       return null;
                     },
-                    autofocus: true,
+                    autofocus: !touch,
                     onFieldSubmitted: (_) => _submit(),
                   ),
                   const SizedBox(height: AppTheme.spacingMedium),

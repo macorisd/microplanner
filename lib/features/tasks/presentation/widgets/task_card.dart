@@ -40,6 +40,9 @@ class _TaskCardState extends State<TaskCard> {
     final showActions = touch || _isHovered;
     final task = widget.task;
     final hasActions = widget.onEdit != null || widget.onDelete != null;
+    final actionWidth =
+        48.0 *
+        ((widget.onEdit != null ? 1 : 0) + (widget.onDelete != null ? 1 : 0));
     final actions = IgnorePointer(
       ignoring: !showActions,
       child: ExcludeSemantics(
@@ -74,6 +77,21 @@ class _TaskCardState extends State<TaskCard> {
     final dateColor = task.isLate || urgent
         ? AppColors.error
         : AppColors.textSecondary;
+    final completion = Semantics(
+      label: task.isCompleted ? 'Mark task incomplete' : 'Mark task complete',
+      checked: task.isCompleted,
+      child: InkResponse(
+        onTap: widget.onToggleComplete,
+        child: SizedBox.square(
+          dimension: touch ? 48 : 24,
+          child: touch ? null : _CompletionMark(completed: task.isCompleted),
+        ),
+      ),
+    );
+    // Touch targets occupy the card's padding instead of stretching content rows.
+    final actionSlot = touch
+        ? SizedBox(width: hasActions ? actionWidth - 12 : 0, height: 24)
+        : actions;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -96,178 +114,162 @@ class _TaskCardState extends State<TaskCard> {
           child: InkWell(
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-            child: Padding(
-              padding: EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            child: Stack(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Semantics(
-                        label: task.isCompleted
-                            ? 'Mark task incomplete'
-                            : 'Mark task complete',
-                        checked: task.isCompleted,
-                        child: InkResponse(
-                          onTap: widget.onToggleComplete,
-                          child: SizedBox.square(
-                            dimension: touch ? 48 : 24,
-                            child: Center(
-                              child: Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  color: task.isCompleted
-                                      ? AppColors.success
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    width: 2,
+                      Row(
+                        crossAxisAlignment: touch
+                            ? CrossAxisAlignment.start
+                            : CrossAxisAlignment.center,
+                        children: [
+                          if (touch)
+                            _CompletionMark(completed: task.isCompleted)
+                          else
+                            completion,
+                          SizedBox(width: touch ? 12 : AppTheme.spacingMedium),
+                          Expanded(
+                            child: Text(
+                              task.name,
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    decoration: task.isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                     color: task.isCompleted
-                                        ? AppColors.success
-                                        : AppColors.textTertiary,
+                                        ? AppColors.textTertiary
+                                        : AppColors.textPrimary,
                                   ),
-                                ),
-                                child: task.isCompleted
-                                    ? const Icon(
-                                        Icons.check_rounded,
-                                        size: 16,
-                                        color: Colors.white,
-                                      )
-                                    : null,
-                              ),
                             ),
                           ),
-                        ),
+                          _PriorityIndicator(priority: task.priority),
+                        ],
                       ),
-                      SizedBox(width: touch ? 4 : AppTheme.spacingMedium),
-                      Expanded(
-                        child: Text(
-                          task.name,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                decoration: task.isCompleted
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                                color: task.isCompleted
-                                    ? AppColors.textTertiary
-                                    : AppColors.textPrimary,
-                              ),
-                        ),
-                      ),
-                      _PriorityIndicator(priority: task.priority),
-                    ],
-                  ),
-                  SizedBox(height: touch ? 4 : AppTheme.spacingSmall),
-                  Consumer<BoardsProvider>(
-                    builder: (context, boards, _) {
-                      final subject = boards.getSubjectById(task.subjectId);
-                      final subjectName = subject?.name ?? task.subject;
-                      final hasSubject = subjectName.isNotEmpty;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                      const SizedBox(height: AppTheme.spacingSmall),
+                      Consumer<BoardsProvider>(
+                        builder: (context, boards, _) {
+                          final subject = boards.getSubjectById(task.subjectId);
+                          final subjectName = subject?.name ?? task.subject;
+                          final hasSubject = subjectName.isNotEmpty;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Wrap(
-                                  spacing: AppTheme.spacingSmall,
-                                  runSpacing: AppTheme.spacingXSmall,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    if (task.type != TaskType.unassigned)
-                                      _detail(
-                                        context,
-                                        task.type.icon,
-                                        task.type.label,
-                                        AppColors.textSecondary,
-                                      ),
-                                    _detail(
-                                      context,
-                                      Icons.calendar_today_rounded,
-                                      DateFormat(
-                                        'EEE dd/MM',
-                                      ).format(task.deadline),
-                                      dateColor,
-                                    ),
-                                    _detail(
-                                      context,
-                                      Icons.access_time_rounded,
-                                      DateFormat('HH:mm').format(task.deadline),
-                                      dateColor,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (!hasSubject && hasActions) actions,
-                            ],
-                          ),
-                          if (hasSubject)
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                top: AppTheme.spacingSmall,
-                              ),
-                              child: Row(
+                              Row(
                                 children: [
                                   Expanded(
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: AppTheme.spacingSmall,
-                                          vertical: AppTheme.spacingXSmall,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Color(
-                                            subject?.color ?? 0xFFF0F0F2,
-                                          ).withValues(alpha: 0.2),
-                                          borderRadius: BorderRadius.circular(
-                                            AppTheme.radiusSmall,
+                                    child: Wrap(
+                                      spacing: AppTheme.spacingSmall,
+                                      runSpacing: AppTheme.spacingXSmall,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        if (task.type != TaskType.unassigned)
+                                          _detail(
+                                            context,
+                                            task.type.icon,
+                                            task.type.label,
+                                            AppColors.textSecondary,
                                           ),
+                                        _detail(
+                                          context,
+                                          Icons.calendar_today_rounded,
+                                          DateFormat(
+                                            'EEE dd/MM',
+                                          ).format(task.deadline),
+                                          dateColor,
                                         ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 8,
-                                              height: 8,
-                                              decoration: BoxDecoration(
-                                                color: Color(
-                                                  subject?.color ?? 0xFF9094A6,
-                                                ),
-                                                shape: BoxShape.circle,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Flexible(
-                                              child: Text(
-                                                subjectName,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .labelMedium
-                                                    ?.copyWith(
-                                                      color: AppColors
-                                                          .textSecondary,
-                                                    ),
-                                              ),
-                                            ),
-                                          ],
+                                        _detail(
+                                          context,
+                                          Icons.access_time_rounded,
+                                          DateFormat(
+                                            'HH:mm',
+                                          ).format(task.deadline),
+                                          dateColor,
                                         ),
-                                      ),
+                                      ],
                                     ),
                                   ),
-                                  if (hasActions) actions,
+                                  if (!hasSubject && hasActions) actionSlot,
                                 ],
                               ),
-                            ),
-                        ],
-                      );
-                    },
+                              if (hasSubject)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: AppTheme.spacingSmall,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: AppTheme.spacingSmall,
+                                              vertical: AppTheme.spacingXSmall,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Color(
+                                                subject?.color ?? 0xFFF0F0F2,
+                                              ).withValues(alpha: 0.2),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    AppTheme.radiusSmall,
+                                                  ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  width: 8,
+                                                  height: 8,
+                                                  decoration: BoxDecoration(
+                                                    color: Color(
+                                                      subject?.color ??
+                                                          0xFF9094A6,
+                                                    ),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Flexible(
+                                                  child: Text(
+                                                    subjectName,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .labelMedium
+                                                        ?.copyWith(
+                                                          color: AppColors
+                                                              .textSecondary,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      if (hasActions) actionSlot,
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                if (touch) Positioned(top: 0, left: 0, child: completion),
+                if (touch && hasActions)
+                  Positioned(bottom: 0, right: 0, child: actions),
+              ],
             ),
           ),
         ),
@@ -292,6 +294,29 @@ class _TaskCardState extends State<TaskCard> {
         ),
       ),
     ],
+  );
+}
+
+class _CompletionMark extends StatelessWidget {
+  final bool completed;
+
+  const _CompletionMark({required this.completed});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 24,
+    height: 24,
+    decoration: BoxDecoration(
+      color: completed ? AppColors.success : Colors.transparent,
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(
+        width: 2,
+        color: completed ? AppColors.success : AppColors.textTertiary,
+      ),
+    ),
+    child: completed
+        ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+        : null,
   );
 }
 

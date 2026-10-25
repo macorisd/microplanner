@@ -11,6 +11,7 @@ import 'package:microplanner/features/tasks/presentation/dashboard_screen.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/sidebar.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_card.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_column.dart';
+import 'package:microplanner/features/tasks/presentation/widgets/edit_task_dialog.dart';
 import 'package:microplanner/features/tasks/providers/tasks_provider.dart';
 import 'support/fakes.dart';
 
@@ -93,6 +94,114 @@ void main() {
         },
       );
     }
+  }
+
+  for (final subject in ['', 'Doctorado']) {
+    testWidgets('Android content stays compact and aligned, subject=$subject', (
+      tester,
+    ) async {
+      final fixture = _Fixture();
+      await tester.runAsync(fixture.initialize);
+      var toggles = 0;
+      final task = Task.create(
+        id: 'spacing',
+        name: 'FPU',
+        deadline: DateTime(2030, 6, 15),
+        type: TaskType.unassigned,
+        priority: TaskPriority.high,
+      )..subject = subject;
+      await tester.pumpWidget(
+        fixture.app(
+          TargetPlatform.android,
+          Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 350,
+              child: TaskCard(
+                task: task,
+                onToggleComplete: () => toggles++,
+                onEdit: () {},
+                onDelete: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final mark = find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.constraints?.minWidth == 24 &&
+            w.constraints?.minHeight == 24,
+      );
+      final date = find.byIcon(Icons.calendar_today_rounded);
+      expect(
+        tester.getTopLeft(mark).dx,
+        closeTo(tester.getTopLeft(date).dx, 0.1),
+      );
+      expect(
+        tester.getTopLeft(date).dy - tester.getBottomLeft(find.text('FPU')).dy,
+        lessThanOrEqualTo(16),
+      );
+      final bottom = tester.getBottomLeft(find.byType(TaskCard)).dy - 9;
+      if (subject.isNotEmpty) {
+        final badge = find
+            .ancestor(of: find.text(subject), matching: find.byType(Container))
+            .first;
+        expect(bottom - tester.getBottomLeft(badge).dy, closeTo(12, 0.1));
+      } else {
+        expect(bottom - tester.getBottomLeft(date).dy, lessThanOrEqualTo(18));
+      }
+      final checkbox = find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.checked != null,
+      );
+      expect(tester.getSize(checkbox), const Size(48, 48));
+      await tester.tapAt(tester.getTopLeft(checkbox) + const Offset(3, 3));
+      expect(toggles, 1);
+      for (final label in ['Edit', 'Delete']) {
+        expect(tester.getSize(find.byTooltip(label)), const Size(48, 48));
+      }
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      fixture.dispose();
+    });
+  }
+
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    testWidgets('$platform edit dialog focuses the name only on desktop', (
+      tester,
+    ) async {
+      final fixture = _Fixture();
+      await tester.runAsync(fixture.initialize);
+      final task = Task.create(
+        id: 'edit-focus',
+        name: 'Existing task',
+        deadline: DateTime(2030, 6, 15),
+        type: TaskType.unassigned,
+        priority: TaskPriority.low,
+      );
+      await tester.pumpWidget(
+        fixture.app(
+          platform,
+          EditTaskDialog(task: task, onSave: (_) async => true),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final name = find.byType(EditableText).first;
+      expect(
+        tester.widget<EditableText>(name).focusNode.hasFocus,
+        platform == TargetPlatform.windows,
+      );
+      if (platform == TargetPlatform.android) {
+        expect(tester.testTextInput.isVisible, isFalse);
+        await tester.tap(name);
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isTrue);
+      }
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      fixture.dispose();
+    });
   }
 
   testWidgets(

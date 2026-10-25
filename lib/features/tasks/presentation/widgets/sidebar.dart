@@ -49,7 +49,7 @@ class _SidebarState extends State<Sidebar> {
                         width: touch ? 32 : 40,
                         height: touch ? 32 : 40,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(touch ? 9.6 : 12),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: Image.asset(
@@ -322,6 +322,7 @@ class _BoardsSection extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
+            style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
             child: const Text('Cancel'),
           ),
           FilledButton(
