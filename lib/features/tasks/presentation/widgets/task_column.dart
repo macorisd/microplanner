@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/utils/input_mode.dart';
 import '../../data/models/task.dart';
 import 'task_card.dart';
@@ -38,93 +39,71 @@ class TaskColumn extends StatelessWidget {
         ? AppColors.surfaceVariant
         : headerBackgroundColor;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header
-          Container(
-            padding: EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium),
-            decoration: BoxDecoration(
-              color: effectiveHeaderBgColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(AppTheme.radiusXLarge),
-                topRight: Radius.circular(AppTheme.radiusXLarge),
+    return MotionEntrance(
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            AnimatedContainer(
+              duration: AppMotion.duration(context, AppMotion.normal),
+              padding: EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium),
+              decoration: BoxDecoration(
+                color: effectiveHeaderBgColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(AppTheme.radiusXLarge),
+                  topRight: Radius.circular(AppTheme.radiusXLarge),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(icon, color: effectiveHeaderColor, size: 22),
+                  const SizedBox(width: AppTheme.spacingSmall),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: effectiveHeaderColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingSmall,
+                      vertical: AppTheme.spacingXSmall,
+                    ),
+                    decoration: BoxDecoration(
+                      color: effectiveHeaderColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                    ),
+                    child: MotionSwap(
+                      child: Text(
+                        '${tasks.length}',
+                        key: ValueKey(tasks.length),
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: effectiveHeaderColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Icon(icon, color: effectiveHeaderColor, size: 22),
-                const SizedBox(width: AppTheme.spacingSmall),
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: effectiveHeaderColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.spacingSmall,
-                    vertical: AppTheme.spacingXSmall,
-                  ),
-                  decoration: BoxDecoration(
-                    color: effectiveHeaderColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                  ),
-                  child: Text(
-                    '${tasks.length}',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: effectiveHeaderColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
 
-          // Task list
-          Expanded(
-            child: tasks.isEmpty
-                ? _EmptyState(title: title)
-                : ScrollbarTheme(
-                    data: ScrollbarThemeData(
-                      thumbVisibility: WidgetStateProperty.all(false),
-                      trackVisibility: WidgetStateProperty.all(false),
-                    ),
-                    child: ListView.builder(
-                      padding: EdgeInsets.all(
-                        touch ? 8 : AppTheme.spacingMedium,
-                      ),
-                      itemCount: tasks.length,
-                      itemBuilder: (context, index) {
-                        final task = tasks[index];
-                        return TaskCard(
-                          task: task,
-                          hoverBorderColor: headerColor,
-                          onToggleComplete: () => onToggleComplete(task),
-                          onDelete: onDeleteTask != null
-                              ? () => onDeleteTask!(task)
-                              : null,
-                          onEdit: onEditTask != null
-                              ? () => onEditTask!(task)
-                              : null,
-                        );
-                      },
-                    ),
-                  ),
-          ),
-        ],
+            // Task list
+            Expanded(child: _TaskList(column: this)),
+          ],
+        ),
       ),
     );
   }
@@ -176,4 +155,132 @@ class _EmptyState extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TaskList extends StatefulWidget {
+  final TaskColumn column;
+  const _TaskList({required this.column});
+  @override
+  State<_TaskList> createState() => _TaskListState();
+}
+
+class _TaskListState extends State<_TaskList> {
+  var _listKey = GlobalKey<AnimatedListState>();
+  late List<Task> _items;
+
+  @override
+  void initState() {
+    super.initState();
+    _items = List.of(widget.column.tasks);
+  }
+
+  @override
+  void didUpdateWidget(covariant _TaskList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final next = widget.column.tasks;
+    if (_items.length == next.length &&
+        List.generate(
+          next.length,
+          (i) => _items[i].id == next[i].id,
+        ).every((same) => same)) {
+      _items = List.of(next);
+      return;
+    }
+    final state = _listKey.currentState;
+    if (state == null) {
+      _items = List.of(next);
+      _listKey = GlobalKey<AnimatedListState>();
+      return;
+    }
+    final ids = next.map((task) => task.id).toSet();
+    for (var i = _items.length - 1; i >= 0; i--) {
+      if (!ids.contains(_items[i].id)) _remove(state, i);
+    }
+    for (var i = 0; i < next.length; i++) {
+      final oldIndex = _items.indexWhere((task) => task.id == next[i].id);
+      if (oldIndex == i) {
+        _items[i] = next[i];
+      } else {
+        if (oldIndex >= 0) _remove(state, oldIndex);
+        _items.insert(i, next[i]);
+        state.insertItem(
+          i,
+          duration: AppMotion.duration(context, AppMotion.normal),
+        );
+      }
+    }
+  }
+
+  void _remove(AnimatedListState state, int index) {
+    final removed = _items.removeAt(index);
+    state.removeItem(
+      index,
+      (_, animation) => IgnorePointer(
+        child: ExcludeSemantics(
+          child: _transition(removed, animation, removed: true),
+        ),
+      ),
+      duration: AppMotion.duration(context, AppMotion.fast),
+    );
+  }
+
+  Widget _transition(
+    Task task,
+    Animation<double> animation, {
+    bool removed = false,
+  }) {
+    final column = widget.column;
+    return SizeTransition(
+      sizeFactor: animation.drive(CurveTween(curve: AppMotion.curve)),
+      axisAlignment: -1,
+      child: FadeTransition(
+        opacity: animation,
+        child: TaskCard(
+          key: ValueKey(task.id),
+          task: task,
+          hoverBorderColor: column.headerColor,
+          onToggleComplete: removed
+              ? () {}
+              : () => column.onToggleComplete(task),
+          onEdit: column.onEditTask != null
+              ? (removed ? () {} : () => column.onEditTask!(task))
+              : null,
+          onDelete: column.onDeleteTask != null
+              ? (removed ? () {} : () => column.onDeleteTask!(task))
+              : null,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    children: [
+      Positioned.fill(
+        child: ScrollbarTheme(
+          data: ScrollbarThemeData(
+            thumbVisibility: WidgetStateProperty.all(false),
+            trackVisibility: WidgetStateProperty.all(false),
+          ),
+          child: AnimatedList(
+            key: _listKey,
+            initialItemCount: _items.length,
+            padding: EdgeInsets.all(
+              usesTouchControls(context) ? 8 : AppTheme.spacingMedium,
+            ),
+            itemBuilder: (_, index, animation) =>
+                _transition(_items[index], animation),
+          ),
+        ),
+      ),
+      if (_items.isEmpty)
+        Positioned.fill(
+          child: IgnorePointer(
+            child: MotionEntrance(
+              child: _EmptyState(title: widget.column.title),
+            ),
+          ),
+        ),
+    ],
+  );
 }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/utils/input_mode.dart';
 import '../../../boards/providers/boards_provider.dart';
 import '../../data/models/task.dart';
@@ -47,7 +48,8 @@ class _TaskCardState extends State<TaskCard> {
       ignoring: !showActions,
       child: ExcludeSemantics(
         excluding: !showActions,
-        child: Opacity(
+        child: AnimatedOpacity(
+          duration: AppMotion.duration(context, AppMotion.fast),
           opacity: showActions ? 1 : 0,
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -96,7 +98,9 @@ class _TaskCardState extends State<TaskCard> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: Container(
+      child: AnimatedContainer(
+        duration: AppMotion.duration(context, AppMotion.fast),
+        curve: AppMotion.curve,
         margin: const EdgeInsets.only(bottom: AppTheme.spacingSmall),
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -303,7 +307,8 @@ class _CompletionMark extends StatelessWidget {
   const _CompletionMark({required this.completed});
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => AnimatedContainer(
+    duration: AppMotion.duration(context, AppMotion.fast),
     width: 24,
     height: 24,
     decoration: BoxDecoration(
@@ -314,9 +319,16 @@ class _CompletionMark extends StatelessWidget {
         color: completed ? AppColors.success : AppColors.textTertiary,
       ),
     ),
-    child: completed
-        ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
-        : null,
+    child: MotionSwap(
+      child: completed
+          ? const Icon(
+              Icons.check_rounded,
+              key: ValueKey('checked'),
+              size: 16,
+              color: Colors.white,
+            )
+          : const SizedBox.shrink(key: ValueKey('unchecked')),
+    ),
   );
 }
 
@@ -334,13 +346,15 @@ class _ActionButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => SizedBox.square(
-    dimension: touch ? 48 : 30,
-    child: IconButton(
-      tooltip: tooltip,
-      onPressed: onPressed,
-      padding: EdgeInsets.zero,
-      icon: Icon(icon, size: 18, color: AppColors.textSecondary),
+  Widget build(BuildContext context) => PressFeedback(
+    child: SizedBox.square(
+      dimension: touch ? 48 : 30,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        icon: Icon(icon, size: 18, color: AppColors.textSecondary),
+      ),
     ),
   );
 }

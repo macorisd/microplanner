@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/utils/input_mode.dart';
 import '../../../auth/data/auth_service.dart';
 import '../../../boards/data/models/board.dart';
@@ -77,10 +78,19 @@ class _SidebarState extends State<Sidebar> {
                   child: SingleChildScrollView(
                     child: Consumer<BoardsProvider>(
                       builder: (context, boardsProvider, _) {
-                        if (boardsProvider.showSubjectsView) {
-                          return const _SubjectsView();
-                        }
-                        return const _BoardsSection();
+                        return MotionSwap(
+                          alignment: Alignment.topLeft,
+                          child: KeyedSubtree(
+                            key: ValueKey(
+                              boardsProvider.showSubjectsView
+                                  ? 'subjects:${boardsProvider.subjectsBoardName}'
+                                  : 'boards',
+                            ),
+                            child: boardsProvider.showSubjectsView
+                                ? const _SubjectsView()
+                                : const _BoardsSection(),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -91,10 +101,6 @@ class _SidebarState extends State<Sidebar> {
                   builder: (context, authService, _) {
                     final user = authService.currentUser;
                     if (user == null) return const SizedBox.shrink();
-                    final photoUrl = user.photoUrl?.trim();
-                    final photo = photoUrl == null || photoUrl.isEmpty
-                        ? null
-                        : NetworkImage(photoUrl);
 
                     return MouseRegion(
                       cursor: SystemMouseCursors.click,
@@ -113,26 +119,7 @@ class _SidebarState extends State<Sidebar> {
                         ),
                         child: Row(
                           children: [
-                            CircleAvatar(
-                              key: ValueKey(user.id),
-                              radius: 18,
-                              backgroundColor: AppColors.primaryLight,
-                              foregroundImage: photo,
-                              onForegroundImageError: photo == null
-                                  ? null
-                                  : (_, _) {
-                                      // Keep the initial visible when the photo cannot load.
-                                    },
-                              child: Text(
-                                user.displayName.isNotEmpty
-                                    ? user.displayName[0].toUpperCase()
-                                    : 'U',
-                                style: const TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
+                            _ProfileAvatar(key: ValueKey(user.id), user: user),
                             const SizedBox(width: AppTheme.spacingSmall),
                             Expanded(
                               child: Column(
@@ -302,7 +289,7 @@ class _BoardsSection extends StatelessWidget {
 
   void _showAddBoardDialog(BuildContext context) {
     final controller = TextEditingController();
-    showDialog(
+    showMotionDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('New Board'),
@@ -416,7 +403,7 @@ class _BoardCardState extends State<_BoardCard> {
   }
 
   void _confirmDelete() {
-    showDialog(
+    showMotionDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Board'),
@@ -476,7 +463,9 @@ class _BoardCardState extends State<_BoardCard> {
                       scaffold!.closeDrawer();
                     }
                   },
-            child: Container(
+            child: AnimatedContainer(
+              duration: AppMotion.duration(context, AppMotion.normal),
+              curve: AppMotion.curve,
               padding: EdgeInsets.symmetric(
                 horizontal: touch ? 12 : AppTheme.spacingMedium,
                 vertical: touch ? 4 : AppTheme.spacingMedium,
@@ -507,54 +496,44 @@ class _BoardCardState extends State<_BoardCard> {
                             : AppColors.textSecondary,
                       ),
                       const SizedBox(width: AppTheme.spacingSmall),
-                      _isEditing
-                          ? Flexible(
-                              fit: FlexFit.loose,
-                              child: Container(
-                                constraints: const BoxConstraints(
-                                  minWidth: 100,
-                                ),
-                                width: _nameController.text.length * 10.0 + 40,
-                                child: TextField(
+                      Expanded(
+                        child: MotionSwap(
+                          alignment: Alignment.centerLeft,
+                          child: _isEditing
+                              ? TextField(
+                                  key: const ValueKey('editing'),
                                   controller: _nameController,
                                   autofocus: true,
                                   style: Theme.of(context).textTheme.bodyMedium,
-                                  decoration: InputDecoration(
+                                  decoration: const InputDecoration(
                                     isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
+                                    contentPadding: EdgeInsets.symmetric(
                                       horizontal: 8,
                                       vertical: 6,
                                     ),
-                                    filled: true,
-                                    fillColor: AppColors.surface,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                      borderSide: BorderSide.none,
-                                    ),
                                   ),
                                   onSubmitted: (_) => _finishEditing(),
-                                  onEditingComplete: _finishEditing,
+                                )
+                              : Text(
+                                  widget.board.name,
+                                  key: const ValueKey('name'),
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: widget.isActive
+                                            ? AppColors.primary
+                                            : AppColors.textPrimary,
+                                        fontWeight: widget.isActive
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
+                                      ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                            )
-                          : Expanded(
-                              child: Text(
-                                widget.board.name,
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: widget.isActive
-                                          ? AppColors.primary
-                                          : AppColors.textPrimary,
-                                      fontWeight: widget.isActive
-                                          ? FontWeight.w600
-                                          : FontWeight.w500,
-                                    ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
+                        ),
+                      ),
                       // Action buttons - always present but invisible when not hovered
                       if (!_isEditing)
-                        Opacity(
+                        AnimatedOpacity(
+                          duration: AppMotion.duration(context, AppMotion.fast),
                           opacity: showActions ? 1.0 : 0.0,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -600,7 +579,8 @@ class _BoardCardState extends State<_BoardCard> {
                           widget.board.id,
                         );
                       },
-                      child: Container(
+                      child: AnimatedContainer(
+                        duration: AppMotion.duration(context, AppMotion.fast),
                         constraints: BoxConstraints(
                           minHeight: usesTouchControls(context) ? 48 : 0,
                         ),
@@ -741,7 +721,7 @@ class _SubjectsView extends StatelessWidget {
 
   void _showAddSubjectDialog(BuildContext context) {
     final boardsProvider = context.read<BoardsProvider>();
-    showDialog(
+    showMotionDialog(
       context: context,
       builder: (dialogContext) => SubjectDialog(
         title: 'New Subject',
@@ -777,7 +757,8 @@ class _SubjectItemState extends State<_SubjectItem> {
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
-        child: Container(
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.fast),
           padding: const EdgeInsets.symmetric(
             horizontal: AppTheme.spacingMedium,
             vertical: AppTheme.spacingSmall,
@@ -824,7 +805,7 @@ class _SubjectItemState extends State<_SubjectItem> {
   }
 
   void _confirmDeleteSubject() {
-    showDialog(
+    showMotionDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Subject'),
@@ -859,7 +840,7 @@ class _SubjectItemState extends State<_SubjectItem> {
 
   void _showEditDialog(BuildContext context) {
     final boardsProvider = context.read<BoardsProvider>();
-    showDialog(
+    showMotionDialog(
       context: context,
       builder: (dialogContext) => SubjectDialog(
         title: 'Edit Subject',
@@ -969,14 +950,59 @@ class _BoardActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: usesTouchControls(context) ? 48 : 24,
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onTap,
-        padding: EdgeInsets.zero,
-        hoverColor: AppColors.surfaceVariant,
-        icon: Icon(icon, size: 16, color: color ?? AppColors.textSecondary),
+    return PressFeedback(
+      child: SizedBox.square(
+        dimension: usesTouchControls(context) ? 48 : 24,
+        child: IconButton(
+          tooltip: tooltip,
+          onPressed: onTap,
+          padding: EdgeInsets.zero,
+          hoverColor: AppColors.surfaceVariant,
+          icon: Icon(icon, size: 16, color: color ?? AppColors.textSecondary),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  final AppUser user;
+  const _ProfileAvatar({super.key, required this.user});
+  @override
+  Widget build(BuildContext context) {
+    final url = user.photoUrl?.trim();
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: AppColors.primaryLight,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Center(
+            child: Text(
+              user.displayName.isEmpty
+                  ? 'U'
+                  : user.displayName[0].toUpperCase(),
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (url != null && url.isNotEmpty)
+            ClipOval(
+              child: Image.network(
+                url,
+                fit: BoxFit.cover,
+                frameBuilder: (context, child, frame, synchronous) =>
+                    AnimatedOpacity(
+                      duration: AppMotion.duration(context, AppMotion.normal),
+                      opacity: frame == null ? 0 : 1,
+                      child: child,
+                    ),
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              ),
+            ),
+        ],
       ),
     );
   }

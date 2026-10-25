@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/app_motion.dart';
 import 'core/theme/system_bars.dart';
 import 'features/auth/data/auth_service.dart';
 import 'features/auth/presentation/login_screen.dart';
@@ -30,8 +31,14 @@ class PlannerApp extends StatelessWidget {
       supportedLocales: const [Locale('en', 'GB'), Locale('en', 'US')],
       locale: const Locale('en', 'GB'),
       home: auth.isAuthenticated
-          ? const AccountDashboard()
-          : const LoginScreen(),
+          ? MotionEntrance(
+              key: ValueKey(auth.currentUser!.id),
+              child: const AccountDashboard(),
+            )
+          : const MotionEntrance(
+              key: ValueKey('sign-in'),
+              child: LoginScreen(),
+            ),
     ),
   );
 }

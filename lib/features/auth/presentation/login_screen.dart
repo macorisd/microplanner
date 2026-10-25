@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_motion.dart';
 import '../data/auth_service.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -31,17 +32,24 @@ class LoginScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   const Text('Your academic tasks, on your devices.'),
                   const SizedBox(height: 40),
-                  FilledButton.icon(
-                    onPressed: auth.isLoading ? null : auth.signInWithGoogle,
-                    icon: auth.isLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.login),
-                    label: Text(
-                      auth.isLoading ? 'Connecting…' : 'Sign in with Google',
+                  PressFeedback(
+                    child: FilledButton.icon(
+                      onPressed: auth.isLoading ? null : auth.signInWithGoogle,
+                      icon: auth.isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.login),
+                      label: MotionSwap(
+                        child: Text(
+                          key: ValueKey(auth.isLoading),
+                          auth.isLoading
+                              ? 'Connecting…'
+                              : 'Sign in with Google',
+                        ),
+                      ),
                     ),
                   ),
                   if (auth.canCancelSignIn)
