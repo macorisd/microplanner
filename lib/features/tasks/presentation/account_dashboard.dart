@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/data/workspace_controller.dart';
+import '../../../core/theme/app_motion.dart';
 import '../../auth/data/auth_service.dart';
 import 'dashboard_screen.dart';
+import 'widgets/cloud_status_card.dart';
 
 class AccountDashboard extends StatefulWidget {
   const AccountDashboard({super.key});
@@ -48,7 +50,7 @@ class _AccountDashboardState extends State<AccountDashboard>
     final workspace = context.read<WorkspaceController>();
     final auth = context.read<AuthService>();
     final owner = auth.currentUser?.id;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showMotionDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Import local data?'),
@@ -91,93 +93,81 @@ class _AccountDashboardState extends State<AccountDashboard>
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            if (workspace.error != null || !workspace.isOnline)
-              Material(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.cloud_off_outlined),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          workspace.error ??
-                              (workspace.isLoading
-                                  ? 'Loading your data…'
-                                  : 'Read-only local copy. Connect to edit.'),
-                        ),
+            Column(
+              children: [
+                if (workspace.hasLegacyData)
+                  Material(
+                    color: colors.primaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
-                      TextButton(
-                        onPressed: workspace.isLoading || workspace.isSaving
-                            ? null
-                            : workspace.refresh,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            if (workspace.canImport)
-              Material(
-                color: colors.primaryContainer,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  child: Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    children: [
-                      Text(
-                        'Local data from before sign-in are available.',
-                        style: TextStyle(color: colors.onPrimaryContainer),
-                      ),
-                      FilledButton(
-                        style: _importButtonStyle(context),
-                        onPressed: _confirmImport,
-                        child: const Text('Import…'),
-                      ),
-                      TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: colors.onPrimaryContainer,
-                        ),
-                        onPressed: workspace.dismissImport,
-                        child: const Text('Not now'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            Expanded(
-              child: workspace.isLoading && !workspace.hasData
-                  ? const Center(child: CircularProgressIndicator())
-                  : !workspace.hasData
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
                         children: [
-                          const Text(
-                            'Connect to load your data for this account.',
+                          Text(
+                            'Local data from before sign-in are available.',
+                            style: TextStyle(color: colors.onPrimaryContainer),
+                          ),
+                          FilledButton(
+                            style: _importButtonStyle(context),
+                            onPressed: workspace.canImport
+                                ? _confirmImport
+                                : null,
+                            child: const Text('Import…'),
                           ),
                           TextButton(
-                            onPressed: workspace.refresh,
-                            child: const Text('Retry'),
-                          ),
-                          TextButton(
-                            onPressed: context.read<AuthService>().signOut,
-                            child: const Text('Sign out'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: colors.onPrimaryContainer,
+                            ),
+                            onPressed: workspace.dismissImport,
+                            child: const Text('Not now'),
                           ),
                         ],
                       ),
-                    )
-                  : const DashboardScreen(),
+                    ),
+                  ),
+                Expanded(
+                  child: workspace.isLoading && !workspace.hasData
+                      ? const Center(child: CircularProgressIndicator())
+                      : !workspace.hasData
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Connect to load your data for this account.',
+                              ),
+                              TextButton(
+                                onPressed: workspace.refresh,
+                                child: const Text('Retry'),
+                              ),
+                              TextButton(
+                                onPressed: context.read<AuthService>().signOut,
+                                child: const Text('Sign out'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : const DashboardScreen(),
+                ),
+              ],
+            ),
+            Positioned(
+              top: MediaQuery.sizeOf(context).width < 850 ? 64 : 12,
+              left: 16,
+              right: 16,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: CloudStatusCard(workspace: workspace),
+                ),
+              ),
             ),
           ],
         ),

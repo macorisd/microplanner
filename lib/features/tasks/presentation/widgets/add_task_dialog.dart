@@ -1,3 +1,4 @@
+import '../../../../core/theme/app_motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -484,7 +485,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                   onTap: () => setState(() => _priority = priority),
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
+                    duration: AppMotion.duration(context, AppMotion.fast),
                     padding: const EdgeInsets.symmetric(
                       vertical: AppTheme.spacingMedium,
                     ),

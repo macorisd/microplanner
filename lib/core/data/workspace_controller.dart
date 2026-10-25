@@ -36,6 +36,7 @@ class WorkspaceController extends ChangeNotifier {
   bool get isOnline => _online;
   bool get hasData => _hasCache;
   bool get canImport => _canImport && canWrite;
+  bool get hasLegacyData => _canImport;
   bool get canWrite => _online && !_loading && !_saving && auth.sessionValid;
   String? get error => _error;
   String? get ownerId => _ownerId;

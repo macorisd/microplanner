@@ -1,3 +1,4 @@
+import '../../../../core/theme/app_motion.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -93,7 +94,8 @@ class _SubjectDialogState extends State<SubjectDialog> {
                 child: GestureDetector(
                   onTap: () =>
                       setState(() => _selectedColor = color.toARGB32()),
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: AppMotion.duration(context, AppMotion.fast),
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/data/workspace_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_motion.dart';
 import '../../../core/utils/input_mode.dart';
 import '../../boards/providers/boards_provider.dart';
 import '../data/models/task.dart';
@@ -35,10 +36,13 @@ class DashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: compact
           ? AppBar(
-              title: Text(
-                boardName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              title: MotionSwap(
+                child: Text(
+                  boardName,
+                  key: ValueKey(boardName),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               actions: [
                 if (workspace.isLoading || workspace.isSaving) progress,
@@ -67,11 +71,15 @@ class DashboardScreen extends StatelessWidget {
                       child: Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              boardName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.displaySmall,
+                            child: MotionSwap(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                boardName,
+                                key: ValueKey(boardName),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.displaySmall,
+                              ),
                             ),
                           ),
                           if (workspace.isLoading || workspace.isSaving)
@@ -117,10 +125,12 @@ class DashboardScreen extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: workspace.canWrite ? () => _add(context) : null,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('New Task'),
+      floatingActionButton: PressFeedback(
+        child: FloatingActionButton.extended(
+          onPressed: workspace.canWrite ? () => _add(context) : null,
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('New Task'),
+        ),
       ),
     );
   }
@@ -134,6 +144,9 @@ class DashboardScreen extends StatelessWidget {
       Color background,
       IconData icon,
     ) => TaskColumn(
+      key: ValueKey(
+        '${provider.workspace.ownerId}:${provider.boards.currentBoardId}:$title',
+      ),
       title: title,
       tasks: tasks,
       headerColor: color,
@@ -170,7 +183,7 @@ class DashboardScreen extends StatelessWidget {
 
   void _add(BuildContext context) {
     final provider = context.read<TasksProvider>();
-    showDialog(
+    showMotionDialog(
       context: context,
       builder: (_) => AddTaskDialog(onSave: provider.addTask),
     );
@@ -179,7 +192,7 @@ class DashboardScreen extends StatelessWidget {
   void _edit(BuildContext context, Task task) {
     if (!context.read<WorkspaceController>().canWrite) return;
     final provider = context.read<TasksProvider>();
-    showDialog(
+    showMotionDialog(
       context: context,
       builder: (_) => EditTaskDialog(task: task, onSave: provider.updateTask),
     );
@@ -188,7 +201,7 @@ class DashboardScreen extends StatelessWidget {
   void _delete(BuildContext context, Task task) {
     if (!context.read<WorkspaceController>().canWrite) return;
     final provider = context.read<TasksProvider>();
-    showDialog(
+    showMotionDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Task'),
