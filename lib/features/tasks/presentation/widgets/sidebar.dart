@@ -91,6 +91,10 @@ class _SidebarState extends State<Sidebar> {
                   builder: (context, authService, _) {
                     final user = authService.currentUser;
                     if (user == null) return const SizedBox.shrink();
+                    final photoUrl = user.photoUrl?.trim();
+                    final photo = photoUrl == null || photoUrl.isEmpty
+                        ? null
+                        : NetworkImage(photoUrl);
 
                     return MouseRegion(
                       cursor: SystemMouseCursors.click,
@@ -110,8 +114,15 @@ class _SidebarState extends State<Sidebar> {
                         child: Row(
                           children: [
                             CircleAvatar(
+                              key: ValueKey(user.id),
                               radius: 18,
                               backgroundColor: AppColors.primaryLight,
+                              foregroundImage: photo,
+                              onForegroundImageError: photo == null
+                                  ? null
+                                  : (_, _) {
+                                      // Keep the initial visible when the photo cannot load.
+                                    },
                               child: Text(
                                 user.displayName.isNotEmpty
                                     ? user.displayName[0].toUpperCase()
