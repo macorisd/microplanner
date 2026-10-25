@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/input_mode.dart';
 import '../../data/models/task.dart';
 import 'task_card.dart';
 
@@ -29,10 +30,13 @@ class TaskColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final touch = usesTouchControls(context);
     // Use gray colors when column is empty
     final isEmpty = tasks.isEmpty;
     final effectiveHeaderColor = isEmpty ? AppColors.textTertiary : headerColor;
-    final effectiveHeaderBgColor = isEmpty ? AppColors.surfaceVariant : headerBackgroundColor;
+    final effectiveHeaderBgColor = isEmpty
+        ? AppColors.surfaceVariant
+        : headerBackgroundColor;
 
     return Container(
       decoration: BoxDecoration(
@@ -44,7 +48,7 @@ class TaskColumn extends StatelessWidget {
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.all(AppTheme.spacingMedium),
+            padding: EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium),
             decoration: BoxDecoration(
               color: effectiveHeaderBgColor,
               borderRadius: const BorderRadius.only(
@@ -54,20 +58,20 @@ class TaskColumn extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(
-                  icon,
-                  color: effectiveHeaderColor,
-                  size: 22,
-                ),
+                Icon(icon, color: effectiveHeaderColor, size: 22),
                 const SizedBox(width: AppTheme.spacingSmall),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: effectiveHeaderColor,
-                        fontWeight: FontWeight.w600,
-                      ),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: effectiveHeaderColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppTheme.spacingSmall,
@@ -80,9 +84,9 @@ class TaskColumn extends StatelessWidget {
                   child: Text(
                     '${tasks.length}',
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: effectiveHeaderColor,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: effectiveHeaderColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -99,7 +103,9 @@ class TaskColumn extends StatelessWidget {
                       trackVisibility: WidgetStateProperty.all(false),
                     ),
                     child: ListView.builder(
-                      padding: const EdgeInsets.all(AppTheme.spacingMedium),
+                      padding: EdgeInsets.all(
+                        touch ? 8 : AppTheme.spacingMedium,
+                      ),
                       itemCount: tasks.length,
                       itemBuilder: (context, index) {
                         final task = tasks[index];
@@ -157,17 +163,13 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            size: 48,
-            color: AppColors.textTertiary,
-          ),
+          Icon(icon, size: 48, color: AppColors.textTertiary),
           const SizedBox(height: AppTheme.spacingSmall),
           Text(
             message,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textTertiary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
             textAlign: TextAlign.center,
           ),
         ],

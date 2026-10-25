@@ -30,6 +30,7 @@ class _SidebarState extends State<Sidebar> {
 
   @override
   Widget build(BuildContext context) {
+    final touch = usesTouchControls(context);
     return LayoutBuilder(
       builder: (context, constraints) => Row(
         mainAxisSize: MainAxisSize.min,
@@ -41,12 +42,12 @@ class _SidebarState extends State<Sidebar> {
               children: [
                 // Header with logo
                 Container(
-                  padding: const EdgeInsets.all(AppTheme.spacingLarge),
+                  padding: EdgeInsets.all(touch ? 16 : AppTheme.spacingLarge),
                   child: Row(
                     children: [
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: touch ? 32 : 40,
+                        height: touch ? 32 : 40,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -94,8 +95,12 @@ class _SidebarState extends State<Sidebar> {
                     return MouseRegion(
                       cursor: SystemMouseCursors.click,
                       child: Container(
-                        margin: const EdgeInsets.all(AppTheme.spacingMedium),
-                        padding: const EdgeInsets.all(AppTheme.spacingMedium),
+                        margin: EdgeInsets.all(
+                          touch ? 12 : AppTheme.spacingMedium,
+                        ),
+                        padding: EdgeInsets.all(
+                          touch ? 12 : AppTheme.spacingMedium,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
                           borderRadius: BorderRadius.circular(
@@ -155,7 +160,7 @@ class _SidebarState extends State<Sidebar> {
                     context.read<AuthService>().signOut();
                   },
                 ),
-                const SizedBox(height: AppTheme.spacingMedium),
+                SizedBox(height: touch ? 8 : AppTheme.spacingMedium),
               ],
             ),
           ),
@@ -199,9 +204,9 @@ class _BoardsSection extends StatelessWidget {
       children: [
         // Section header
         Padding(
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: AppTheme.spacingLarge,
-            vertical: AppTheme.spacingSmall,
+            vertical: usesTouchControls(context) ? 0 : AppTheme.spacingSmall,
           ),
           child: Row(
             children: [
@@ -434,7 +439,8 @@ class _BoardCardState extends State<_BoardCard> {
 
   @override
   Widget build(BuildContext context) {
-    final showActions = usesTouchControls(context) || _isHovered;
+    final touch = usesTouchControls(context);
+    final showActions = touch || _isHovered;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppTheme.spacingMedium,
@@ -459,7 +465,10 @@ class _BoardCardState extends State<_BoardCard> {
                     }
                   },
             child: Container(
-              padding: const EdgeInsets.all(AppTheme.spacingMedium),
+              padding: EdgeInsets.symmetric(
+                horizontal: touch ? 12 : AppTheme.spacingMedium,
+                vertical: touch ? 4 : AppTheme.spacingMedium,
+              ),
               decoration: BoxDecoration(
                 color: widget.isActive
                     ? AppColors.sidebarItemActive
@@ -567,7 +576,7 @@ class _BoardCardState extends State<_BoardCard> {
                       ],
                     ],
                   ),
-                  const SizedBox(height: AppTheme.spacingXSmall),
+                  SizedBox(height: touch ? 0 : AppTheme.spacingXSmall),
                   // Subjects button with oval hover effect
                   MouseRegion(
                     cursor: SystemMouseCursors.click,
@@ -598,16 +607,29 @@ class _BoardCardState extends State<_BoardCard> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.subject_rounded,
-                              size: 14,
-                              color: AppColors.textTertiary,
+                              size: touch ? 16 : 14,
+                              color: touch
+                                  ? AppColors.textSecondary
+                                  : AppColors.textTertiary,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Subjects',
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(color: AppColors.textTertiary),
+                              style:
+                                  (touch
+                                          ? Theme.of(
+                                              context,
+                                            ).textTheme.labelMedium
+                                          : Theme.of(
+                                              context,
+                                            ).textTheme.labelSmall)
+                                      ?.copyWith(
+                                        color: touch
+                                            ? AppColors.textSecondary
+                                            : AppColors.textTertiary,
+                                      ),
                             ),
                           ],
                         ),
@@ -639,9 +661,11 @@ class _SubjectsView extends StatelessWidget {
           children: [
             // Header with back button
             Padding(
-              padding: const EdgeInsets.symmetric(
+              padding: EdgeInsets.symmetric(
                 horizontal: AppTheme.spacingLarge,
-                vertical: AppTheme.spacingSmall,
+                vertical: usesTouchControls(context)
+                    ? 0
+                    : AppTheme.spacingSmall,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

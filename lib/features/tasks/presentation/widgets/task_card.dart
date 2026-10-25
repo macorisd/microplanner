@@ -97,7 +97,7 @@ class _TaskCardState extends State<TaskCard> {
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
             child: Padding(
-              padding: const EdgeInsets.all(AppTheme.spacingMedium),
+              padding: EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -140,7 +140,7 @@ class _TaskCardState extends State<TaskCard> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: AppTheme.spacingMedium),
+                      SizedBox(width: touch ? 4 : AppTheme.spacingMedium),
                       Expanded(
                         child: Text(
                           task.name,
@@ -158,7 +158,7 @@ class _TaskCardState extends State<TaskCard> {
                       _PriorityIndicator(priority: task.priority),
                     ],
                   ),
-                  const SizedBox(height: AppTheme.spacingSmall),
+                  SizedBox(height: touch ? 4 : AppTheme.spacingSmall),
                   Consumer<BoardsProvider>(
                     builder: (context, boards, _) {
                       final subject = boards.getSubjectById(task.subjectId);
@@ -199,18 +199,19 @@ class _TaskCardState extends State<TaskCard> {
                                   ],
                                 ),
                               ),
-                              if (!hasSubject && !touch && hasActions) actions,
+                              if (!hasSubject && hasActions) actions,
                             ],
                           ),
-                          if (hasSubject || (touch && hasActions))
+                          if (hasSubject)
                             Padding(
                               padding: const EdgeInsets.only(
                                 top: AppTheme.spacingSmall,
                               ),
                               child: Row(
                                 children: [
-                                  if (hasSubject)
-                                    Expanded(
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: AppTheme.spacingSmall,
@@ -225,6 +226,7 @@ class _TaskCardState extends State<TaskCard> {
                                           ),
                                         ),
                                         child: Row(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Container(
                                               width: 8,
@@ -237,7 +239,7 @@ class _TaskCardState extends State<TaskCard> {
                                               ),
                                             ),
                                             const SizedBox(width: 6),
-                                            Expanded(
+                                            Flexible(
                                               child: Text(
                                                 subjectName,
                                                 maxLines: 1,
@@ -254,9 +256,8 @@ class _TaskCardState extends State<TaskCard> {
                                           ],
                                         ),
                                       ),
-                                    )
-                                  else
-                                    const Spacer(),
+                                    ),
+                                  ),
                                   if (hasActions) actions,
                                 ],
                               ),

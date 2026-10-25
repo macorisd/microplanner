@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/input_mode.dart';
 import '../../../boards/data/models/subject.dart';
 import '../../../boards/providers/boards_provider.dart';
 import '../../data/models/task.dart';
@@ -111,6 +112,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final touch = usesTouchControls(context);
     final boardsProvider = context.watch<BoardsProvider>();
     final subjects = boardsProvider.currentBoardSubjects;
     if (_selectedSubjectId != null &&
@@ -119,6 +121,10 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
     }
 
     return Dialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: touch ? 16 : 40,
+        vertical: 24,
+      ),
       child: Focus(
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent &&
@@ -133,7 +139,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
         child: SingleChildScrollView(
           child: Container(
             width: 480,
-            padding: const EdgeInsets.all(AppTheme.spacingLarge),
+            padding: EdgeInsets.all(touch ? 16 : AppTheme.spacingLarge),
             child: Form(
               key: _formKey,
               child: Column(

@@ -10,6 +10,7 @@ import 'package:microplanner/features/tasks/data/models/task.dart';
 import 'package:microplanner/features/tasks/presentation/dashboard_screen.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/sidebar.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_card.dart';
+import 'package:microplanner/features/tasks/presentation/widgets/task_column.dart';
 import 'package:microplanner/features/tasks/providers/tasks_provider.dart';
 import 'support/fakes.dart';
 
@@ -94,7 +95,138 @@ void main() {
     }
   }
 
+  testWidgets(
+    'Windows subject badge fits its text instead of filling the footer',
+    (tester) async {
+      final fixture = _Fixture();
+      await tester.runAsync(fixture.initialize);
+      final task = Task.create(
+        id: 'badge',
+        name: 'A task',
+        deadline: DateTime(2030, 6, 15),
+        type: TaskType.unassigned,
+        priority: TaskPriority.low,
+      )..subject = 'Doctorado';
+      await tester.pumpWidget(
+        fixture.app(
+          TargetPlatform.windows,
+          Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 400,
+              child: TaskCard(
+                task: task,
+                onToggleComplete: () {},
+                onEdit: () {},
+                onDelete: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final text = find.text('Doctorado');
+      final badge = find
+          .ancestor(of: text, matching: find.byType(Container))
+          .first;
+      expect(
+        tester.getSize(badge).width,
+        closeTo(tester.getSize(text).width + 30, 0.1),
+      );
+      expect(tester.getSize(badge).width, lessThan(200));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      fixture.dispose();
+    },
+  );
+
   for (final width in [320.0, 393.0]) {
+    testWidgets(
+      'Android uses the available width at $width, including large text',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetViewInsets);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final fixture = _Fixture();
+        await tester.runAsync(() async {
+          await fixture.initialize();
+          await fixture.tasks.addTask(
+            name: 'Completed task',
+            deadline: DateTime(2030, 6, 15),
+            type: TaskType.unassigned,
+            priority: TaskPriority.low,
+          );
+          final task = fixture.tasks.tasks.last;
+          await fixture.tasks.toggleTaskCompletion(task.id);
+        });
+        final writes = fixture.h.server.writes;
+        await tester.pumpWidget(
+          fixture.app(TargetPlatform.android, const DashboardScreen()),
+        );
+        await tester.pumpAndSettle();
+        final column = find.byType(TaskColumn).first;
+        expect(tester.getSize(column).width, closeTo(width * 0.92 - 12, 0.1));
+        expect(tester.getTopLeft(column).dy, lessThanOrEqualTo(64));
+        expect(
+          tester.getSize(find.byType(TaskCard).first).height,
+          lessThan(190),
+        );
+        final appBar = find.byType(AppBar);
+        expect(
+          find.descendant(
+            of: appBar,
+            matching: find.byTooltip('Refresh cloud data'),
+          ),
+          findsOneWidget,
+        );
+        for (final scale in [1.0, 1.5]) {
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          await tester.tap(find.byTooltip('Edit').first);
+          await tester.pumpAndSettle();
+          tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(find.text('Cancel'));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          await tester.tap(find.text('Cancel'));
+          await tester.pumpAndSettle();
+          tester.view.resetViewInsets();
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('New Task'));
+          await tester.pumpAndSettle();
+          tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(find.text('Cancel'));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          await tester.tap(find.text('Cancel'));
+          await tester.pumpAndSettle();
+          tester.view.resetViewInsets();
+        }
+        tester.platformDispatcher.clearTextScaleFactorTestValue();
+        await tester.drag(find.byType(PageView), Offset(-width * 0.75, 0));
+        await tester.pumpAndSettle();
+        final late = find.byWidgetPredicate(
+          (w) => w is TaskColumn && w.title == 'Late',
+        );
+        expect(tester.getTopLeft(late).dx, closeTo(width * 0.04 + 6, 0.1));
+        await tester.drag(find.byType(PageView), Offset(-width * 0.75, 0));
+        await tester.pumpAndSettle();
+        final upcoming = find.byWidgetPredicate(
+          (w) => w is TaskColumn && w.title == 'Upcoming',
+        );
+        expect(tester.getTopLeft(upcoming).dx, closeTo(width * 0.04 + 6, 0.1));
+        expect(fixture.h.server.writes, writes);
+        await tester.pumpWidget(const SizedBox());
+        fixture.dispose();
+      },
+    );
+
     testWidgets(
       'Android drawer fills its width and supports board/subject actions at $width',
       (tester) async {
@@ -134,6 +266,12 @@ void main() {
           findsNWidgets(2),
         );
         expect(find.byTooltip('Rename board').hitTestable(), findsNWidgets(2));
+        expect(
+          tester
+              .getSize(find.byKey(ValueKey(fixture.boards.boards.first.id)))
+              .height,
+          lessThanOrEqualTo(116),
+        );
         final original = fixture.boards.boards.first.name;
         await tester.tap(find.byTooltip('Rename board').first);
         await tester.pumpAndSettle();

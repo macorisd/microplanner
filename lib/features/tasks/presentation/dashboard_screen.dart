@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/data/workspace_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/input_mode.dart';
 import '../../boards/providers/boards_provider.dart';
 import '../data/models/task.dart';
 import '../providers/tasks_provider.dart';
@@ -16,9 +17,35 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 850;
+    final touchCompact = compact && usesTouchControls(context);
     final workspace = context.watch<WorkspaceController>();
+    final boardName =
+        context.watch<BoardsProvider>().currentBoard?.name ?? 'My Tasks';
+    final refresh = IconButton(
+      tooltip: 'Refresh cloud data',
+      onPressed: workspace.isLoading || workspace.isSaving
+          ? null
+          : workspace.refresh,
+      icon: const Icon(Icons.refresh),
+    );
+    const progress = SizedBox.square(
+      dimension: 22,
+      child: CircularProgressIndicator(strokeWidth: 2),
+    );
     return Scaffold(
-      appBar: compact ? AppBar(title: const Text('microplanner')) : null,
+      appBar: compact
+          ? AppBar(
+              title: Text(
+                boardName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              actions: [
+                if (workspace.isLoading || workspace.isSaving) progress,
+                refresh,
+              ],
+            )
+          : null,
       drawer: compact
           ? const Drawer(child: SafeArea(child: Sidebar(inDrawer: true)))
           : null,
@@ -31,44 +58,35 @@ class DashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.spacingLarge,
-                      vertical: AppTheme.spacingMedium,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            context
-                                    .watch<BoardsProvider>()
-                                    .currentBoard
-                                    ?.name ??
-                                'My Tasks',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.displaySmall,
+                  if (!compact)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.spacingLarge,
+                        vertical: AppTheme.spacingMedium,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              boardName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.displaySmall,
+                            ),
                           ),
-                        ),
-                        if (workspace.isLoading || workspace.isSaving)
-                          const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        IconButton(
-                          tooltip: 'Refresh cloud data',
-                          onPressed: workspace.isLoading || workspace.isSaving
-                              ? null
-                              : workspace.refresh,
-                          icon: const Icon(Icons.refresh),
-                        ),
-                      ],
+                          if (workspace.isLoading || workspace.isSaving)
+                            progress,
+                          refresh,
+                        ],
+                      ),
                     ),
-                  ),
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
+                        final columns = _taskColumns(context);
+                        if (touchCompact) {
+                          return _TouchColumns(columns: columns);
+                        }
                         final width = constraints.maxWidth < 900
                             ? 900.0
                             : constraints.maxWidth;
@@ -79,7 +97,14 @@ class DashboardScreen extends StatelessWidget {
                             height: constraints.maxHeight,
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(24, 0, 24, 80),
-                              child: _columns(context),
+                              child: Row(
+                                children: [
+                                  for (var i = 0; i < columns.length; i++) ...[
+                                    if (i > 0) const SizedBox(width: 16),
+                                    Expanded(child: columns[i]),
+                                  ],
+                                ],
+                              ),
                             ),
                           ),
                         );
@@ -100,7 +125,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _columns(BuildContext context) {
+  List<Widget> _taskColumns(BuildContext context) {
     final provider = context.watch<TasksProvider>();
     Widget column(
       String title,
@@ -108,45 +133,39 @@ class DashboardScreen extends StatelessWidget {
       Color color,
       Color background,
       IconData icon,
-    ) => Expanded(
-      child: TaskColumn(
-        title: title,
-        tasks: tasks,
-        headerColor: color,
-        headerBackgroundColor: background,
-        icon: icon,
-        onToggleComplete: (task) => provider.toggleTaskCompletion(task.id),
-        onDeleteTask: (task) => _delete(context, task),
-        onEditTask: (task) => _edit(context, task),
+    ) => TaskColumn(
+      title: title,
+      tasks: tasks,
+      headerColor: color,
+      headerBackgroundColor: background,
+      icon: icon,
+      onToggleComplete: (task) => provider.toggleTaskCompletion(task.id),
+      onDeleteTask: (task) => _delete(context, task),
+      onEditTask: (task) => _edit(context, task),
+    );
+    return [
+      column(
+        'Complete',
+        provider.completedTasks,
+        AppColors.completeHeader,
+        AppColors.completeHeaderLight,
+        Icons.check_circle_rounded,
       ),
-    );
-    return Row(
-      children: [
-        column(
-          'Complete',
-          provider.completedTasks,
-          AppColors.completeHeader,
-          AppColors.completeHeaderLight,
-          Icons.check_circle_rounded,
-        ),
-        const SizedBox(width: AppTheme.spacingMedium),
-        column(
-          'Late',
-          provider.lateTasks,
-          AppColors.lateHeader,
-          AppColors.lateHeaderLight,
-          Icons.warning_rounded,
-        ),
-        const SizedBox(width: AppTheme.spacingMedium),
-        column(
-          'Upcoming',
-          provider.upcomingTasks,
-          AppColors.upcomingHeader,
-          AppColors.upcomingHeaderLight,
-          Icons.schedule_rounded,
-        ),
-      ],
-    );
+      column(
+        'Late',
+        provider.lateTasks,
+        AppColors.lateHeader,
+        AppColors.lateHeaderLight,
+        Icons.warning_rounded,
+      ),
+      column(
+        'Upcoming',
+        provider.upcomingTasks,
+        AppColors.upcomingHeader,
+        AppColors.upcomingHeaderLight,
+        Icons.schedule_rounded,
+      ),
+    ];
   }
 
   void _add(BuildContext context) {
@@ -196,4 +215,33 @@ class DashboardScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Wide touch columns snap into place while revealing the next page.
+class _TouchColumns extends StatefulWidget {
+  final List<Widget> columns;
+
+  const _TouchColumns({required this.columns});
+
+  @override
+  State<_TouchColumns> createState() => _TouchColumnsState();
+}
+
+class _TouchColumnsState extends State<_TouchColumns> {
+  final _controller = PageController(viewportFraction: 0.92);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => PageView(
+    controller: _controller,
+    children: [
+      for (final column in widget.columns)
+        Padding(padding: const EdgeInsets.fromLTRB(6, 8, 6, 80), child: column),
+    ],
+  );
 }
