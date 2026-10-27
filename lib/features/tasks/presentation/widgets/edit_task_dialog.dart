@@ -114,6 +114,8 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
   @override
   Widget build(BuildContext context) {
     final touch = usesTouchControls(context);
+    final compact = touch || MediaQuery.sizeOf(context).width < 600;
+    final short = MediaQuery.sizeOf(context).height < 420;
     final boardsProvider = context.watch<BoardsProvider>();
     final subjects = boardsProvider.currentBoardSubjects;
     if (_selectedSubjectId != null &&
@@ -123,8 +125,8 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
 
     return Dialog(
       insetPadding: EdgeInsets.symmetric(
-        horizontal: touch ? 16 : 40,
-        vertical: 24,
+        horizontal: compact ? 16 : 40,
+        vertical: short ? 12 : 24,
       ),
       child: Focus(
         onKeyEvent: (node, event) {
@@ -140,7 +142,7 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
         child: SingleChildScrollView(
           child: Container(
             width: 480,
-            padding: EdgeInsets.all(touch ? 16 : AppTheme.spacingLarge),
+            padding: EdgeInsets.all(compact ? 16 : AppTheme.spacingLarge),
             child: Form(
               key: _formKey,
               child: Column(
@@ -320,6 +322,11 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
         final date = await showDatePicker(
           context: context,
           initialDate: _deadline,
+          initialEntryMode:
+              MediaQuery.sizeOf(context).width < 400 &&
+                  !usesTouchControls(context)
+              ? DatePickerEntryMode.inputOnly
+              : DatePickerEntryMode.calendar,
           firstDate: DateTime.now().subtract(const Duration(days: 365)),
           lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
           locale: const Locale('en', 'GB'), // Week starts on Monday
@@ -333,7 +340,9 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
                   onSurface: AppColors.textPrimary,
                 ),
               ),
-              child: child!,
+              child: MediaQuery.sizeOf(context).height < 520
+                  ? SingleChildScrollView(child: child!)
+                  : child!,
             );
           },
         );
@@ -400,7 +409,9 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
                   onSurface: AppColors.textPrimary,
                 ),
               ),
-              child: child!,
+              child: MediaQuery.sizeOf(context).height < 520
+                  ? SingleChildScrollView(child: child!)
+                  : child!,
             );
           },
         );

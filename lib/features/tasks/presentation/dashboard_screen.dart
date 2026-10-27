@@ -18,10 +18,13 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 850;
-    final touchCompact = compact && usesTouchControls(context);
+    final short = MediaQuery.sizeOf(context).height < 360;
     final workspace = context.watch<WorkspaceController>();
     final boardName =
-        context.watch<BoardsProvider>().currentBoard?.name ?? 'My Tasks';
+        context.select<BoardsProvider, String?>(
+          (boards) => boards.currentBoard?.name,
+        ) ??
+        'My Tasks';
     final refresh = IconButton(
       tooltip: 'Refresh cloud data',
       onPressed: workspace.isLoading || workspace.isSaving
@@ -36,6 +39,7 @@ class DashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: compact
           ? AppBar(
+              toolbarHeight: short ? 48 : null,
               title: MotionSwap(
                 child: Text(
                   boardName,
@@ -88,37 +92,7 @@ class DashboardScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final columns = _taskColumns(context);
-                        if (touchCompact) {
-                          return _TouchColumns(columns: columns);
-                        }
-                        final width = constraints.maxWidth < 900
-                            ? 900.0
-                            : constraints.maxWidth;
-                        return SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SizedBox(
-                            width: width,
-                            height: constraints.maxHeight,
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(24, 0, 24, 80),
-                              child: Row(
-                                children: [
-                                  for (var i = 0; i < columns.length; i++) ...[
-                                    if (i > 0) const SizedBox(width: 16),
-                                    Expanded(child: columns[i]),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                  const Expanded(child: _TaskArea()),
                 ],
               ),
             ),
@@ -126,54 +100,71 @@ class DashboardScreen extends StatelessWidget {
         ],
       ),
       floatingActionButton: PressFeedback(
-        child: FloatingActionButton.extended(
-          onPressed: workspace.canWrite ? () => _add(context) : null,
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('New Task'),
-        ),
+        child: short
+            ? FloatingActionButton.small(
+                tooltip: 'New Task',
+                onPressed: workspace.canWrite ? () => _add(context) : null,
+                child: const Icon(Icons.add_rounded),
+              )
+            : FloatingActionButton.extended(
+                onPressed: workspace.canWrite ? () => _add(context) : null,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('New Task'),
+              ),
       ),
     );
   }
 
-  List<Widget> _taskColumns(BuildContext context) {
-    final provider = context.watch<TasksProvider>();
+  static List<Widget> _taskColumns(BuildContext context) {
     Widget column(
       String title,
-      List<Task> tasks,
+      List<Task> Function(TasksProvider) select,
       Color color,
       Color background,
       IconData icon,
-    ) => TaskColumn(
-      key: ValueKey(
-        '${provider.workspace.ownerId}:${provider.boards.currentBoardId}:$title',
+    ) => Selector<TasksProvider, (String?, String?, List<Task>)>(
+      selector: (_, provider) => (
+        provider.workspace.ownerId,
+        provider.boards.currentBoardId,
+        select(provider),
       ),
-      title: title,
-      tasks: tasks,
-      headerColor: color,
-      headerBackgroundColor: background,
-      icon: icon,
-      onToggleComplete: (task) => provider.toggleTaskCompletion(task.id),
-      onDeleteTask: (task) => _delete(context, task),
-      onEditTask: (task) => _edit(context, task),
+      shouldRebuild: (previous, next) =>
+          previous.$1 != next.$1 ||
+          previous.$2 != next.$2 ||
+          !identical(previous.$3, next.$3),
+      builder: (context, view, _) {
+        final provider = context.read<TasksProvider>();
+        return TaskColumn(
+          key: ValueKey('${view.$1}:${view.$2}:$title'),
+          title: title,
+          tasks: view.$3,
+          headerColor: color,
+          headerBackgroundColor: background,
+          icon: icon,
+          onToggleComplete: (task) => provider.toggleTaskCompletion(task.id),
+          onDeleteTask: (task) => _delete(context, task),
+          onEditTask: (task) => _edit(context, task),
+        );
+      },
     );
     return [
       column(
         'Complete',
-        provider.completedTasks,
+        (provider) => provider.completedTasks,
         AppColors.completeHeader,
         AppColors.completeHeaderLight,
         Icons.check_circle_rounded,
       ),
       column(
         'Late',
-        provider.lateTasks,
+        (provider) => provider.lateTasks,
         AppColors.lateHeader,
         AppColors.lateHeaderLight,
         Icons.warning_rounded,
       ),
       column(
         'Upcoming',
-        provider.upcomingTasks,
+        (provider) => provider.upcomingTasks,
         AppColors.upcomingHeader,
         AppColors.upcomingHeaderLight,
         Icons.schedule_rounded,
@@ -181,7 +172,7 @@ class DashboardScreen extends StatelessWidget {
     ];
   }
 
-  void _add(BuildContext context) {
+  static void _add(BuildContext context) {
     final provider = context.read<TasksProvider>();
     showMotionDialog(
       context: context,
@@ -189,7 +180,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  void _edit(BuildContext context, Task task) {
+  static void _edit(BuildContext context, Task task) {
     if (!context.read<WorkspaceController>().canWrite) return;
     final provider = context.read<TasksProvider>();
     showMotionDialog(
@@ -198,12 +189,13 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  void _delete(BuildContext context, Task task) {
+  static void _delete(BuildContext context, Task task) {
     if (!context.read<WorkspaceController>().canWrite) return;
     final provider = context.read<TasksProvider>();
     showMotionDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        scrollable: true,
         title: const Text('Delete Task'),
         content: Text('Are you sure you want to delete "${task.name}"?'),
         actions: [
@@ -228,6 +220,70 @@ class DashboardScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Cloud status changes do not rebuild or re-sort the task workspace.
+class _TaskArea extends StatefulWidget {
+  const _TaskArea();
+  @override
+  State<_TaskArea> createState() => _TaskAreaState();
+}
+
+class _TaskAreaState extends State<_TaskArea> {
+  final _horizontal = ScrollController();
+  @override
+  void dispose() {
+    _horizontal.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final columns = DashboardScreen._taskColumns(context);
+      if (MediaQuery.sizeOf(context).width < 850 &&
+          usesTouchControls(context)) {
+        return _TouchColumns(columns: columns);
+      }
+      final width = constraints.maxWidth < 900 ? 900.0 : constraints.maxWidth;
+      final overflow = width > constraints.maxWidth;
+      return ScrollbarTheme(
+        data: const ScrollbarThemeData(
+          thumbColor: WidgetStatePropertyAll(AppColors.textTertiary),
+        ),
+        child: Scrollbar(
+          controller: _horizontal,
+          thumbVisibility: overflow,
+          trackVisibility: overflow,
+          notificationPredicate: (notice) => notice.depth == 0,
+          child: SingleChildScrollView(
+            controller: _horizontal,
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: width,
+              height: constraints.maxHeight,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  0,
+                  24,
+                  constraints.maxHeight < 300 ? 12 : 80,
+                ),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < columns.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 16),
+                      Expanded(child: columns[i]),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 /// Wide touch columns snap into place while revealing the next page.
