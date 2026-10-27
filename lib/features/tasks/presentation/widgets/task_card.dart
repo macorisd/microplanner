@@ -7,6 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/utils/input_mode.dart';
 import '../../../boards/providers/boards_provider.dart';
+import '../../../boards/data/models/subject.dart';
 import '../../data/models/task.dart';
 
 /// A task's details and actions, with persistent controls on touch platforms.
@@ -33,45 +34,58 @@ class TaskCard extends StatefulWidget {
 }
 
 class _TaskCardState extends State<TaskCard> {
-  bool _isHovered = false;
+  static final _dateFormat = DateFormat('EEE dd/MM');
+  static final _timeFormat = DateFormat('HH:mm');
+  final _hovered = ValueNotifier(false);
+
+  @override
+  void dispose() {
+    _hovered.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final touch = usesTouchControls(context);
-    final showActions = touch || _isHovered;
     final task = widget.task;
     final hasActions = widget.onEdit != null || widget.onDelete != null;
     final actionWidth =
         48.0 *
         ((widget.onEdit != null ? 1 : 0) + (widget.onDelete != null ? 1 : 0));
-    final actions = IgnorePointer(
-      ignoring: !showActions,
-      child: ExcludeSemantics(
-        excluding: !showActions,
-        child: AnimatedOpacity(
-          duration: AppMotion.duration(context, AppMotion.fast),
-          opacity: showActions ? 1 : 0,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (widget.onEdit != null)
-                _ActionButton(
-                  icon: Icons.edit_outlined,
-                  tooltip: 'Edit',
-                  onPressed: showActions ? widget.onEdit : null,
-                  touch: touch,
-                ),
-              if (widget.onDelete != null)
-                _ActionButton(
-                  icon: Icons.delete_outline_rounded,
-                  tooltip: 'Delete',
-                  onPressed: showActions ? widget.onDelete : null,
-                  touch: touch,
-                ),
-            ],
+    final actions = ValueListenableBuilder<bool>(
+      valueListenable: _hovered,
+      builder: (context, hovered, _) {
+        final showActions = touch || hovered;
+        return IgnorePointer(
+          ignoring: !showActions,
+          child: ExcludeSemantics(
+            excluding: !showActions,
+            child: AnimatedOpacity(
+              duration: AppMotion.duration(context, AppMotion.fast),
+              opacity: showActions ? 1 : 0,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.onEdit != null)
+                    _ActionButton(
+                      icon: Icons.edit_outlined,
+                      tooltip: 'Edit',
+                      onPressed: showActions ? widget.onEdit : null,
+                      touch: touch,
+                    ),
+                  if (widget.onDelete != null)
+                    _ActionButton(
+                      icon: Icons.delete_outline_rounded,
+                      tooltip: 'Delete',
+                      onPressed: showActions ? widget.onDelete : null,
+                      touch: touch,
+                    ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
     final hoursUntilDeadline = task.deadline.difference(DateTime.now()).inHours;
     final urgent =
@@ -96,25 +110,28 @@ class _TaskCardState extends State<TaskCard> {
         : actions;
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: AppMotion.duration(context, AppMotion.fast),
-        curve: AppMotion.curve,
-        margin: const EdgeInsets.only(bottom: AppTheme.spacingSmall),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          boxShadow: AppTheme.cardShadow,
-          border: Border.all(
-            color: _isHovered
-                ? widget.hoverBorderColor ??
-                      AppColors.primary.withValues(alpha: 0.3)
-                : AppColors.divider,
+      onEnter: (_) => _hovered.value = true,
+      onExit: (_) => _hovered.value = false,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppTheme.spacingSmall),
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _hovered,
+          builder: (context, hovered, child) => AnimatedContainer(
+            duration: AppMotion.duration(context, AppMotion.fast),
+            curve: AppMotion.curve,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+              boxShadow: AppTheme.cardShadow,
+              border: Border.all(
+                color: hovered
+                    ? widget.hoverBorderColor ??
+                          AppColors.primary.withValues(alpha: 0.3)
+                    : AppColors.divider,
+              ),
+            ),
+            child: Material(type: MaterialType.transparency, child: child),
           ),
-        ),
-        child: Material(
-          color: Colors.transparent,
           child: InkWell(
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
@@ -154,9 +171,10 @@ class _TaskCardState extends State<TaskCard> {
                         ],
                       ),
                       const SizedBox(height: AppTheme.spacingSmall),
-                      Consumer<BoardsProvider>(
-                        builder: (context, boards, _) {
-                          final subject = boards.getSubjectById(task.subjectId);
+                      Selector<BoardsProvider, Subject?>(
+                        selector: (_, boards) =>
+                            boards.getSubjectById(task.subjectId),
+                        builder: (context, subject, _) {
                           final subjectName = subject?.name ?? task.subject;
                           final hasSubject = subjectName.isNotEmpty;
                           return Column(
@@ -181,17 +199,13 @@ class _TaskCardState extends State<TaskCard> {
                                         _detail(
                                           context,
                                           Icons.calendar_today_rounded,
-                                          DateFormat(
-                                            'EEE dd/MM',
-                                          ).format(task.deadline),
+                                          _dateFormat.format(task.deadline),
                                           dateColor,
                                         ),
                                         _detail(
                                           context,
                                           Icons.access_time_rounded,
-                                          DateFormat(
-                                            'HH:mm',
-                                          ).format(task.deadline),
+                                          _timeFormat.format(task.deadline),
                                           dateColor,
                                         ),
                                       ],

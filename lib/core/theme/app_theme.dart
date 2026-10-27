@@ -17,6 +17,17 @@ class AppTheme {
     onSecondary: AppColors.primary,
     surface: AppColors.surface,
     onSurface: AppColors.textPrimary,
+    onSurfaceVariant: AppColors.textSecondary,
+    secondaryContainer: AppColors.primaryLight,
+    onSecondaryContainer: AppColors.textPrimary,
+    surfaceContainerLowest: AppColors.surface,
+    surfaceContainerLow: AppColors.background,
+    surfaceContainer: AppColors.surfaceVariant,
+    surfaceContainerHigh: AppColors.sidebarBackground,
+    surfaceContainerHighest: AppColors.surfaceVariant,
+    surfaceTint: Colors.transparent,
+    outline: AppColors.textTertiary,
+    outlineVariant: AppColors.divider,
     error: AppColors.error,
     onError: Colors.white,
   );
@@ -48,7 +59,9 @@ class AppTheme {
   // ─────────────────────────────────────────────────────────────────────────
   // Light Theme
   // ─────────────────────────────────────────────────────────────────────────
-  static ThemeData get lightTheme {
+  static final ThemeData lightTheme = _buildLightTheme();
+
+  static ThemeData _buildLightTheme() {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
@@ -62,6 +75,21 @@ class AppTheme {
       inputDecorationTheme: _inputDecorationTheme,
       floatingActionButtonTheme: _fabTheme,
       dialogTheme: _dialogTheme,
+      popupMenuTheme: PopupMenuThemeData(
+        color: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 3,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusLarge),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusMedium),
+          ),
+        ),
+      ),
       dividerTheme: const DividerThemeData(
         color: AppColors.divider,
         thickness: 1,
@@ -290,7 +318,7 @@ class AppTheme {
   // ─────────────────────────────────────────────────────────────────────────
   static DialogThemeData get _dialogTheme {
     return DialogThemeData(
-      elevation: 8,
+      elevation: 3,
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radiusXLarge),

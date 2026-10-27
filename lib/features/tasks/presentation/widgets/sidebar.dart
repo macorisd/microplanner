@@ -292,6 +292,7 @@ class _BoardsSection extends StatelessWidget {
     showMotionDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        scrollable: true,
         title: const Text('New Board'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -359,6 +360,7 @@ class _BoardCard extends StatefulWidget {
 
 class _BoardCardState extends State<_BoardCard> {
   bool _isHovered = false;
+  bool _isFocused = false;
   bool _isSubjectsHovered = false;
   bool _isEditing = false;
   late TextEditingController _nameController;
@@ -367,10 +369,6 @@ class _BoardCardState extends State<_BoardCard> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.board.name);
-    _nameController.addListener(() {
-      // Rebuild to update width based on text length
-      setState(() {});
-    });
   }
 
   @override
@@ -406,6 +404,7 @@ class _BoardCardState extends State<_BoardCard> {
     showMotionDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        scrollable: true,
         title: const Text('Delete Board'),
         content: Text(
           'Are you sure you want to delete "${widget.board.name}"? This will also delete all subjects and tasks in this board.',
@@ -439,7 +438,7 @@ class _BoardCardState extends State<_BoardCard> {
   @override
   Widget build(BuildContext context) {
     final touch = usesTouchControls(context);
-    final showActions = touch || _isHovered;
+    final showActions = touch || _isHovered || _isFocused;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppTheme.spacingMedium,
@@ -453,182 +452,201 @@ class _BoardCardState extends State<_BoardCard> {
           cursor: SystemMouseCursors.click,
           onEnter: (_) => setState(() => _isHovered = true),
           onExit: (_) => setState(() => _isHovered = false),
-          child: GestureDetector(
-            onTap: _isEditing
-                ? null
-                : () {
-                    context.read<BoardsProvider>().selectBoard(widget.board.id);
-                    final scaffold = Scaffold.maybeOf(context);
-                    if (scaffold?.isDrawerOpen ?? false) {
-                      scaffold!.closeDrawer();
-                    }
-                  },
-            child: AnimatedContainer(
-              duration: AppMotion.duration(context, AppMotion.normal),
-              curve: AppMotion.curve,
-              padding: EdgeInsets.symmetric(
-                horizontal: touch ? 12 : AppTheme.spacingMedium,
-                vertical: touch ? 4 : AppTheme.spacingMedium,
-              ),
-              decoration: BoxDecoration(
-                color: widget.isActive
-                    ? AppColors.sidebarItemActive
-                    : _isHovered
-                    ? AppColors.sidebarItemHover
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                border: Border.all(
-                  color: widget.isActive
-                      ? AppColors.primary.withValues(alpha: 0.3)
-                      : Colors.transparent,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              hoverColor: Colors.transparent,
+              focusColor: Colors.transparent,
+              highlightColor: AppColors.primaryLight,
+              splashColor: AppColors.primaryLight,
+              onFocusChange: (focused) => setState(() => _isFocused = focused),
+              onTap: _isEditing
+                  ? null
+                  : () {
+                      context.read<BoardsProvider>().selectBoard(
+                        widget.board.id,
+                      );
+                      final scaffold = Scaffold.maybeOf(context);
+                      if (scaffold?.isDrawerOpen ?? false) {
+                        scaffold!.closeDrawer();
+                      }
+                    },
+              // Pointer exit must clear immediately, without an overlapping trail.
+              child: Ink(
+                padding: EdgeInsets.symmetric(
+                  horizontal: touch ? 12 : AppTheme.spacingMedium,
+                  vertical: touch ? 4 : AppTheme.spacingMedium,
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.dashboard_rounded,
-                        size: 18,
-                        color: widget.isActive
-                            ? AppColors.primary
-                            : AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: AppTheme.spacingSmall),
-                      Expanded(
-                        child: MotionSwap(
-                          alignment: Alignment.centerLeft,
-                          child: _isEditing
-                              ? TextField(
-                                  key: const ValueKey('editing'),
-                                  controller: _nameController,
-                                  autofocus: true,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                  decoration: const InputDecoration(
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 6,
-                                    ),
-                                  ),
-                                  onSubmitted: (_) => _finishEditing(),
-                                )
-                              : Text(
-                                  widget.board.name,
-                                  key: const ValueKey('name'),
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        color: widget.isActive
-                                            ? AppColors.primary
-                                            : AppColors.textPrimary,
-                                        fontWeight: widget.isActive
-                                            ? FontWeight.w600
-                                            : FontWeight.w500,
-                                      ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                decoration: BoxDecoration(
+                  color: widget.isActive
+                      ? AppColors.sidebarItemActive
+                      : _isHovered
+                      ? AppColors.sidebarItemHover
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  border: Border.all(
+                    color: widget.isActive
+                        ? AppColors.primary.withValues(alpha: 0.3)
+                        : _isFocused
+                        ? AppColors.textTertiary
+                        : Colors.transparent,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.dashboard_rounded,
+                          size: 18,
+                          color: widget.isActive
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
                         ),
-                      ),
-                      // Action buttons - always present but invisible when not hovered
-                      if (!_isEditing)
-                        AnimatedOpacity(
+                        const SizedBox(width: AppTheme.spacingSmall),
+                        Expanded(
+                          child: MotionSwap(
+                            alignment: Alignment.centerLeft,
+                            child: _isEditing
+                                ? TextField(
+                                    key: const ValueKey('editing'),
+                                    controller: _nameController,
+                                    autofocus: true,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
+                                    decoration: const InputDecoration(
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 6,
+                                      ),
+                                    ),
+                                    onSubmitted: (_) => _finishEditing(),
+                                  )
+                                : Text(
+                                    widget.board.name,
+                                    key: const ValueKey('name'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: widget.isActive
+                                              ? AppColors.primary
+                                              : AppColors.textPrimary,
+                                          fontWeight: widget.isActive
+                                              ? FontWeight.w600
+                                              : FontWeight.w500,
+                                        ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                          ),
+                        ),
+                        // Action buttons - always present but invisible when not hovered
+                        if (!_isEditing)
+                          AnimatedOpacity(
+                            duration: AppMotion.duration(
+                              context,
+                              AppMotion.fast,
+                            ),
+                            opacity: showActions ? 1.0 : 0.0,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _BoardActionButton(
+                                  icon: Icons.edit_outlined,
+                                  tooltip: 'Rename board',
+                                  onTap: showActions ? _startEditing : null,
+                                ),
+                                if (widget.canDelete)
+                                  _BoardActionButton(
+                                    icon: Icons.delete_outline_rounded,
+                                    tooltip: 'Delete board',
+                                    onTap: showActions ? _confirmDelete : null,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        if (_isEditing) ...[
+                          _BoardActionButton(
+                            icon: Icons.check_rounded,
+                            tooltip: 'Save board name',
+                            onTap: _finishEditing,
+                            color: AppColors.success,
+                          ),
+                          _BoardActionButton(
+                            icon: Icons.close_rounded,
+                            tooltip: 'Cancel renaming',
+                            onTap: _cancelEditing,
+                          ),
+                        ],
+                      ],
+                    ),
+                    SizedBox(height: touch ? 0 : AppTheme.spacingXSmall),
+                    // Subjects button with oval hover effect
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      onEnter: (_) => setState(() => _isSubjectsHovered = true),
+                      onExit: (_) => setState(() => _isSubjectsHovered = false),
+                      child: GestureDetector(
+                        onTap: () {
+                          context.read<BoardsProvider>().showSubjectsForBoard(
+                            widget.board.id,
+                          );
+                        },
+                        child: AnimatedContainer(
                           duration: AppMotion.duration(context, AppMotion.fast),
-                          opacity: showActions ? 1.0 : 0.0,
+                          constraints: BoxConstraints(
+                            minHeight: usesTouchControls(context) ? 48 : 0,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.spacingSmall,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: _isSubjectsHovered
+                                  ? AppColors.textTertiary
+                                  : Colors.transparent,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _BoardActionButton(
-                                icon: Icons.edit_outlined,
-                                tooltip: 'Rename board',
-                                onTap: showActions ? _startEditing : null,
+                              Icon(
+                                Icons.subject_rounded,
+                                size: touch ? 16 : 14,
+                                color: touch
+                                    ? AppColors.textSecondary
+                                    : AppColors.textTertiary,
                               ),
-                              if (widget.canDelete)
-                                _BoardActionButton(
-                                  icon: Icons.delete_outline_rounded,
-                                  tooltip: 'Delete board',
-                                  onTap: showActions ? _confirmDelete : null,
-                                ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Subjects',
+                                style:
+                                    (touch
+                                            ? Theme.of(
+                                                context,
+                                              ).textTheme.labelMedium
+                                            : Theme.of(
+                                                context,
+                                              ).textTheme.labelSmall)
+                                        ?.copyWith(
+                                          color: touch
+                                              ? AppColors.textSecondary
+                                              : AppColors.textTertiary,
+                                        ),
+                              ),
                             ],
                           ),
                         ),
-                      if (_isEditing) ...[
-                        _BoardActionButton(
-                          icon: Icons.check_rounded,
-                          tooltip: 'Save board name',
-                          onTap: _finishEditing,
-                          color: AppColors.success,
-                        ),
-                        _BoardActionButton(
-                          icon: Icons.close_rounded,
-                          tooltip: 'Cancel renaming',
-                          onTap: _cancelEditing,
-                        ),
-                      ],
-                    ],
-                  ),
-                  SizedBox(height: touch ? 0 : AppTheme.spacingXSmall),
-                  // Subjects button with oval hover effect
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    onEnter: (_) => setState(() => _isSubjectsHovered = true),
-                    onExit: (_) => setState(() => _isSubjectsHovered = false),
-                    child: GestureDetector(
-                      onTap: () {
-                        context.read<BoardsProvider>().showSubjectsForBoard(
-                          widget.board.id,
-                        );
-                      },
-                      child: AnimatedContainer(
-                        duration: AppMotion.duration(context, AppMotion.fast),
-                        constraints: BoxConstraints(
-                          minHeight: usesTouchControls(context) ? 48 : 0,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.spacingSmall,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: _isSubjectsHovered
-                                ? AppColors.textTertiary
-                                : Colors.transparent,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.subject_rounded,
-                              size: touch ? 16 : 14,
-                              color: touch
-                                  ? AppColors.textSecondary
-                                  : AppColors.textTertiary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Subjects',
-                              style:
-                                  (touch
-                                          ? Theme.of(
-                                              context,
-                                            ).textTheme.labelMedium
-                                          : Theme.of(
-                                              context,
-                                            ).textTheme.labelSmall)
-                                      ?.copyWith(
-                                        color: touch
-                                            ? AppColors.textSecondary
-                                            : AppColors.textTertiary,
-                                      ),
-                            ),
-                          ],
-                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -808,6 +826,7 @@ class _SubjectItemState extends State<_SubjectItem> {
     showMotionDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        scrollable: true,
         title: const Text('Delete Subject'),
         content: Text(
           'Are you sure you want to delete "${widget.subject.name}"?',

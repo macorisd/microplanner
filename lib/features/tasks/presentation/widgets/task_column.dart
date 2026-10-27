@@ -32,77 +32,85 @@ class TaskColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final touch = usesTouchControls(context);
-    // Use gray colors when column is empty
-    final isEmpty = tasks.isEmpty;
-    final effectiveHeaderColor = isEmpty ? AppColors.textTertiary : headerColor;
-    final effectiveHeaderBgColor = isEmpty
+    final muted =
+        tasks.isEmpty && Theme.of(context).platform != TargetPlatform.android;
+    final effectiveHeaderColor = muted ? AppColors.textTertiary : headerColor;
+    final effectiveHeaderBgColor = muted
         ? AppColors.surfaceVariant
         : headerBackgroundColor;
 
     return MotionEntrance(
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            AnimatedContainer(
-              duration: AppMotion.duration(context, AppMotion.normal),
-              padding: EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium),
-              decoration: BoxDecoration(
-                color: effectiveHeaderBgColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(AppTheme.radiusXLarge),
-                  topRight: Radius.circular(AppTheme.radiusXLarge),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(icon, color: effectiveHeaderColor, size: 22),
-                  const SizedBox(width: AppTheme.spacingSmall),
-                  Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: effectiveHeaderColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+      fade: false,
+      child: RepaintBoundary(
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              AnimatedContainer(
+                duration: AppMotion.duration(context, AppMotion.normal),
+                padding: !touch && MediaQuery.sizeOf(context).height < 360
+                    ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
+                    : EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium),
+                decoration: BoxDecoration(
+                  color: effectiveHeaderBgColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(AppTheme.radiusXLarge),
+                    topRight: Radius.circular(AppTheme.radiusXLarge),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.spacingSmall,
-                      vertical: AppTheme.spacingXSmall,
-                    ),
-                    decoration: BoxDecoration(
-                      color: effectiveHeaderColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                    ),
-                    child: MotionSwap(
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, color: effectiveHeaderColor, size: 22),
+                    const SizedBox(width: AppTheme.spacingSmall),
+                    Expanded(
                       child: Text(
-                        '${tasks.length}',
-                        key: ValueKey(tasks.length),
-                        style: Theme.of(context).textTheme.labelMedium
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               color: effectiveHeaderColor,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.spacingSmall,
+                        vertical: AppTheme.spacingXSmall,
+                      ),
+                      decoration: BoxDecoration(
+                        color: effectiveHeaderColor.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.radiusSmall,
+                        ),
+                      ),
+                      child: MotionSwap(
+                        child: Text(
+                          '${tasks.length}',
+                          key: ValueKey(tasks.length),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: effectiveHeaderColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            // Task list
-            Expanded(child: _TaskList(column: this)),
-          ],
+              // Task list
+              Expanded(child: _TaskList(column: this)),
+            ],
+          ),
         ),
       ),
     );
@@ -138,6 +146,29 @@ class _EmptyState extends StatelessWidget {
         message = 'No tasks';
     }
 
+    if (MediaQuery.sizeOf(context).height < 360) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            children: [
+              Icon(icon, size: 24, color: AppColors.textTertiary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -265,8 +296,13 @@ class _TaskListState extends State<_TaskList> {
           child: AnimatedList(
             key: _listKey,
             initialItemCount: _items.length,
-            padding: EdgeInsets.all(
+            padding: EdgeInsets.fromLTRB(
               usesTouchControls(context) ? 8 : AppTheme.spacingMedium,
+              usesTouchControls(context) ? 8 : AppTheme.spacingMedium,
+              usesTouchControls(context) ? 8 : AppTheme.spacingMedium,
+              MediaQuery.sizeOf(context).height < 360
+                  ? 64
+                  : (usesTouchControls(context) ? 8 : AppTheme.spacingMedium),
             ),
             itemBuilder: (_, index, animation) =>
                 _transition(_items[index], animation),

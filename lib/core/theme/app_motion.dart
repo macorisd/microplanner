@@ -60,10 +60,12 @@ class MotionSwap extends StatelessWidget {
 class MotionEntrance extends StatelessWidget {
   final Widget child;
   final Duration duration;
+  final bool fade;
   const MotionEntrance({
     super.key,
     required this.child,
     this.duration = AppMotion.entrance,
+    this.fade = true,
   });
 
   @override
@@ -71,13 +73,13 @@ class MotionEntrance extends StatelessWidget {
     tween: Tween(begin: 0, end: 1),
     duration: AppMotion.duration(context, duration),
     curve: AppMotion.curve,
-    builder: (context, value, child) => Opacity(
-      opacity: value,
-      child: Transform.translate(
+    builder: (context, value, child) {
+      final shifted = Transform.translate(
         offset: Offset(0, 12 * (1 - value)),
         child: child,
-      ),
-    ),
+      );
+      return fade ? Opacity(opacity: value, child: shifted) : shifted;
+    },
     child: child,
   );
 }
@@ -118,13 +120,13 @@ Future<T?> showMotionDialog<T>({
   pageBuilder: (context, _, _) => SafeArea(child: Builder(builder: builder)),
   transitionBuilder: (context, animation, _, child) {
     final eased = animation.drive(CurveTween(curve: AppMotion.curve));
-    final spatial = animation.drive(CurveTween(curve: Curves.easeOutBack));
-    return FadeTransition(
-      opacity: eased,
-      child: ScaleTransition(
-        scale: Tween(begin: 0.96, end: 1.0).animate(spatial),
-        child: child,
-      ),
+    // Keep the form opaque: fading the entire surface forces an expensive layer.
+    return SlideTransition(
+      position: Tween(
+        begin: const Offset(0, 0.02),
+        end: Offset.zero,
+      ).animate(eased),
+      child: RepaintBoundary(child: child),
     );
   },
 );
