@@ -147,19 +147,26 @@ class TasksProvider extends ChangeNotifier {
   }
 
   Future<bool> updateTask(Task task) => workspace.mutate(
-    (s) => s.copyWith(
-      tasks: s.tasks.map((t) => t.id == task.id ? task : t).toList(),
-    ),
+    (s) => !s.tasks.any((t) => t.id == task.id)
+        ? null
+        : s.copyWith(
+            tasks: s.tasks.map((t) => t.id == task.id ? task : t).toList(),
+          ),
   );
   Future<bool> deleteTask(String id) => workspace.mutate(
     (s) => s.copyWith(tasks: s.tasks.where((t) => t.id != id).toList()),
   );
   Future<bool> toggleTaskCompletion(String id) => workspace.mutate(
-    (s) => s.copyWith(
-      tasks: s.tasks
-          .map((t) => t.id == id ? t.copyWith(isCompleted: !t.isCompleted) : t)
-          .toList(),
-    ),
+    (s) => !s.tasks.any((t) => t.id == id)
+        ? null
+        : s.copyWith(
+            tasks: s.tasks
+                .map(
+                  (t) =>
+                      t.id == id ? t.copyWith(isCompleted: !t.isCompleted) : t,
+                )
+                .toList(),
+          ),
   );
   @override
   void dispose() {

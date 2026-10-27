@@ -108,25 +108,37 @@ class _PressFeedbackState extends State<PressFeedback> {
   );
 }
 
+final _openDialogs = Expando<bool>();
+
 Future<T?> showMotionDialog<T>({
   required BuildContext context,
   required WidgetBuilder builder,
-}) => showGeneralDialog<T>(
-  context: context,
-  barrierDismissible: true,
-  barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-  barrierColor: Colors.black54,
-  transitionDuration: AppMotion.duration(context, AppMotion.normal),
-  pageBuilder: (context, _, _) => SafeArea(child: Builder(builder: builder)),
-  transitionBuilder: (context, animation, _, child) {
-    final eased = animation.drive(CurveTween(curve: AppMotion.curve));
-    // Keep the form opaque: fading the entire surface forces an expensive layer.
-    return SlideTransition(
-      position: Tween(
-        begin: const Offset(0, 0.02),
-        end: Offset.zero,
-      ).animate(eased),
-      child: RepaintBoundary(child: child),
+}) async {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  if (_openDialogs[navigator] == true) return null;
+  _openDialogs[navigator] = true;
+  try {
+    return await showGeneralDialog<T>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.black54,
+      transitionDuration: AppMotion.duration(context, AppMotion.normal),
+      pageBuilder: (context, _, _) =>
+          SafeArea(child: Builder(builder: builder)),
+      transitionBuilder: (context, animation, _, child) {
+        final eased = animation.drive(CurveTween(curve: AppMotion.curve));
+        // Keep the form opaque: fading the entire surface forces an expensive layer.
+        return SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 0.02),
+            end: Offset.zero,
+          ).animate(eased),
+          child: RepaintBoundary(child: child),
+        );
+      },
     );
-  },
-);
+  } finally {
+    _openDialogs[navigator] = false;
+  }
+}

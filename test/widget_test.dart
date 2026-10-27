@@ -43,6 +43,9 @@ void main() {
               theme: ThemeData(
                 useMaterial3: true,
                 colorScheme: AppTheme.lightColorScheme,
+                dialogTheme: DialogThemeData(
+                  backgroundColor: AppTheme.lightColorScheme.surface,
+                ),
                 textButtonTheme: TextButtonThemeData(
                   style: TextButton.styleFrom(
                     foregroundColor: AppTheme.lightColorScheme.primary,

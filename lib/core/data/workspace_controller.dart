@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../features/auth/data/auth_service.dart';
 import 'api_client.dart';
 import 'workspace_snapshot.dart';
+import 'workspace_limits.dart';
 import 'workspace_storage.dart';
 
 class WorkspaceController extends ChangeNotifier {
@@ -20,6 +21,7 @@ class WorkspaceController extends ChangeNotifier {
   bool _online = false;
   bool _hasCache = false;
   bool _canImport = false;
+  bool _dismissingImport = false;
   String? _error;
   Completer<void>? _refreshBarrier;
   Future<void> _mutationTail = Future<void>.value();
@@ -37,7 +39,8 @@ class WorkspaceController extends ChangeNotifier {
   bool get isSaving => _saving;
   bool get isOnline => _online;
   bool get hasData => _hasCache;
-  bool get canImport => _canImport && canWrite;
+  bool get canImport => _canImport && canWrite && !_dismissingImport;
+  bool get isDismissingImport => _dismissingImport;
   bool get hasLegacyData => _canImport;
   // Online actions stay available during synchronization; writes wait their turn.
   bool get canWrite => _online && auth.sessionValid;
@@ -58,6 +61,7 @@ class WorkspaceController extends ChangeNotifier {
     _online = false;
     _hasCache = false;
     _canImport = false;
+    _dismissingImport = false;
     _saving = false;
     _loading = owner != null;
     _error = null;
@@ -184,6 +188,12 @@ class WorkspaceController extends ChangeNotifier {
   }
 
   Future<bool> _save(WorkspaceSnapshot data, {String? sourceId}) async {
+    final validationError = WorkspaceLimits.validate(data);
+    if (validationError != null) {
+      _error = validationError;
+      notifyListeners();
+      return false;
+    }
     final owner = _ownerId!;
     final token = auth.token!;
     final generation = _generation;
@@ -266,11 +276,22 @@ class WorkspaceController extends ChangeNotifier {
 
   Future<void> dismissImport() async {
     final owner = _ownerId;
-    if (owner == null) return;
-    await legacy.dismiss(owner);
-    if (owner == _ownerId) {
-      _canImport = false;
-      notifyListeners();
+    final generation = _generation;
+    if (owner == null || _dismissingImport) return;
+    _dismissingImport = true;
+    notifyListeners();
+    try {
+      await legacy.dismiss(owner);
+      if (_current(generation, owner)) _canImport = false;
+    } catch (_) {
+      if (_current(generation, owner)) {
+        _error = 'Could not dismiss the import offer. Please try again.';
+      }
+    } finally {
+      if (_current(generation, owner)) {
+        _dismissingImport = false;
+        notifyListeners();
+      }
     }
   }
 

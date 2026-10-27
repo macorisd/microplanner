@@ -1,3 +1,4 @@
+import 'widgets/action_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/data/workspace_controller.dart';
@@ -202,29 +203,13 @@ class DashboardScreen extends StatelessWidget {
     final provider = context.read<TasksProvider>();
     showMotionDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        scrollable: true,
-        title: const Text('Delete Task'),
-        content: Text('Are you sure you want to delete "${task.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (await provider.deleteTask(task.id) && dialogContext.mounted) {
-                Navigator.pop(dialogContext);
-              }
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade700,
-              foregroundColor: Colors.white,
-            ),
-            autofocus: true,
-            child: const Text('Delete'),
-          ),
-        ],
+      builder: (_) => ActionConfirmationDialog(
+        actionLabel: 'Delete',
+        pendingLabel: 'Deleting…',
+        destructive: true,
+        title: 'Delete Task',
+        message: 'Are you sure you want to delete "${task.name}"?',
+        onConfirm: () => provider.deleteTask(task.id),
       ),
     );
   }

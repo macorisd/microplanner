@@ -10,7 +10,12 @@ import '../../../../core/utils/input_mode.dart';
 import '../../../boards/data/models/subject.dart';
 import '../../../boards/providers/boards_provider.dart';
 import 'save_status.dart';
+import '../../../../core/data/workspace_limits.dart';
+import '../../../../core/widgets/limited_text_field.dart';
+import '../../../../core/widgets/pending_action.dart';
+import '../../../../core/utils/task_date_range.dart';
 import 'subject_dropdown.dart';
+import 'task_date_picker.dart';
 
 /// Dialog for creating a new task
 /// All fields are displayed in a clean, Cashew-inspired form
@@ -31,7 +36,8 @@ class AddTaskDialog extends StatefulWidget {
   State<AddTaskDialog> createState() => _AddTaskDialogState();
 }
 
-class _AddTaskDialogState extends State<AddTaskDialog> {
+class _AddTaskDialogState extends State<AddTaskDialog>
+    with PendingActionState<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -42,7 +48,18 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   TaskType _type = TaskType.unassigned;
   TaskPriority _priority = TaskPriority.low;
   String? _selectedSubjectId;
-  bool _isLoading = false;
+  bool get _isLoading => actionBlocked;
+
+  void _textChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController.addListener(_textChanged);
+    _descriptionController.addListener(_textChanged);
+  }
 
   @override
   void dispose() {
@@ -56,8 +73,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     if (_isLoading) return;
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-
     // Combine date and time
     final deadlineWithTime = DateTime(
       _deadline.year,
@@ -67,22 +82,22 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       _deadlineTime.minute,
     );
 
-    final saved = await widget.onSave(
-      name: _nameController.text.trim(),
-      deadline: deadlineWithTime,
-      type: _type,
-      priority: _priority,
-      subjectId: _selectedSubjectId,
-      description: _descriptionController.text.trim().isEmpty
-          ? null
-          : _descriptionController.text.trim(),
+    final saved = await submitOnce(
+      () => widget.onSave(
+        name: _nameController.text.trim(),
+        deadline: deadlineWithTime,
+        type: _type,
+        priority: _priority,
+        subjectId: _selectedSubjectId,
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+      ),
     );
 
     if (!mounted) return;
     if (saved) {
-      Navigator.of(context).pop();
-    } else {
-      setState(() => _isLoading = false);
+      closeForm();
     }
   }
 
@@ -98,159 +113,173 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
       _selectedSubjectId = null;
     }
 
-    return Dialog(
-      insetPadding: EdgeInsets.symmetric(
-        horizontal: compact ? 16 : 40,
-        vertical: short ? 12 : 24,
-      ),
-      child: Focus(
-        onKeyEvent: (node, event) {
-          if (event is KeyDownEvent &&
-              event.logicalKey == LogicalKeyboardKey.enter) {
-            if (!_descriptionFocusNode.hasFocus) {
-              _submit();
-              return KeyEventResult.handled;
+    return PendingForm(
+      pending: _isLoading,
+      child: Dialog(
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: compact ? 16 : 40,
+          vertical: short ? 12 : 24,
+        ),
+        child: Focus(
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.enter) {
+              if (!_descriptionFocusNode.hasFocus) {
+                _submit();
+                return KeyEventResult.handled;
+              }
             }
-          }
-          return KeyEventResult.ignored;
-        },
-        child: SingleChildScrollView(
-          child: Container(
-            width: 480,
-            padding: EdgeInsets.all(compact ? 16 : AppTheme.spacingLarge),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Header
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.add_task_rounded,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: AppTheme.spacingMedium),
-                      Expanded(
-                        child: Text(
-                          'New Task',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close_rounded),
-                        style: IconButton.styleFrom(
-                          foregroundColor: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppTheme.spacingLarge),
-
-                  // Task name
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Task name',
-                      hintText: 'e.g., Math homework chapter 5',
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a task name';
-                      }
-                      return null;
-                    },
-                    autofocus: true,
-                    onFieldSubmitted: (_) => _submit(),
-                  ),
-                  const SizedBox(height: AppTheme.spacingMedium),
-
-                  // Description
-                  TextFormField(
-                    controller: _descriptionController,
-                    focusNode: _descriptionFocusNode,
-                    decoration: const InputDecoration(
-                      labelText: 'Description (optional)',
-                      hintText: 'Add details about this task...',
-                    ),
-                    maxLines: 3,
-                    minLines: 2,
-                  ),
-                  const SizedBox(height: AppTheme.spacingMedium),
-
-                  // Subject dropdown
-                  _buildSubjectDropdown(subjects),
-                  const SizedBox(height: AppTheme.spacingMedium),
-
-                  // Deadline date and time
-                  if (MediaQuery.sizeOf(context).width < 600) ...[
-                    _buildDeadlinePicker(context),
-                    const SizedBox(height: AppTheme.spacingSmall),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: _buildTimePicker(context),
-                    ),
-                  ] else
+            return KeyEventResult.ignored;
+          },
+          child: SingleChildScrollView(
+            child: Container(
+              width: 480,
+              padding: EdgeInsets.all(compact ? 16 : AppTheme.spacingLarge),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header
                     Row(
                       children: [
-                        Expanded(child: _buildDeadlinePicker(context)),
-                        const SizedBox(width: AppTheme.spacingSmall),
-                        _buildTimePicker(context),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.add_task_rounded,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: AppTheme.spacingMedium),
+                        Expanded(
+                          child: Text(
+                            'New Task',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _isLoading ? null : closeForm,
+                          icon: const Icon(Icons.close_rounded),
+                          style: IconButton.styleFrom(
+                            foregroundColor: AppColors.textSecondary,
+                          ),
+                        ),
                       ],
                     ),
-                  const SizedBox(height: AppTheme.spacingMedium),
+                    const SizedBox(height: AppTheme.spacingLarge),
 
-                  // Type dropdown
-                  _buildTypeDropdown(),
-                  const SizedBox(height: AppTheme.spacingMedium),
+                    // Task name
+                    LimitedTextField(
+                      controller: _nameController,
+                      limit: WorkspaceLimits.name,
+                      enabled: !_isLoading,
+                      decoration: const InputDecoration(
+                        labelText: 'Task name',
+                        hintText: 'e.g., Math homework chapter 5',
+                      ),
+                      validator: WorkspaceLimits.nameError,
+                      autofocus: true,
+                      onSubmitted: (_) => _submit(),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMedium),
 
-                  // Priority selector
-                  _buildPrioritySelector(),
-                  const SizedBox(height: AppTheme.spacingLarge),
+                    // Description
+                    LimitedTextField(
+                      controller: _descriptionController,
+                      limit: WorkspaceLimits.description,
+                      validator: WorkspaceLimits.descriptionError,
+                      enabled: !_isLoading,
+                      focusNode: _descriptionFocusNode,
+                      decoration: const InputDecoration(
+                        labelText: 'Description (optional)',
+                        hintText: 'Add details about this task...',
+                      ),
+                      maxLines: 3,
+                      minLines: 2,
+                    ),
+                    const SizedBox(height: AppTheme.spacingMedium),
 
-                  // Actions
-                  const SaveStatus(),
-                  OverflowBar(
-                    alignment: MainAxisAlignment.end,
-                    spacing: AppTheme.spacingSmall,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red.shade700,
+                    // Subject dropdown
+                    _buildSubjectDropdown(subjects),
+                    const SizedBox(height: AppTheme.spacingMedium),
+
+                    // Deadline date and time
+                    if (MediaQuery.sizeOf(context).width < 600) ...[
+                      _buildDeadlinePicker(context),
+                      const SizedBox(height: AppTheme.spacingSmall),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _buildTimePicker(context),
+                      ),
+                    ] else
+                      Row(
+                        children: [
+                          Expanded(child: _buildDeadlinePicker(context)),
+                          const SizedBox(width: AppTheme.spacingSmall),
+                          _buildTimePicker(context),
+                        ],
+                      ),
+                    const SizedBox(height: AppTheme.spacingMedium),
+
+                    // Type dropdown
+                    _buildTypeDropdown(),
+                    const SizedBox(height: AppTheme.spacingMedium),
+
+                    // Priority selector
+                    _buildPrioritySelector(),
+                    const SizedBox(height: AppTheme.spacingLarge),
+
+                    // Actions
+                    SaveStatus(error: submissionError),
+                    OverflowBar(
+                      alignment: MainAxisAlignment.end,
+                      spacing: AppTheme.spacingSmall,
+                      children: [
+                        TextButton(
+                          onPressed: _isLoading ? null : closeForm,
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red.shade700,
+                          ),
+                          child: const Text('Cancel'),
                         ),
-                        child: const Text('Cancel'),
-                      ),
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _submit,
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation(
-                                    Colors.white,
+                        ElevatedButton(
+                          onPressed:
+                              _isLoading ||
+                                  WorkspaceLimits.nameError(
+                                        _nameController.text,
+                                      ) !=
+                                      null ||
+                                  WorkspaceLimits.descriptionError(
+                                        _descriptionController.text,
+                                      ) !=
+                                      null
+                              ? null
+                              : _submit,
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation(
+                                      Colors.white,
+                                    ),
                                   ),
-                                ),
-                              )
-                            : const Text('Create Task'),
-                      ),
-                    ],
-                  ),
-                ],
+                                )
+                              : const Text('Create Task'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -268,34 +297,37 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   Widget _buildDeadlinePicker(BuildContext context) {
     return InkWell(
       onTap: () async {
-        final date = await showDatePicker(
-          context: context,
-          initialDate: _deadline,
-          initialEntryMode:
-              MediaQuery.sizeOf(context).width < 400 &&
-                  !usesTouchControls(context)
-              ? DatePickerEntryMode.inputOnly
-              : DatePickerEntryMode.calendar,
-          firstDate: DateTime.now().subtract(const Duration(days: 365)),
-          lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-          locale: const Locale('en', 'GB'), // Week starts on Monday
-          builder: (context, child) {
-            return Theme(
-              data: Theme.of(context).copyWith(
-                colorScheme: const ColorScheme.light(
-                  primary: AppColors.primary,
-                  onPrimary: Colors.white,
-                  surface: AppColors.surface,
-                  onSurface: AppColors.textPrimary,
+        final range = TaskDateRange(_deadline);
+        final date = await pickOnce(
+          () => showTaskDatePicker(
+            context: context,
+            initialDate: range.initial,
+            initialEntryMode:
+                MediaQuery.sizeOf(context).width < 400 &&
+                    !usesTouchControls(context)
+                ? DatePickerEntryMode.inputOnly
+                : DatePickerEntryMode.calendar,
+            firstDate: range.first,
+            lastDate: range.last,
+            locale: const Locale('en', 'GB'), // Week starts on Monday
+            builder: (context, child) {
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: const ColorScheme.light(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    surface: AppColors.surface,
+                    onSurface: AppColors.textPrimary,
+                  ),
                 ),
-              ),
-              child: MediaQuery.sizeOf(context).height < 520
-                  ? SingleChildScrollView(child: child!)
-                  : child!,
-            );
-          },
+                child: MediaQuery.sizeOf(context).height < 520
+                    ? SingleChildScrollView(child: child!)
+                    : child!,
+              );
+            },
+          ),
         );
-        if (date != null) {
+        if (date != null && mounted) {
           setState(() => _deadline = date);
         }
       },
@@ -345,26 +377,28 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   Widget _buildTimePicker(BuildContext context) {
     return InkWell(
       onTap: () async {
-        final time = await showTimePicker(
-          context: context,
-          initialTime: _deadlineTime,
-          builder: (context, child) {
-            return Theme(
-              data: Theme.of(context).copyWith(
-                colorScheme: const ColorScheme.light(
-                  primary: AppColors.primary,
-                  onPrimary: Colors.white,
-                  surface: AppColors.surface,
-                  onSurface: AppColors.textPrimary,
+        final time = await pickOnce(
+          () => showTimePicker(
+            context: context,
+            initialTime: _deadlineTime,
+            builder: (context, child) {
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: const ColorScheme.light(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    surface: AppColors.surface,
+                    onSurface: AppColors.textPrimary,
+                  ),
                 ),
-              ),
-              child: MediaQuery.sizeOf(context).height < 520
-                  ? SingleChildScrollView(child: child!)
-                  : child!,
-            );
-          },
+                child: MediaQuery.sizeOf(context).height < 520
+                    ? SingleChildScrollView(child: child!)
+                    : child!,
+              );
+            },
+          ),
         );
-        if (time != null) {
+        if (time != null && mounted) {
           setState(() => _deadlineTime = time);
         }
       },

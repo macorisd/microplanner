@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'save_status.dart';
+import '../../../../core/data/workspace_limits.dart';
+import '../../../../core/widgets/limited_text_field.dart';
+import '../../../../core/widgets/pending_action.dart';
 
 class NewBoardDialog extends StatefulWidget {
   final Future<bool> Function(String? name) onSave;
@@ -8,20 +11,31 @@ class NewBoardDialog extends StatefulWidget {
   State<NewBoardDialog> createState() => _NewBoardDialogState();
 }
 
-class _NewBoardDialogState extends State<NewBoardDialog> {
+class _NewBoardDialogState extends State<NewBoardDialog>
+    with PendingActionState<NewBoardDialog> {
   final _controller = TextEditingController();
-  bool _saving = false;
+  bool get _saving => actionBlocked;
+  String? _nameError(String? value) =>
+      (value?.trim().isEmpty ?? true) ? null : WorkspaceLimits.nameError(value);
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_textChanged);
+  }
+
+  void _textChanged() {
+    if (mounted) setState(() {});
+  }
 
   Future<void> _save() async {
-    if (_saving) return;
-    setState(() => _saving = true);
+    if (_saving || _nameError(_controller.text) != null) return;
     final name = _controller.text.trim();
-    final saved = await widget.onSave(name.isEmpty ? null : name);
+    final saved = await submitOnce(
+      () => widget.onSave(name.isEmpty ? null : name),
+    );
     if (!mounted) return;
     if (saved) {
-      Navigator.pop(context);
-    } else {
-      setState(() => _saving = false);
+      closeForm();
     }
   }
 
@@ -32,36 +46,44 @@ class _NewBoardDialogState extends State<NewBoardDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    scrollable: true,
-    title: const Text('New Board'),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        TextField(
-          controller: _controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Board name',
-            hintText: 'Enter board name',
+  Widget build(BuildContext context) => PendingForm(
+    pending: _saving,
+    child: AlertDialog(
+      scrollable: true,
+      title: const Text('New Board'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LimitedTextField(
+            limit: WorkspaceLimits.name,
+            validator: _nameError,
+            enabled: !_saving,
+            controller: _controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Board name',
+              hintText: 'Enter board name',
+            ),
+            onSubmitted: (_) {
+              if (_controller.text.trim().isNotEmpty) _save();
+            },
           ),
-          onSubmitted: (_) {
-            if (_controller.text.trim().isNotEmpty) _save();
-          },
+          SaveStatus(error: submissionError),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : closeForm,
+          style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+          child: const Text('Cancel'),
         ),
-        const SaveStatus(),
+        FilledButton(
+          onPressed: _saving || _nameError(_controller.text) != null
+              ? null
+              : _save,
+          child: const Text('Create'),
+        ),
       ],
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
-        child: const Text('Cancel'),
-      ),
-      FilledButton(
-        onPressed: _saving ? null : _save,
-        child: const Text('Create'),
-      ),
-    ],
   );
 }

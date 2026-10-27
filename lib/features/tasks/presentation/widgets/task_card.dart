@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -13,7 +14,7 @@ import '../../data/models/task.dart';
 /// Android edits through the card; completion and deletion stay independent.
 class TaskCard extends StatefulWidget {
   final Task task;
-  final VoidCallback onToggleComplete;
+  final FutureOr<void> Function() onToggleComplete;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onEdit;
@@ -37,6 +38,25 @@ class _TaskCardState extends State<TaskCard> {
   static final _dateFormat = DateFormat('EEE dd/MM');
   static final _timeFormat = DateFormat('HH:mm');
   final _hovered = ValueNotifier(false);
+  bool _toggling = false;
+
+  Future<void> _toggle() async {
+    if (_toggling) return;
+    setState(() => _toggling = true);
+    try {
+      await widget.onToggleComplete();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(
+            content: Text('Could not update this task. Please try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _toggling = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -97,8 +117,13 @@ class _TaskCardState extends State<TaskCard> {
     final completion = Semantics(
       label: task.isCompleted ? 'Mark task incomplete' : 'Mark task complete',
       checked: task.isCompleted,
+      enabled: !_toggling,
       child: InkResponse(
-        onTap: widget.onToggleComplete,
+        onTap: _toggling ? null : _toggle,
+        containedInkWell: true,
+        highlightShape: BoxShape.rectangle,
+        borderRadius: BorderRadius.circular(6),
+        radius: touch ? 24 : 16,
         child: SizedBox.square(
           dimension: touch ? 48 : 24,
           child: touch ? null : _CompletionMark(completed: task.isCompleted),

@@ -4,20 +4,22 @@ import 'package:provider/provider.dart';
 import '../../../../core/data/workspace_controller.dart';
 
 class SaveStatus extends StatelessWidget {
-  const SaveStatus({super.key});
+  final String? error;
+  const SaveStatus({super.key, this.error});
   @override
   Widget build(BuildContext context) {
     final workspace = context.watch<WorkspaceController>();
+    final message = workspace.error ?? error;
     return AnimatedSize(
       duration: AppMotion.duration(context, AppMotion.normal),
       alignment: Alignment.topLeft,
       child: MotionSwap(
-        child: workspace.error == null
+        child: message == null
             ? const SizedBox.shrink(key: ValueKey('clear'))
             : Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
-                  workspace.error!,
+                  message,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),

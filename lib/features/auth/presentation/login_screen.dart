@@ -54,7 +54,9 @@ class LoginScreen extends StatelessWidget {
                   ),
                   if (auth.canCancelSignIn)
                     TextButton(
-                      onPressed: auth.cancelSignIn,
+                      onPressed: auth.canCancelSignIn
+                          ? auth.cancelSignIn
+                          : null,
                       child: const Text('Cancel'),
                     ),
                   if (auth.error != null)

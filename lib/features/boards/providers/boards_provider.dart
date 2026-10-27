@@ -122,9 +122,11 @@ class BoardsProvider extends ChangeNotifier {
   }
 
   Future<bool> updateBoard(Board board) => workspace.mutate(
-    (s) => s.copyWith(
-      boards: s.boards.map((b) => b.id == board.id ? board : b).toList(),
-    ),
+    (s) => !s.boards.any((b) => b.id == board.id)
+        ? null
+        : s.copyWith(
+            boards: s.boards.map((b) => b.id == board.id ? board : b).toList(),
+          ),
   );
   Future<bool> deleteBoard(String id) async {
     if (boards.length <= 1) return false;
@@ -207,11 +209,13 @@ class BoardsProvider extends ChangeNotifier {
   }
 
   Future<bool> updateSubject(Subject subject) => workspace.mutate(
-    (s) => s.copyWith(
-      subjects: s.subjects
-          .map((item) => item.id == subject.id ? subject : item)
-          .toList(),
-    ),
+    (s) => !s.subjects.any((item) => item.id == subject.id)
+        ? null
+        : s.copyWith(
+            subjects: s.subjects
+                .map((item) => item.id == subject.id ? subject : item)
+                .toList(),
+          ),
   );
   Future<bool> deleteSubject(String id) => workspace.mutate(
     (s) => s.copyWith(

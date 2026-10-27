@@ -54,7 +54,7 @@ class AuthService extends ChangeNotifier {
   String? get token => _token;
   bool get isAuthenticated => _currentUser != null;
   bool get isLoading => _isLoading;
-  bool get canCancelSignIn => _signingIn;
+  bool get canCancelSignIn => _signingIn && !_cancelRequested;
   String? get error => _error;
   bool get sessionValid => _expiresAt?.isAfter(DateTime.now()) ?? false;
 
@@ -155,7 +155,7 @@ class AuthService extends ChangeNotifier {
   }
 
   void cancelSignIn() {
-    if (!_signingIn) return;
+    if (!_signingIn || _cancelRequested) return;
     _cancelRequested = true;
     google.cancel();
     notifyListeners();
@@ -197,7 +197,13 @@ class AuthService extends ChangeNotifier {
     await storage.write('revocations', jsonEncode(remaining));
   }
 
-  Future<void> signOut() async {
+  Future<void>? _signOutFuture;
+  Future<void> signOut() =>
+      _signOutFuture ??= _performSignOut().whenComplete(() {
+        _signOutFuture = null;
+      });
+
+  Future<void> _performSignOut() async {
     final oldToken = _token;
     ++_generation;
     _token = null;

@@ -11,6 +11,11 @@ import '../../../boards/data/models/board.dart';
 import '../../../boards/providers/boards_provider.dart';
 import 'subject_dialog.dart';
 import 'new_board_dialog.dart';
+import 'action_confirmation_dialog.dart';
+import 'save_status.dart';
+import '../../../../core/data/workspace_limits.dart';
+import '../../../../core/widgets/limited_text_field.dart';
+import '../../../../core/widgets/pending_action.dart';
 
 /// Resizable sidebar navigation widget
 /// Contains Boards section with subjects management and Sign Out
@@ -313,7 +318,8 @@ class _BoardCard extends StatefulWidget {
   State<_BoardCard> createState() => _BoardCardState();
 }
 
-class _BoardCardState extends State<_BoardCard> {
+class _BoardCardState extends State<_BoardCard>
+    with PendingActionState<_BoardCard> {
   bool _isHovered = false;
   bool _isFocused = false;
   bool _isSubjectsHovered = false;
@@ -333,22 +339,36 @@ class _BoardCardState extends State<_BoardCard> {
   }
 
   void _startEditing() {
+    if (isSubmitting) return;
     setState(() {
       _isEditing = true;
       _nameController.text = widget.board.name;
     });
   }
 
-  void _finishEditing() {
-    final newName = _nameController.text.trim();
-    if (newName.isNotEmpty && newName != widget.board.name) {
-      final updated = widget.board.copyWith(name: newName);
-      context.read<BoardsProvider>().updateBoard(updated);
+  Future<void> _finishEditing() async {
+    if (isSubmitting ||
+        WorkspaceLimits.nameError(_nameController.text) != null) {
+      return;
     }
-    setState(() => _isEditing = false);
+    final newName = _nameController.text.trim();
+    if (newName == widget.board.name.trim()) {
+      _cancelEditing();
+      return;
+    }
+    final boards = context.read<BoardsProvider>();
+    final updated = widget.board.copyWith(name: newName);
+    if (await submitOnce(
+          () => boards.updateBoard(updated),
+          lockAfterSuccess: false,
+        ) &&
+        mounted) {
+      setState(() => _isEditing = false);
+    }
   }
 
   void _cancelEditing() {
+    if (isSubmitting) return;
     setState(() {
       _isEditing = false;
       _nameController.text = widget.board.name;
@@ -356,36 +376,17 @@ class _BoardCardState extends State<_BoardCard> {
   }
 
   void _confirmDelete() {
+    final boards = context.read<BoardsProvider>();
     showMotionDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        scrollable: true,
-        title: const Text('Delete Board'),
-        content: Text(
-          'Are you sure you want to delete "${widget.board.name}"? This will also delete all subjects and tasks in this board.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final saved = await context.read<BoardsProvider>().deleteBoard(
-                widget.board.id,
-              );
-              if (saved && dialogContext.mounted) {
-                Navigator.of(dialogContext).pop();
-              }
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade700,
-              foregroundColor: Colors.white,
-            ),
-            autofocus: true,
-            child: const Text('Delete'),
-          ),
-        ],
+      builder: (_) => ActionConfirmationDialog(
+        actionLabel: 'Delete',
+        pendingLabel: 'Deleting…',
+        destructive: true,
+        title: 'Delete Board',
+        message:
+            'Are you sure you want to delete "${widget.board.name}"? This will also delete all subjects and tasks in this board.',
+        onConfirm: () => boards.deleteBoard(widget.board.id),
       ),
     );
   }
@@ -451,6 +452,8 @@ class _BoardCardState extends State<_BoardCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_isEditing && submissionError != null)
+                      SaveStatus(error: submissionError),
                     Row(
                       children: [
                         Icon(
@@ -465,8 +468,11 @@ class _BoardCardState extends State<_BoardCard> {
                           child: MotionSwap(
                             alignment: Alignment.centerLeft,
                             child: _isEditing
-                                ? TextField(
+                                ? LimitedTextField(
                                     key: const ValueKey('editing'),
+                                    limit: WorkspaceLimits.name,
+                                    validator: WorkspaceLimits.nameError,
+                                    enabled: !isSubmitting,
                                     controller: _nameController,
                                     autofocus: true,
                                     style: Theme.of(
@@ -778,36 +784,16 @@ class _SubjectItemState extends State<_SubjectItem> {
   }
 
   void _confirmDeleteSubject() {
+    final boards = context.read<BoardsProvider>();
     showMotionDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        scrollable: true,
-        title: const Text('Delete Subject'),
-        content: Text(
-          'Are you sure you want to delete "${widget.subject.name}"?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final saved = await context.read<BoardsProvider>().deleteSubject(
-                widget.subject.id,
-              );
-              if (saved && dialogContext.mounted) {
-                Navigator.of(dialogContext).pop();
-              }
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade700,
-              foregroundColor: Colors.white,
-            ),
-            autofocus: true,
-            child: const Text('Delete'),
-          ),
-        ],
+      builder: (_) => ActionConfirmationDialog(
+        actionLabel: 'Delete',
+        pendingLabel: 'Deleting…',
+        destructive: true,
+        title: 'Delete Subject',
+        message: 'Are you sure you want to delete "${widget.subject.name}"?',
+        onConfirm: () => boards.deleteSubject(widget.subject.id),
       ),
     );
   }

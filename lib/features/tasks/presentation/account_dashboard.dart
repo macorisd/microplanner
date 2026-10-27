@@ -6,6 +6,7 @@ import '../../../core/theme/app_motion.dart';
 import '../../auth/data/auth_service.dart';
 import 'dashboard_screen.dart';
 import 'widgets/cloud_status_card.dart';
+import 'widgets/action_confirmation_dialog.dart';
 
 class AccountDashboard extends StatefulWidget {
   const AccountDashboard({super.key});
@@ -56,34 +57,22 @@ class _AccountDashboardState extends State<AccountDashboard>
     final workspace = context.read<WorkspaceController>();
     final auth = context.read<AuthService>();
     final owner = auth.currentUser?.id;
-    final confirmed = await showMotionDialog<bool>(
+    await showMotionDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        scrollable: true,
-        title: const Text('Import local data?'),
-        content: Text(
-          'Add the boards, subjects and tasks previously saved on this device to ${auth.currentUser?.email}? '
-          'Your existing cloud data and the original local copy will be kept.',
-        ),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(dialogContext).colorScheme.onSurface,
-            ),
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: _importButtonStyle(dialogContext),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Import'),
-          ),
-        ],
+      builder: (dialogContext) => ActionConfirmationDialog(
+        title: 'Import local data?',
+        message:
+            'Add the boards, subjects and tasks previously saved on this device to ${auth.currentUser?.email}? '
+            'Your existing cloud data and the original local copy will be kept.',
+        actionLabel: 'Import',
+        pendingLabel: 'Importing…',
+        confirmStyle: _importButtonStyle(dialogContext),
+        onConfirm: () async {
+          if (auth.currentUser?.id != owner) return false;
+          return workspace.importLegacy();
+        },
       ),
     );
-    if (confirmed == true && mounted && auth.currentUser?.id == owner) {
-      await workspace.importLegacy();
-    }
   }
 
   ButtonStyle _importButtonStyle(BuildContext context) {
@@ -131,7 +120,9 @@ class _AccountDashboardState extends State<AccountDashboard>
                             style: TextButton.styleFrom(
                               foregroundColor: colors.onPrimaryContainer,
                             ),
-                            onPressed: workspace.dismissImport,
+                            onPressed: workspace.isDismissingImport
+                                ? null
+                                : workspace.dismissImport,
                             child: const Text('Not now'),
                           ),
                         ],

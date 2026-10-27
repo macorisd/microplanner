@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -13,7 +14,7 @@ class TaskColumn extends StatelessWidget {
   final Color headerColor;
   final Color headerBackgroundColor;
   final IconData icon;
-  final void Function(Task task) onToggleComplete;
+  final FutureOr<void> Function(Task task) onToggleComplete;
   final void Function(Task task)? onDeleteTask;
   final void Function(Task task)? onEditTask;
 

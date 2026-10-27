@@ -84,6 +84,7 @@ class MemoryCache implements WorkspaceCache {
 }
 
 class FakeLegacy implements LegacyWorkspace {
+  WorkspaceSnapshot? contents;
   String? importedBy;
   bool exists = false;
   @override
@@ -91,7 +92,7 @@ class FakeLegacy implements LegacyWorkspace {
   @override
   Future<String> get sourceId async => 'd6165e1c-2fe0-45d8-8898-8a7ff2db4d5a';
   @override
-  Future<WorkspaceSnapshot> read() async => snapshot('Legacy');
+  Future<WorkspaceSnapshot> read() async => contents ?? snapshot('Legacy');
   @override
   Future<void> imported(String ownerId) async {
     importedBy = ownerId;
