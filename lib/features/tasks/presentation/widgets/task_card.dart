@@ -10,7 +10,7 @@ import '../../../boards/providers/boards_provider.dart';
 import '../../../boards/data/models/subject.dart';
 import '../../data/models/task.dart';
 
-/// A task's details and actions, with persistent controls on touch platforms.
+/// Android edits through the card; completion and deletion stay independent.
 class TaskCard extends StatefulWidget {
   final Task task;
   final VoidCallback onToggleComplete;
@@ -47,11 +47,12 @@ class _TaskCardState extends State<TaskCard> {
   @override
   Widget build(BuildContext context) {
     final touch = usesTouchControls(context);
+    final android = Theme.of(context).platform == TargetPlatform.android;
+    final showEdit = !android && widget.onEdit != null;
     final task = widget.task;
-    final hasActions = widget.onEdit != null || widget.onDelete != null;
+    final hasActions = showEdit || widget.onDelete != null;
     final actionWidth =
-        48.0 *
-        ((widget.onEdit != null ? 1 : 0) + (widget.onDelete != null ? 1 : 0));
+        48.0 * ((showEdit ? 1 : 0) + (widget.onDelete != null ? 1 : 0));
     final actions = ValueListenableBuilder<bool>(
       valueListenable: _hovered,
       builder: (context, hovered, _) {
@@ -66,7 +67,7 @@ class _TaskCardState extends State<TaskCard> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (widget.onEdit != null)
+                  if (showEdit)
                     _ActionButton(
                       icon: Icons.edit_outlined,
                       tooltip: 'Edit',
@@ -133,7 +134,7 @@ class _TaskCardState extends State<TaskCard> {
             child: Material(type: MaterialType.transparency, child: child),
           ),
           child: InkWell(
-            onTap: widget.onTap,
+            onTap: android ? widget.onEdit ?? widget.onTap : widget.onTap,
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
             child: Stack(
               children: [

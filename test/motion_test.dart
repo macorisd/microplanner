@@ -10,6 +10,7 @@ import 'package:microplanner/features/auth/data/auth_service.dart';
 import 'package:microplanner/features/boards/providers/boards_provider.dart';
 import 'package:microplanner/features/tasks/presentation/account_dashboard.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_card.dart';
+import 'package:microplanner/features/tasks/presentation/widgets/android_board_carousel.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_column.dart';
 import 'package:microplanner/features/tasks/providers/tasks_provider.dart';
 import 'support/fakes.dart';
@@ -90,6 +91,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 30));
       await tester.runAsync(() => f.tasks.toggleTaskCompletion(first.id));
       await tester.pumpAndSettle();
+      // Completion moves the task out of Upcoming without changing the page.
+      expect(find.text('Edited').hitTestable(), findsNothing);
+      for (var i = 0; i < 2; i++) {
+        await tester.drag(
+          find.byType(AndroidBoardCarousel),
+          const Offset(600, 0),
+        );
+        await tester.pumpAndSettle();
+      }
       expect(find.text('First'), findsNothing);
       expect(find.text('Second'), findsNothing);
       expect(find.text('Edited'), findsOneWidget);

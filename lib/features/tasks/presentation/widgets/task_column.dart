@@ -130,6 +130,7 @@ class _EmptyState extends StatelessWidget {
 
     switch (title.toLowerCase()) {
       case 'complete':
+      case 'completed':
         icon = Icons.check_circle_outline_rounded;
         message = 'No completed tasks yet';
         break;

@@ -9,6 +9,7 @@ import '../../boards/providers/boards_provider.dart';
 import '../data/models/task.dart';
 import '../providers/tasks_provider.dart';
 import 'widgets/add_task_dialog.dart';
+import 'widgets/android_board_carousel.dart';
 import 'widgets/edit_task_dialog.dart';
 import 'widgets/sidebar.dart';
 import 'widgets/task_column.dart';
@@ -17,7 +18,9 @@ class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 850;
+    final android = Theme.of(context).platform == TargetPlatform.android;
+    final backInset = MediaQuery.systemGestureInsetsOf(context).left;
+    final compact = android || MediaQuery.sizeOf(context).width < 850;
     final short = MediaQuery.sizeOf(context).height < 360;
     final workspace = context.watch<WorkspaceController>();
     final boardName =
@@ -32,10 +35,6 @@ class DashboardScreen extends StatelessWidget {
           : workspace.refresh,
       icon: const Icon(Icons.refresh),
     );
-    const progress = SizedBox.square(
-      dimension: 22,
-      child: CircularProgressIndicator(strokeWidth: 2),
-    );
     return Scaffold(
       appBar: compact
           ? AppBar(
@@ -48,14 +47,17 @@ class DashboardScreen extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              actions: [
-                if (workspace.isLoading || workspace.isSaving) progress,
-                refresh,
-              ],
+              actions: [refresh],
             )
           : null,
       drawer: compact
           ? const Drawer(child: SafeArea(child: Sidebar(inDrawer: true)))
+          : null,
+      // Some Android skins report zero for the Back inset. Keep a small fallback
+      // so an inward drag just beyond that OS-owned strip can reach the drawer.
+      // This does not exclude or override the system Back gesture.
+      drawerEdgeDragWidth: android
+          ? 36 + (backInset < 20 ? 20 : backInset)
           : null,
       body: Row(
         children: [
@@ -86,8 +88,6 @@ class DashboardScreen extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (workspace.isLoading || workspace.isSaving)
-                            progress,
                           refresh,
                         ],
                       ),
@@ -99,19 +99,25 @@ class DashboardScreen extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: PressFeedback(
-        child: short
-            ? FloatingActionButton.small(
-                tooltip: 'New Task',
-                onPressed: workspace.canWrite ? () => _add(context) : null,
-                child: const Icon(Icons.add_rounded),
-              )
-            : FloatingActionButton.extended(
-                onPressed: workspace.canWrite ? () => _add(context) : null,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('New Task'),
-              ),
-      ),
+      floatingActionButton: android
+          ? null
+          : PressFeedback(
+              child: short
+                  ? FloatingActionButton.small(
+                      tooltip: 'New Task',
+                      onPressed: workspace.canWrite
+                          ? () => _add(context)
+                          : null,
+                      child: const Icon(Icons.add_rounded),
+                    )
+                  : FloatingActionButton.extended(
+                      onPressed: workspace.canWrite
+                          ? () => _add(context)
+                          : null,
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('New Task'),
+                    ),
+            ),
     );
   }
 
@@ -149,7 +155,9 @@ class DashboardScreen extends StatelessWidget {
     );
     return [
       column(
-        'Complete',
+        Theme.of(context).platform == TargetPlatform.android
+            ? 'Completed'
+            : 'Complete',
         (provider) => provider.completedTasks,
         AppColors.completeHeader,
         AppColors.completeHeaderLight,
@@ -241,6 +249,16 @@ class _TaskAreaState extends State<_TaskArea> {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final columns = DashboardScreen._taskColumns(context);
+      if (Theme.of(context).platform == TargetPlatform.android) {
+        final identity = context.select<BoardsProvider, (String?, String?)>(
+          (boards) => (boards.workspace.ownerId, boards.currentBoardId),
+        );
+        return AndroidBoardCarousel(
+          key: ValueKey(identity),
+          columns: columns,
+          onAdd: () => DashboardScreen._add(context),
+        );
+      }
       if (MediaQuery.sizeOf(context).width < 850 &&
           usesTouchControls(context)) {
         return _TouchColumns(columns: columns);

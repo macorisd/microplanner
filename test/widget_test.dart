@@ -152,7 +152,7 @@ void main() {
       expect(tester.takeException(), isNull);
       Navigator.of(tester.element(find.text('Sign out'))).pop();
       await tester.pumpAndSettle();
-      await tester.tap(find.text('New Task'));
+      await tester.tap(find.byTooltip('New Task'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       tester.view.viewInsets = const FakeViewPadding(bottom: 300);

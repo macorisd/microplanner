@@ -10,6 +10,7 @@ import 'package:microplanner/features/tasks/data/models/task.dart';
 import 'package:microplanner/features/tasks/presentation/dashboard_screen.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/sidebar.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_card.dart';
+import 'package:microplanner/features/tasks/presentation/widgets/android_board_carousel.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_column.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/edit_task_dialog.dart';
 import 'package:microplanner/features/tasks/providers/tasks_provider.dart';
@@ -73,12 +74,16 @@ void main() {
             await mouse.moveTo(tester.getCenter(find.byType(TaskCard)));
             await tester.pumpAndSettle();
           } else {
-            expect(tester.getSize(edit).width, greaterThanOrEqualTo(48));
+            expect(edit, findsNothing);
             expect(tester.getSize(delete).height, greaterThanOrEqualTo(48));
           }
-          expect(edit.hitTestable(), findsOneWidget);
           expect(delete.hitTestable(), findsOneWidget);
-          await tester.tap(edit);
+          if (platform == TargetPlatform.windows) {
+            expect(edit.hitTestable(), findsOneWidget);
+            await tester.tap(edit);
+          } else {
+            await tester.tap(find.text('A task with a long title'));
+          }
           await tester.tap(delete);
           expect(edits, 1);
           expect(deletes, 1);
@@ -158,9 +163,8 @@ void main() {
       expect(tester.getSize(checkbox), const Size(48, 48));
       await tester.tapAt(tester.getTopLeft(checkbox) + const Offset(3, 3));
       expect(toggles, 1);
-      for (final label in ['Edit', 'Delete']) {
-        expect(tester.getSize(find.byTooltip(label)), const Size(48, 48));
-      }
+      expect(find.byTooltip('Edit'), findsNothing);
+      expect(tester.getSize(find.byTooltip('Delete')), const Size(48, 48));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       fixture.dispose();
@@ -263,21 +267,22 @@ void main() {
         await tester.runAsync(() async {
           await fixture.initialize();
           await fixture.tasks.addTask(
-            name: 'Completed task',
+            name: 'Upcoming task',
             deadline: DateTime(2030, 6, 15),
             type: TaskType.unassigned,
             priority: TaskPriority.low,
           );
-          final task = fixture.tasks.tasks.last;
-          await fixture.tasks.toggleTaskCompletion(task.id);
         });
         final writes = fixture.h.server.writes;
         await tester.pumpWidget(
           fixture.app(TargetPlatform.android, const DashboardScreen()),
         );
         await tester.pumpAndSettle();
-        final column = find.byType(TaskColumn).first;
-        expect(tester.getSize(column).width, closeTo(width * 0.92 - 12, 0.1));
+        final column = find.byWidgetPredicate(
+          (w) => w is TaskColumn && w.title == 'Upcoming',
+        );
+        expect(tester.getSize(column).width, greaterThan(width * 0.85));
+        expect(tester.getSize(column).width, lessThan(width));
         expect(tester.getTopLeft(column).dy, lessThanOrEqualTo(64));
         expect(
           tester.getSize(find.byType(TaskCard).first).height,
@@ -295,7 +300,7 @@ void main() {
           tester.platformDispatcher.textScaleFactorTestValue = scale;
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
-          await tester.tap(find.byTooltip('Edit').first);
+          await tester.tap(find.text('Upcoming task'));
           await tester.pumpAndSettle();
           tester.view.viewInsets = const FakeViewPadding(bottom: 300);
           await tester.pumpAndSettle();
@@ -306,7 +311,7 @@ void main() {
           await tester.pumpAndSettle();
           tester.view.resetViewInsets();
           await tester.pumpAndSettle();
-          await tester.tap(find.text('New Task'));
+          await tester.tap(find.byTooltip('New Task'));
           await tester.pumpAndSettle();
           tester.view.viewInsets = const FakeViewPadding(bottom: 300);
           await tester.pumpAndSettle();
@@ -318,18 +323,30 @@ void main() {
           tester.view.resetViewInsets();
         }
         tester.platformDispatcher.clearTextScaleFactorTestValue();
-        await tester.drag(find.byType(PageView), Offset(-width * 0.75, 0));
+        await tester.drag(
+          find.byType(AndroidBoardCarousel),
+          Offset(width * 0.75, 0),
+        );
         await tester.pumpAndSettle();
         final late = find.byWidgetPredicate(
           (w) => w is TaskColumn && w.title == 'Late',
         );
-        expect(tester.getTopLeft(late).dx, closeTo(width * 0.04 + 6, 0.1));
-        await tester.drag(find.byType(PageView), Offset(-width * 0.75, 0));
-        await tester.pumpAndSettle();
-        final upcoming = find.byWidgetPredicate(
-          (w) => w is TaskColumn && w.title == 'Upcoming',
+        expect(
+          tester.getTopLeft(late).dx,
+          closeTo(tester.getTopLeft(find.byTooltip('Completed')).dx, 0.1),
         );
-        expect(tester.getTopLeft(upcoming).dx, closeTo(width * 0.04 + 6, 0.1));
+        await tester.drag(
+          find.byType(AndroidBoardCarousel),
+          Offset(width * 0.75, 0),
+        );
+        await tester.pumpAndSettle();
+        final completed = find.byWidgetPredicate(
+          (w) => w is TaskColumn && w.title == 'Completed',
+        );
+        expect(
+          tester.getTopLeft(completed).dx,
+          closeTo(tester.getTopLeft(find.byTooltip('Completed')).dx, 0.1),
+        );
         expect(fixture.h.server.writes, writes);
         await tester.pumpWidget(const SizedBox());
         fixture.dispose();
