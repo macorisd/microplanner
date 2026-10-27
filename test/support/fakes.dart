@@ -112,6 +112,8 @@ class FakeServer {
   bool rejectSession = false;
   bool conflict = false;
   int writes = 0;
+  int reads = 0;
+  final writeRevisions = <int>[];
   Completer<http.Response>? nextRead;
   Completer<http.Response>? nextWrite;
   Future<http.Response> handle(http.Request request) async {
@@ -130,6 +132,7 @@ class FakeServer {
       return jsonResponse({'user': session(owner)['user']});
     }
     if (request.method == 'GET') {
+      reads++;
       final blocked = nextRead;
       nextRead = null;
       return blocked == null
@@ -145,6 +148,7 @@ class FakeServer {
       }, 409);
     }
     final body = jsonDecode(request.body) as Map<String, dynamic>;
+    writeRevisions.add(body['revision'] as int);
     final next = WorkspaceSnapshot.fromJson({
       ...body['data'] as Map<String, dynamic>,
       'revision': (body['revision'] as int) + 1,

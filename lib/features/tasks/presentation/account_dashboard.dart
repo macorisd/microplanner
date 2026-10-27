@@ -16,6 +16,7 @@ class AccountDashboard extends StatefulWidget {
 class _AccountDashboardState extends State<AccountDashboard>
     with WidgetsBindingObserver {
   Timer? _expiry;
+  bool _wasInBackground = false;
   @override
   void initState() {
     super.initState();
@@ -29,11 +30,16 @@ class _AccountDashboardState extends State<AccountDashboard>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      _wasInBackground = true;
+    }
     if (state == AppLifecycleState.resumed) {
       final auth = context.read<AuthService>();
       if (!auth.sessionValid) {
         auth.signOut();
-      } else {
+      } else if (_wasInBackground) {
+        _wasInBackground = false;
         context.read<WorkspaceController>().refresh();
       }
     }

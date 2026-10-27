@@ -21,6 +21,8 @@ class WorkspaceController extends ChangeNotifier {
   bool _hasCache = false;
   bool _canImport = false;
   String? _error;
+  Completer<void>? _refreshBarrier;
+  Future<void> _mutationTail = Future<void>.value();
   WorkspaceController({
     required this.auth,
     required this.api,
@@ -37,7 +39,8 @@ class WorkspaceController extends ChangeNotifier {
   bool get hasData => _hasCache;
   bool get canImport => _canImport && canWrite;
   bool get hasLegacyData => _canImport;
-  bool get canWrite => _online && !_loading && !_saving && auth.sessionValid;
+  // Online actions stay available during synchronization; writes wait their turn.
+  bool get canWrite => _online && auth.sessionValid;
   String? get error => _error;
   String? get ownerId => _ownerId;
   bool _current(int generation, String ownerId) =>
@@ -47,6 +50,9 @@ class WorkspaceController extends ChangeNotifier {
     final owner = auth.currentUser?.id;
     if (owner == _ownerId) return;
     ++_generation;
+    _refreshBarrier?.complete();
+    _refreshBarrier = null;
+    _mutationTail = Future<void>.value();
     _ownerId = owner;
     _snapshot = const WorkspaceSnapshot();
     _online = false;
@@ -86,6 +92,7 @@ class WorkspaceController extends ChangeNotifier {
     if (owner == null || token == null || _saving) return;
     final generation = _generation;
     final refreshVersion = ++_refreshVersion;
+    _refreshBarrier ??= Completer<void>();
     _loading = true;
     notifyListeners();
     try {
@@ -113,6 +120,8 @@ class WorkspaceController extends ChangeNotifier {
     } finally {
       if (_current(generation, owner) && refreshVersion == _refreshVersion) {
         _loading = false;
+        _refreshBarrier?.complete();
+        _refreshBarrier = null;
         notifyListeners();
       }
     }
@@ -133,16 +142,45 @@ class WorkspaceController extends ChangeNotifier {
   }
 
   Future<bool> mutate(
-    WorkspaceSnapshot Function(WorkspaceSnapshot) change,
-  ) async {
-    if (!canWrite) {
-      _error = _saving
-          ? 'A save is already in progress.'
-          : 'Connect to the server and refresh before editing.';
+    WorkspaceSnapshot? Function(WorkspaceSnapshot) change,
+  ) => _enqueue(() async {
+    final next = change(_snapshot.clone());
+    if (next == null) {
+      _error =
+          'This item changed while syncing. Your latest data have been kept.';
       notifyListeners();
       return false;
     }
-    return _save(change(_snapshot.clone()));
+    return _save(next);
+  });
+
+  bool _rejectWrite() {
+    _error ??= 'Connect to the server and refresh before editing.';
+    notifyListeners();
+    return false;
+  }
+
+  Future<bool> _enqueue(Future<bool> Function() write) {
+    final owner = _ownerId;
+    final generation = _generation;
+    if (owner == null || !canWrite) return Future.value(_rejectWrite());
+    final result = _mutationTail.then((_) async {
+      // A later refresh can supersede the one that was active at click time.
+      while (_current(generation, owner) && _loading) {
+        final barrier = _refreshBarrier;
+        if (barrier == null) return false;
+        await barrier.future;
+      }
+      if (!_current(generation, owner)) return false;
+      if (!canWrite) return _rejectWrite();
+      return write();
+    });
+    // Keep subsequent actions usable even if a caller's transformation throws.
+    _mutationTail = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return result;
   }
 
   Future<bool> _save(WorkspaceSnapshot data, {String? sourceId}) async {
@@ -211,8 +249,11 @@ class WorkspaceController extends ChangeNotifier {
     try {
       final source = await legacy.sourceId;
       final data = await legacy.read();
-      if (!_current(generation, owner) || !canWrite) return false;
-      return _save(data, sourceId: source);
+      if (!_current(generation, owner)) return false;
+      return _enqueue(() async {
+        if (!canImport) return false;
+        return _save(data, sourceId: source);
+      });
     } catch (_) {
       if (_current(generation, owner)) {
         _error =
@@ -236,6 +277,8 @@ class WorkspaceController extends ChangeNotifier {
   @override
   void dispose() {
     ++_generation;
+    _refreshBarrier?.complete();
+    _refreshBarrier = null;
     auth.removeListener(_authChanged);
     super.dispose();
   }

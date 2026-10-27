@@ -95,22 +95,27 @@ class BoardsProvider extends ChangeNotifier {
   }
 
   Future<bool> addBoard({String? name}) async {
-    final board = Board.create(
-      id: const Uuid().v4(),
-      name: name ?? 'Board ${boards.length + 1}',
-      sortOrder:
-          boards.fold<int>(
-            -1,
-            (max, b) => b.sortOrder > max ? b.sortOrder : max,
-          ) +
-          1,
-    );
+    final id = const Uuid().v4();
     final owner = workspace.ownerId;
     final success = await workspace.mutate(
-      (s) => s.copyWith(boards: [...s.boards, board]),
+      (s) => s.copyWith(
+        boards: [
+          ...s.boards,
+          Board.create(
+            id: id,
+            name: name ?? 'Board ${s.boards.length + 1}',
+            sortOrder:
+                s.boards.fold<int>(
+                  -1,
+                  (max, b) => b.sortOrder > max ? b.sortOrder : max,
+                ) +
+                1,
+          ),
+        ],
+      ),
     );
     if (success && owner == workspace.ownerId) {
-      _currentBoardId = board.id;
+      _currentBoardId = id;
       notifyListeners();
     }
     return success;
@@ -124,26 +129,45 @@ class BoardsProvider extends ChangeNotifier {
   Future<bool> deleteBoard(String id) async {
     if (boards.length <= 1) return false;
     return workspace.mutate(
-      (s) => s.copyWith(
-        boards: s.boards.where((b) => b.id != id).toList(),
-        subjects: s.subjects.where((sub) => sub.boardId != id).toList(),
-        tasks: s.tasks.where((t) => t.boardId != id).toList(),
-      ),
+      (s) => s.boards.length <= 1
+          ? null
+          : s.copyWith(
+              boards: s.boards.where((b) => b.id != id).toList(),
+              subjects: s.subjects.where((sub) => sub.boardId != id).toList(),
+              tasks: s.tasks.where((t) => t.boardId != id).toList(),
+            ),
     );
   }
 
-  Future<bool> reorderBoards(int oldIndex, int newIndex) =>
-      workspace.mutate((s) {
-        final ordered = [...s.boards];
-        if (newIndex > oldIndex) newIndex--;
-        ordered.insert(newIndex, ordered.removeAt(oldIndex));
-        return s.copyWith(
-          boards: [
-            for (var i = 0; i < ordered.length; i++)
-              ordered[i].copyWith(sortOrder: i),
-          ],
-        );
-      });
+  Future<bool> reorderBoards(int oldIndex, int newIndex) {
+    if (oldIndex < 0 ||
+        oldIndex >= boards.length ||
+        newIndex < 0 ||
+        newIndex > boards.length) {
+      return Future.value(false);
+    }
+    final moved = boards[oldIndex].id;
+    final before = newIndex < boards.length ? boards[newIndex].id : null;
+    return workspace.mutate((s) {
+      final ordered = [...s.boards];
+      final from = ordered.indexWhere((board) => board.id == moved);
+      if (from < 0) return null;
+      final board = ordered.removeAt(from);
+      final target = before == null
+          ? ordered.length
+          : ordered.indexWhere((board) => board.id == before);
+      if (before == moved) return s;
+      if (target < 0) return null;
+      ordered.insert(target, board);
+      return s.copyWith(
+        boards: [
+          for (var i = 0; i < ordered.length; i++)
+            ordered[i].copyWith(sortOrder: i),
+        ],
+      );
+    });
+  }
+
   void toggleSubjectsView() {
     _showSubjectsView = !_showSubjectsView;
     if (!_showSubjectsView) _subjectsBoardId = null;

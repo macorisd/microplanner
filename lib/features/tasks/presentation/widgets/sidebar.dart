@@ -10,7 +10,7 @@ import '../../../auth/data/auth_service.dart';
 import '../../../boards/data/models/board.dart';
 import '../../../boards/providers/boards_provider.dart';
 import 'subject_dialog.dart';
-import 'save_status.dart';
+import 'new_board_dialog.dart';
 
 /// Resizable sidebar navigation widget
 /// Contains Boards section with subjects management and Sign Out
@@ -288,56 +288,11 @@ class _BoardsSection extends StatelessWidget {
   }
 
   void _showAddBoardDialog(BuildContext context) {
-    final controller = TextEditingController();
+    final boards = context.read<BoardsProvider>();
     showMotionDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        scrollable: true,
-        title: const Text('New Board'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Board name',
-                hintText: 'Enter board name',
-              ),
-              onSubmitted: (_) async {
-                if (controller.text.trim().isNotEmpty) {
-                  final saved = await context.read<BoardsProvider>().addBoard(
-                    name: controller.text.trim(),
-                  );
-                  if (saved && dialogContext.mounted) {
-                    Navigator.of(dialogContext).pop();
-                  }
-                }
-              },
-            ),
-            const SaveStatus(),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              final saved = await context.read<BoardsProvider>().addBoard(
-                name: name.isEmpty ? null : name,
-              );
-              if (saved && dialogContext.mounted) {
-                Navigator.of(dialogContext).pop();
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+      builder: (_) =>
+          NewBoardDialog(onSave: (name) => boards.addBoard(name: name)),
     );
   }
 }
