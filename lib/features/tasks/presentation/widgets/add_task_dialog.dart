@@ -10,6 +10,7 @@ import '../../../../core/utils/input_mode.dart';
 import '../../../boards/data/models/subject.dart';
 import '../../../boards/providers/boards_provider.dart';
 import 'save_status.dart';
+import 'subject_dropdown.dart';
 
 /// Dialog for creating a new task
 /// All fields are displayed in a clean, Cashew-inspired form
@@ -258,37 +259,11 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     );
   }
 
-  Widget _buildSubjectDropdown(List<Subject> subjects) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String?>(
-          value: _selectedSubjectId,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded),
-          items: [
-            const DropdownMenuItem<String?>(
-              value: null,
-              child: Text('No Subject'),
-            ),
-            ...subjects.map((subject) {
-              return DropdownMenuItem<String?>(
-                value: subject.id,
-                child: Text(subject.name),
-              );
-            }),
-          ],
-          onChanged: (value) {
-            setState(() => _selectedSubjectId = value);
-          },
-        ),
-      ),
-    );
-  }
+  Widget _buildSubjectDropdown(List<Subject> subjects) => SubjectDropdown(
+    subjects: subjects,
+    value: _selectedSubjectId,
+    onChanged: (value) => setState(() => _selectedSubjectId = value),
+  );
 
   Widget _buildDeadlinePicker(BuildContext context) {
     return InkWell(
