@@ -53,6 +53,7 @@ class _AccountDashboardState extends State<AccountDashboard>
     final confirmed = await showMotionDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        scrollable: true,
         title: const Text('Import local data?'),
         content: Text(
           'Add the boards, subjects and tasks previously saved on this device to ${auth.currentUser?.email}? '

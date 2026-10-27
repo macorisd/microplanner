@@ -4,6 +4,7 @@
 #include <flutter_windows.h>
 
 #include "resource.h"
+#include "window_size_policy.h"
 
 namespace {
 
@@ -51,6 +52,33 @@ void EnableFullDpiSupportIfAvailable(HWND hwnd) {
     enable_non_client_dpi_scaling(hwnd);
   }
   FreeLibrary(user32_module);
+}
+
+WindowMinimum MonitorMinimum(HWND hwnd, const RECT* target = nullptr) {
+  const HMONITOR monitor = target
+      ? MonitorFromRect(target, MONITOR_DEFAULTTONEAREST)
+      : MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+  MONITORINFO info{sizeof(MONITORINFO)};
+  if (!GetMonitorInfo(monitor, &info)) {
+    return {GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK)};
+  }
+  return HalfMonitorMinimum(info.rcMonitor.right - info.rcMonitor.left,
+                            info.rcMonitor.bottom - info.rcMonitor.top);
+}
+
+void EnforceMonitorMinimum(HWND hwnd) {
+  if (IsIconic(hwnd) || IsZoomed(hwnd)) return;
+  RECT bounds;
+  if (!GetWindowRect(hwnd, &bounds)) return;
+  const auto minimum = MonitorMinimum(hwnd);
+  const LONG width = bounds.right - bounds.left;
+  const LONG height = bounds.bottom - bounds.top;
+  if (width < minimum.width || height < minimum.height) {
+    SetWindowPos(hwnd, nullptr, 0, 0,
+                 width < minimum.width ? minimum.width : width,
+                 height < minimum.height ? minimum.height : height,
+                 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+  }
 }
 
 }  // namespace
@@ -179,6 +207,19 @@ Win32Window::MessageHandler(HWND hwnd,
                             WPARAM const wparam,
                             LPARAM const lparam) noexcept {
   switch (message) {
+    case WM_GETMINMAXINFO: {
+      const auto minimum = MonitorMinimum(hwnd);
+      auto limits = reinterpret_cast<MINMAXINFO*>(lparam);
+      limits->ptMinTrackSize.x = minimum.width;
+      limits->ptMinTrackSize.y = minimum.height;
+      return 0;
+    }
+
+    case WM_DISPLAYCHANGE:
+    case WM_WINDOWPOSCHANGED:
+      EnforceMonitorMinimum(hwnd);
+      break;
+
     case WM_DESTROY:
       window_handle_ = nullptr;
       Destroy();
@@ -191,6 +232,11 @@ Win32Window::MessageHandler(HWND hwnd,
       auto newRectSize = reinterpret_cast<RECT*>(lparam);
       LONG newWidth = newRectSize->right - newRectSize->left;
       LONG newHeight = newRectSize->bottom - newRectSize->top;
+      const auto minimum = MonitorMinimum(hwnd, newRectSize);
+      if (!IsZoomed(hwnd) && !IsIconic(hwnd)) {
+        if (newWidth < minimum.width) newWidth = minimum.width;
+        if (newHeight < minimum.height) newHeight = minimum.height;
+      }
 
       SetWindowPos(hwnd, nullptr, newRectSize->left, newRectSize->top, newWidth,
                    newHeight, SWP_NOZORDER | SWP_NOACTIVATE);

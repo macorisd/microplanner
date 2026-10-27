@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/data/workspace_controller.dart';
+import '../../../core/data/same_list.dart';
 import '../data/models/board.dart';
 import '../data/models/subject.dart';
 
@@ -10,31 +11,70 @@ class BoardsProvider extends ChangeNotifier {
   String? _subjectsBoardId;
   String? _owner;
   bool _showSubjectsView = false;
+  List<Board> _boards = const [];
+  List<Subject> _subjects = const [];
+  Map<String, Board> _boardIndex = {};
+  Map<String, Subject> _subjectIndex = {};
+  Map<String, List<Subject>> _subjectsByBoard = {};
   BoardsProvider(this.workspace) {
     workspace.addListener(_changed);
+    _changed();
   }
-  List<Board> get boards => List.unmodifiable(workspace.snapshot.boards);
-  List<Subject> get subjects => List.unmodifiable(workspace.snapshot.subjects);
+  List<Board> get boards => _boards;
+  List<Subject> get subjects => _subjects;
   bool get isLoading => workspace.isLoading;
   bool get showSubjectsView => _showSubjectsView;
-  String? get currentBoardId => boards.any((b) => b.id == _currentBoardId)
-      ? _currentBoardId
-      : boards.firstOrNull?.id;
-  Board? get currentBoard =>
-      boards.where((b) => b.id == currentBoardId).firstOrNull;
-  List<Subject> get currentBoardSubjects => subjects
-      .where((s) => s.boardId == (_subjectsBoardId ?? currentBoardId))
-      .toList();
-  String? get subjectsBoardName => boards
-      .where((b) => b.id == (_subjectsBoardId ?? currentBoardId))
-      .firstOrNull
-      ?.name;
+  String? get currentBoardId => _currentBoardId ?? _boards.firstOrNull?.id;
+  Board? get currentBoard => _boardIndex[currentBoardId];
+  List<Subject> get currentBoardSubjects =>
+      _subjectsByBoard[_subjectsBoardId ?? currentBoardId] ?? const [];
+  String? get subjectsBoardName =>
+      _boardIndex[_subjectsBoardId ?? currentBoardId]?.name;
   void _changed() {
-    if (_owner != workspace.ownerId) {
+    final ownerChanged = _owner != workspace.ownerId;
+    final data = workspace.snapshot;
+    final boardsChanged = !sameList(
+      _boards,
+      data.boards,
+      (a, b) =>
+          a.id == b.id &&
+          a.name == b.name &&
+          a.createdAt == b.createdAt &&
+          a.sortOrder == b.sortOrder,
+    );
+    final subjectsChanged = !sameList(
+      _subjects,
+      data.subjects,
+      (a, b) =>
+          a.id == b.id &&
+          a.name == b.name &&
+          a.boardId == b.boardId &&
+          a.color == b.color,
+    );
+    if (!ownerChanged && !boardsChanged && !subjectsChanged) return;
+    if (ownerChanged) {
       _owner = workspace.ownerId;
       _currentBoardId = null;
       _subjectsBoardId = null;
       _showSubjectsView = false;
+    }
+    if (boardsChanged || ownerChanged) {
+      _boards = List.unmodifiable(data.boards);
+      _boardIndex = {for (final board in _boards) board.id: board};
+    }
+    if (subjectsChanged || ownerChanged) {
+      _subjects = List.unmodifiable(data.subjects);
+      _subjectIndex = {for (final subject in _subjects) subject.id: subject};
+      final grouped = <String, List<Subject>>{};
+      for (final subject in _subjects) {
+        grouped.putIfAbsent(subject.boardId, () => []).add(subject);
+      }
+      _subjectsByBoard = grouped.map(
+        (id, items) => MapEntry(id, List.unmodifiable(items)),
+      );
+    }
+    if (!_boardIndex.containsKey(_currentBoardId)) {
+      _currentBoardId = _boards.firstOrNull?.id;
     }
     if (_subjectsBoardId != null &&
         !boards.any((b) => b.id == _subjectsBoardId)) {
@@ -45,6 +85,10 @@ class BoardsProvider extends ChangeNotifier {
   }
 
   void selectBoard(String id) {
+    if (!_boardIndex.containsKey(id) ||
+        (_currentBoardId == id && !_showSubjectsView)) {
+      return;
+    }
     _currentBoardId = id;
     _showSubjectsView = false;
     notifyListeners();
@@ -107,12 +151,14 @@ class BoardsProvider extends ChangeNotifier {
   }
 
   void showSubjectsForBoard(String id) {
+    if (_showSubjectsView && _subjectsBoardId == id) return;
     _subjectsBoardId = id;
     _showSubjectsView = true;
     notifyListeners();
   }
 
   void hideSubjectsView() {
+    if (!_showSubjectsView) return;
     _subjectsBoardId = null;
     _showSubjectsView = false;
     notifyListeners();
@@ -151,8 +197,7 @@ class BoardsProvider extends ChangeNotifier {
           .toList(),
     ),
   );
-  Subject? getSubjectById(String? id) =>
-      subjects.where((s) => s.id == id).firstOrNull;
+  Subject? getSubjectById(String? id) => _subjectIndex[id];
   @override
   void dispose() {
     workspace.removeListener(_changed);

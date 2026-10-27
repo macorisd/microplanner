@@ -38,3 +38,16 @@ target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
+
+# Explicit test target; excluded from normal builds and installation bundles.
+add_executable(window_size_integration_test EXCLUDE_FROM_ALL
+  "window_size_integration_test.cpp"
+  "win32_window.cpp"
+)
+apply_standard_settings(window_size_integration_test)
+target_compile_definitions(window_size_integration_test PRIVATE NOMINMAX)
+target_include_directories(window_size_integration_test PRIVATE "${CMAKE_SOURCE_DIR}")
+target_link_libraries(window_size_integration_test PRIVATE flutter "dwmapi.lib")
+set_target_properties(window_size_integration_test PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+)
