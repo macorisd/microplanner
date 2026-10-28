@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/data/workspace_controller.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../auth/data/auth_service.dart';
+import '../../boards/providers/boards_provider.dart';
 import 'dashboard_screen.dart';
 import 'widgets/cloud_status_card.dart';
 import 'widgets/action_confirmation_dialog.dart';
@@ -86,6 +87,9 @@ class _AccountDashboardState extends State<AccountDashboard>
   @override
   Widget build(BuildContext context) {
     final workspace = context.watch<WorkspaceController>();
+    final restoringBoard = context.select<BoardsProvider, bool>(
+      (boards) => boards.isRestoringSelection,
+    );
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
       body: SafeArea(
@@ -130,7 +134,9 @@ class _AccountDashboardState extends State<AccountDashboard>
                     ),
                   ),
                 Expanded(
-                  child: workspace.isLoading && !workspace.hasData
+                  child:
+                      (workspace.isLoading && !workspace.hasData) ||
+                          restoringBoard
                       ? const Center(child: CircularProgressIndicator())
                       : !workspace.hasData
                       ? Center(
