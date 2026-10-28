@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/data/workspace_controller.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_motion.dart';
@@ -17,6 +19,7 @@ class TaskColumn extends StatelessWidget {
   final FutureOr<void> Function(Task task) onToggleComplete;
   final void Function(Task task)? onDeleteTask;
   final void Function(Task task)? onEditTask;
+  final Future<void> Function()? onClearCompleted;
 
   const TaskColumn({
     super.key,
@@ -28,6 +31,7 @@ class TaskColumn extends StatelessWidget {
     required this.onToggleComplete,
     this.onDeleteTask,
     this.onEditTask,
+    this.onClearCompleted,
   });
 
   @override
@@ -39,6 +43,10 @@ class TaskColumn extends StatelessWidget {
     final effectiveHeaderBgColor = muted
         ? AppColors.surfaceVariant
         : headerBackgroundColor;
+    final headerPadding = !touch && MediaQuery.sizeOf(context).height < 360
+        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
+        : EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium);
+    final contentPadding = EdgeInsets.symmetric(vertical: headerPadding.top);
 
     return MotionEntrance(
       fade: false,
@@ -54,9 +62,7 @@ class TaskColumn extends StatelessWidget {
               // Header
               AnimatedContainer(
                 duration: AppMotion.duration(context, AppMotion.normal),
-                padding: !touch && MediaQuery.sizeOf(context).height < 360
-                    ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
-                    : EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium),
+                padding: EdgeInsets.symmetric(horizontal: headerPadding.left),
                 decoration: BoxDecoration(
                   color: effectiveHeaderBgColor,
                   borderRadius: const BorderRadius.only(
@@ -66,41 +72,58 @@ class TaskColumn extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(icon, color: effectiveHeaderColor, size: 22),
-                    const SizedBox(width: AppTheme.spacingSmall),
                     Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: effectiveHeaderColor,
-                              fontWeight: FontWeight.w600,
+                      child: Padding(
+                        padding: contentPadding,
+                        child: Row(
+                          children: [
+                            Icon(icon, color: effectiveHeaderColor, size: 22),
+                            const SizedBox(width: AppTheme.spacingSmall),
+                            Expanded(
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: effectiveHeaderColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
                             ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTheme.spacingSmall,
-                        vertical: AppTheme.spacingXSmall,
+                    if (onClearCompleted != null)
+                      _ClearCompletedButton(
+                        hasTasks: tasks.isNotEmpty,
+                        onClear: onClearCompleted!,
                       ),
-                      decoration: BoxDecoration(
-                        color: effectiveHeaderColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.radiusSmall,
+                    Padding(
+                      padding: contentPadding,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingSmall,
+                          vertical: AppTheme.spacingXSmall,
                         ),
-                      ),
-                      child: MotionSwap(
-                        child: Text(
-                          '${tasks.length}',
-                          key: ValueKey(tasks.length),
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(
-                                color: effectiveHeaderColor,
-                                fontWeight: FontWeight.w600,
-                              ),
+                        decoration: BoxDecoration(
+                          color: effectiveHeaderColor.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusSmall,
+                          ),
+                        ),
+                        child: MotionSwap(
+                          child: Text(
+                            '${tasks.length}',
+                            key: ValueKey(tasks.length),
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  color: effectiveHeaderColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
                         ),
                       ),
                     ),
@@ -113,6 +136,44 @@ class TaskColumn extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ClearCompletedButton extends StatefulWidget {
+  final bool hasTasks;
+  final Future<void> Function() onClear;
+  const _ClearCompletedButton({required this.hasTasks, required this.onClear});
+  @override
+  State<_ClearCompletedButton> createState() => _ClearCompletedButtonState();
+}
+
+class _ClearCompletedButtonState extends State<_ClearCompletedButton> {
+  bool _opening = false;
+  Future<void> _open() async {
+    if (_opening) return;
+    setState(() => _opening = true);
+    try {
+      await widget.onClear();
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final writable = context.select<WorkspaceController, bool>(
+      (workspace) => workspace.canWrite,
+    );
+    return SizedBox.square(
+      dimension: usesTouchControls(context) ? 48 : 30,
+      child: IconButton(
+        tooltip: 'Clear Complete Tasks',
+        onPressed: widget.hasTasks && writable && !_opening ? _open : null,
+        padding: EdgeInsets.zero,
+        color: AppColors.textSecondary,
+        icon: const Icon(Icons.delete_outline_rounded, size: 18),
       ),
     );
   }
@@ -226,6 +287,12 @@ class _TaskListState extends State<_TaskList> {
       return;
     }
     final ids = next.map((task) => task.id).toSet();
+    if (_items.where((task) => !ids.contains(task.id)).take(21).length > 20) {
+      // Bulk removal should not create an animation/controller for every row.
+      _items = List.of(next);
+      _listKey = GlobalKey<AnimatedListState>();
+      return;
+    }
     for (var i = _items.length - 1; i >= 0; i--) {
       if (!ids.contains(_items[i].id)) _remove(state, i);
     }

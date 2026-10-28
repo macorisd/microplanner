@@ -483,6 +483,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<TaskType>(
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
           value: _type,
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down_rounded),
@@ -539,7 +540,10 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                       : 0,
                 ),
                 child: InkWell(
-                  onTap: () => setState(() => _priority = priority),
+                  onTap: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    setState(() => _priority = priority);
+                  },
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   child: AnimatedContainer(
                     duration: AppMotion.duration(context, AppMotion.fast),

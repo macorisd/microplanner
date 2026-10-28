@@ -14,6 +14,7 @@ import 'features/auth/data/auth_service.dart';
 import 'features/boards/data/models/board.dart';
 import 'features/boards/data/models/subject.dart';
 import 'features/boards/providers/boards_provider.dart';
+import 'features/boards/data/board_selection_storage.dart';
 import 'features/tasks/data/models/task.dart';
 import 'features/tasks/providers/tasks_provider.dart';
 
@@ -35,7 +36,10 @@ void main() async {
     cache: EncryptedWorkspaceCache(storage),
     legacy: HiveLegacyWorkspace(),
   );
-  final boards = BoardsProvider(workspace);
+  final boards = BoardsProvider(
+    workspace,
+    selectionStorage: const PrivateBoardSelectionStorage(storage),
+  );
   final tasks = TasksProvider(workspace, boards);
   runApp(
     MultiProvider(

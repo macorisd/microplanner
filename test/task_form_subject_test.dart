@@ -42,8 +42,7 @@ void main() {
                 w is Container &&
                 w.decoration is BoxDecoration &&
                 (w.decoration as BoxDecoration).shape == BoxShape.circle &&
-                (w.decoration as BoxDecoration).color ==
-                    Color(_subject.color),
+                (w.decoration as BoxDecoration).color == Color(_subject.color),
           );
           if (editing) expect(swatches(), findsOneWidget);
           await tester.tap(find.byType(DropdownButton<String?>));
@@ -85,12 +84,17 @@ void main() {
     await tester.pumpWidget(f.app(TargetPlatform.windows, f.add));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'First click');
+    await tester.pump();
     final read = Completer<http.Response>();
     f.h.server.nextRead = read;
     final refreshing = f.h.workspace.refresh();
     await tester.runAsync(settleAsync);
     await tester.tap(find.text('Create Task'));
     await tester.pump();
+    expect(
+      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
+      isNull,
+    );
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.runAsync(settleAsync);
     expect(f.h.server.writes, 1); // Fixture creation only.
@@ -100,6 +104,8 @@ void main() {
       await refreshing;
       await settleAsync();
     });
+    await tester.pump();
+    await tester.runAsync(settleAsync);
     await tester.pumpAndSettle();
     expect(f.h.server.writes, 2);
     expect(f.h.workspace.snapshot.tasks.last.name, 'First click');

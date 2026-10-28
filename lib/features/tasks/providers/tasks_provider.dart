@@ -156,6 +156,25 @@ class TasksProvider extends ChangeNotifier {
   Future<bool> deleteTask(String id) => workspace.mutate(
     (s) => s.copyWith(tasks: s.tasks.where((t) => t.id != id).toList()),
   );
+  Future<bool> clearCompletedTasks({
+    required String boardId,
+    required Set<String> taskIds,
+  }) {
+    final intended = Set<String>.of(taskIds);
+    return workspace.mutate((s) {
+      final remaining = s.tasks
+          .where(
+            (task) =>
+                task.boardId != boardId ||
+                !task.isCompleted ||
+                !intended.contains(task.id),
+          )
+          .toList();
+      if (remaining.length == s.tasks.length) return null;
+      return s.copyWith(tasks: remaining);
+    });
+  }
+
   Future<bool> toggleTaskCompletion(String id) => workspace.mutate(
     (s) => !s.tasks.any((t) => t.id == id)
         ? null
