@@ -10,6 +10,7 @@ mixin PendingActionState<T extends StatefulWidget> on State<T> {
   Future<R?> pickOnce<R>(Future<R?> Function() open) async {
     if (actionBlocked || _pickerOpen) return null;
     _pickerOpen = true;
+    FocusManager.instance.primaryFocus?.unfocus();
     try {
       return await open();
     } finally {

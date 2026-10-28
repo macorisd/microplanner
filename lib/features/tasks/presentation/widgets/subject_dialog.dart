@@ -101,8 +101,10 @@ class _SubjectDialogState extends State<SubjectDialog>
                 return MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
-                    onTap: () =>
-                        setState(() => _selectedColor = color.toARGB32()),
+                    onTap: () {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                      setState(() => _selectedColor = color.toARGB32());
+                    },
                     child: AnimatedContainer(
                       duration: AppMotion.duration(context, AppMotion.fast),
                       width: 24,

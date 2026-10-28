@@ -193,7 +193,19 @@ class _TaskCardState extends State<TaskCard> {
                                   ),
                             ),
                           ),
-                          _PriorityIndicator(priority: task.priority),
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: touch ? 24 : 30,
+                            child: Center(
+                              heightFactor: 1,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: _PriorityIndicator(
+                                  priority: task.priority,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: AppTheme.spacingSmall),

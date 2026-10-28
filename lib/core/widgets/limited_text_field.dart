@@ -76,6 +76,7 @@ class LimitedTextField extends StatelessWidget {
     validator: validator,
     autovalidateMode: AutovalidateMode.onUserInteraction,
     onFieldSubmitted: onSubmitted,
+    onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
     maxLength: limit,
     maxLengthEnforcement: MaxLengthEnforcement.none,
     inputFormatters: [ContractLengthFormatter(limit)],

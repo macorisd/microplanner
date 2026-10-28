@@ -128,8 +128,9 @@ class DashboardScreen extends StatelessWidget {
       List<Task> Function(TasksProvider) select,
       Color color,
       Color background,
-      IconData icon,
-    ) => Selector<TasksProvider, (String?, String?, List<Task>)>(
+      IconData icon, {
+      bool completed = false,
+    }) => Selector<TasksProvider, (String?, String?, List<Task>)>(
       selector: (_, provider) => (
         provider.workspace.ownerId,
         provider.boards.currentBoardId,
@@ -151,6 +152,7 @@ class DashboardScreen extends StatelessWidget {
           onToggleComplete: (task) => provider.toggleTaskCompletion(task.id),
           onDeleteTask: (task) => _delete(context, task),
           onEditTask: (task) => _edit(context, task),
+          onClearCompleted: completed ? () => _clearCompleted(context) : null,
         );
       },
     );
@@ -163,6 +165,7 @@ class DashboardScreen extends StatelessWidget {
         AppColors.completeHeader,
         AppColors.completeHeaderLight,
         Icons.check_circle_rounded,
+        completed: true,
       ),
       column(
         'Late',
@@ -210,6 +213,41 @@ class DashboardScreen extends StatelessWidget {
         title: 'Delete Task',
         message: 'Are you sure you want to delete "${task.name}"?',
         onConfirm: () => provider.deleteTask(task.id),
+      ),
+    );
+  }
+
+  static Future<void> _clearCompleted(BuildContext context) async {
+    final workspace = context.read<WorkspaceController>();
+    final provider = context.read<TasksProvider>();
+    final board = context.read<BoardsProvider>().currentBoard;
+    if (!workspace.canWrite ||
+        board == null ||
+        provider.completedTasks.isEmpty) {
+      return;
+    }
+    final owner = workspace.ownerId;
+    final token = workspace.auth.token;
+    final intended = provider.completedTasks.map((task) => task.id).toSet();
+    final count = intended.length;
+    await showMotionDialog(
+      context: context,
+      builder: (_) => ActionConfirmationDialog(
+        title: 'Clear Complete Tasks',
+        message:
+            'Delete $count completed ${count == 1 ? 'task' : 'tasks'} from "${board.name}"?',
+        actionLabel: 'Clear',
+        pendingLabel: 'Clearing…',
+        destructive: true,
+        onConfirm: () {
+          if (workspace.ownerId != owner || workspace.auth.token != token) {
+            return Future.value(false);
+          }
+          return provider.clearCompletedTasks(
+            boardId: board.id,
+            taskIds: intended,
+          );
+        },
       ),
     );
   }
