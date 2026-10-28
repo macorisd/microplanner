@@ -373,6 +373,57 @@ void main() {
     }
   }
 
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    for (final scale in [1.0, 1.8]) {
+      testWidgets(
+        'clear action preserves the original header height on $platform at $scale',
+        (tester) async {
+          _viewport(tester, platform);
+          final f = _Fixture();
+          await tester.runAsync(f.initialize);
+          Widget column({Future<void> Function()? onClear}) => f.app(
+            platform,
+            Scaffold(
+              body: TaskColumn(
+                title: 'Completed',
+                tasks: [task('done', completed: true)],
+                headerColor: Colors.green,
+                headerBackgroundColor: Colors.green.shade100,
+                icon: Icons.check_circle_rounded,
+                onToggleComplete: (_) {},
+                onClearCompleted: onClear,
+              ),
+            ),
+            scale: scale,
+          );
+          final header = find
+              .ancestor(
+                of: find.text('Completed'),
+                matching: find.byType(AnimatedContainer),
+              )
+              .first;
+          await tester.pumpWidget(column());
+          await tester.pumpAndSettle();
+          final originalHeight = tester.getSize(header).height;
+          final originalTitleY = tester.getCenter(find.text('Completed')).dy;
+
+          await tester.pumpWidget(column(onClear: () async {}));
+          await tester.pumpAndSettle();
+          expect(tester.getSize(header).height, originalHeight);
+          expect(tester.getCenter(find.text('Completed')).dy, originalTitleY);
+          final buttonRect = tester.getRect(_clear);
+          final headerRect = tester.getRect(header);
+          expect(buttonRect.top, greaterThanOrEqualTo(headerRect.top));
+          expect(buttonRect.bottom, lessThanOrEqualTo(headerRect.bottom));
+          expect(_clear.hitTestable(), findsOneWidget);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+          f.dispose();
+        },
+      );
+    }
+  }
+
   for (final width in [320.0, 393.0]) {
     testWidgets(
       'completed header controls remain reachable at $width and large text',

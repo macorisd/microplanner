@@ -43,6 +43,10 @@ class TaskColumn extends StatelessWidget {
     final effectiveHeaderBgColor = muted
         ? AppColors.surfaceVariant
         : headerBackgroundColor;
+    final headerPadding = !touch && MediaQuery.sizeOf(context).height < 360
+        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
+        : EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium);
+    final contentPadding = EdgeInsets.symmetric(vertical: headerPadding.top);
 
     return MotionEntrance(
       fade: false,
@@ -58,9 +62,7 @@ class TaskColumn extends StatelessWidget {
               // Header
               AnimatedContainer(
                 duration: AppMotion.duration(context, AppMotion.normal),
-                padding: !touch && MediaQuery.sizeOf(context).height < 360
-                    ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
-                    : EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium),
+                padding: EdgeInsets.symmetric(horizontal: headerPadding.left),
                 decoration: BoxDecoration(
                   color: effectiveHeaderBgColor,
                   borderRadius: const BorderRadius.only(
@@ -70,18 +72,27 @@ class TaskColumn extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(icon, color: effectiveHeaderColor, size: 22),
-                    const SizedBox(width: AppTheme.spacingSmall),
                     Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: effectiveHeaderColor,
-                              fontWeight: FontWeight.w600,
+                      child: Padding(
+                        padding: contentPadding,
+                        child: Row(
+                          children: [
+                            Icon(icon, color: effectiveHeaderColor, size: 22),
+                            const SizedBox(width: AppTheme.spacingSmall),
+                            Expanded(
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: effectiveHeaderColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
                             ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -90,26 +101,29 @@ class TaskColumn extends StatelessWidget {
                         hasTasks: tasks.isNotEmpty,
                         onClear: onClearCompleted!,
                       ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTheme.spacingSmall,
-                        vertical: AppTheme.spacingXSmall,
-                      ),
-                      decoration: BoxDecoration(
-                        color: effectiveHeaderColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.radiusSmall,
+                    Padding(
+                      padding: contentPadding,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingSmall,
+                          vertical: AppTheme.spacingXSmall,
                         ),
-                      ),
-                      child: MotionSwap(
-                        child: Text(
-                          '${tasks.length}',
-                          key: ValueKey(tasks.length),
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(
-                                color: effectiveHeaderColor,
-                                fontWeight: FontWeight.w600,
-                              ),
+                        decoration: BoxDecoration(
+                          color: effectiveHeaderColor.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusSmall,
+                          ),
+                        ),
+                        child: MotionSwap(
+                          child: Text(
+                            '${tasks.length}',
+                            key: ValueKey(tasks.length),
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  color: effectiveHeaderColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
                         ),
                       ),
                     ),
