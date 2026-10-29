@@ -186,6 +186,72 @@ void main() {
   );
 
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    for (final offline in [false, true]) {
+      _windowsTest(
+        '$platform keeps cached startup behind the logo until sync ${offline ? 'fails' : 'finishes'}',
+        (tester) async {
+          final f = _Startup();
+          f.storage.block = false;
+          f.storage.values['session'] = jsonEncode(session('A'));
+          f.cache.values['A'] = snapshot('Cached board');
+          final initialRead = Completer<http.Response>();
+          f.server.nextRead = initialRead;
+          await tester.pumpWidget(f.app(platform));
+          await tester.runAsync(() async {
+            await f.auth.initialize();
+            await settleAsync();
+          });
+          expect(f.workspace.hasData, isTrue);
+          expect(f.workspace.isLoading, isTrue);
+          await tester.pump(const Duration(seconds: 2));
+          _expectOnlyLogo();
+          expect(find.text('Loading your data'), findsNothing);
+          await tester.runAsync(() async {
+            if (offline) {
+              initialRead.completeError(http.ClientException('offline'));
+            } else {
+              initialRead.complete(
+                jsonResponse(snapshot('Synced board').toJson()),
+              );
+            }
+            await settleAsync();
+          });
+          await tester.pumpAndSettle();
+          expect(find.byType(StartupLoadingScreen), findsNothing);
+          expect(find.byType(DashboardScreen), findsOneWidget);
+          expect(
+            find.text(offline ? 'Cached board' : 'Synced board'),
+            findsWidgets,
+          );
+          expect(find.text('Loading your data'), findsNothing);
+          expect(f.workspace.canWrite, !offline);
+
+          // Later refreshes keep the workspace and its floating progress notice.
+          final refreshRead = Completer<http.Response>();
+          f.server.nextRead = refreshRead;
+          final refresh = f.workspace.refresh();
+          await tester.pump(const Duration(milliseconds: 500));
+          await tester.pump(const Duration(milliseconds: 300));
+          expect(find.byType(DashboardScreen), findsOneWidget);
+          expect(find.byType(StartupLoadingScreen), findsNothing);
+          expect(find.text('Loading your data'), findsOneWidget);
+          await tester.runAsync(() async {
+            refreshRead.complete(
+              jsonResponse(snapshot('Synced board').toJson()),
+            );
+            await refresh;
+          });
+          await tester.pumpAndSettle();
+          expect(find.text('Loading your data'), findsNothing);
+          expect(f.server.writes, 0);
+          await tester.pumpWidget(const SizedBox());
+          f.dispose();
+        },
+      );
+    }
+  }
+
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
     _windowsTest(
       'icon-only startup reaches the workspace without login flash on $platform',
       (tester) async {

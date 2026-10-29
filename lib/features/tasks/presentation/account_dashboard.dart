@@ -21,6 +21,7 @@ class _AccountDashboardState extends State<AccountDashboard>
     with WidgetsBindingObserver {
   Timer? _expiry;
   bool _wasInBackground = false;
+  bool _opened = false;
   @override
   void initState() {
     super.initState();
@@ -96,11 +97,14 @@ class _AccountDashboardState extends State<AccountDashboard>
     final restoringColumns = context.select<BoardsProvider, bool>(
       (boards) => boards.isRestoringColumns,
     );
-    if ((workspace.isLoading && !workspace.hasData) ||
+    if ((workspace.isLoading && (!_opened || !workspace.hasData)) ||
         restoringBoard ||
         (android && restoringColumns)) {
       return const StartupLoadingScreen();
     }
+    // Initial synchronization stays behind the logo, including a cached launch.
+    // Later refreshes keep the workspace visible with its floating status card.
+    _opened = true;
     final colors = Theme.of(context).colorScheme;
     final content = Scaffold(
       body: SafeArea(
