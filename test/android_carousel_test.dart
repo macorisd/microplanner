@@ -20,6 +20,45 @@ import 'package:microplanner/features/tasks/providers/tasks_provider.dart';
 import 'support/fakes.dart';
 
 void main() {
+  for (final (label, column) in [('Late', 1), ('Completed', 0)]) {
+    testWidgets(
+      '$label is remembered immediately even if the carousel is disposed mid-transition',
+      (tester) async {
+        _viewport(tester, const Size(393, 800));
+        final f = _Fixture();
+        await tester.runAsync(f.initialize);
+        await tester.pumpWidget(f.app());
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip(label));
+        expect(f.boards.currentColumnIndex, column);
+        await tester.pumpWidget(const SizedBox());
+        expect(f.boards.currentColumnIndex, column);
+        f.dispose();
+      },
+    );
+  }
+
+  testWidgets(
+    'the visible drag column is remembered before the finger is released',
+    (tester) async {
+      _viewport(tester, const Size(393, 800));
+      final f = _Fixture();
+      await tester.runAsync(f.initialize);
+      await tester.pumpWidget(f.app());
+      await tester.pumpAndSettle();
+      final gesture = await tester.startGesture(const Offset(100, 300));
+      await gesture.moveBy(const Offset(24, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(210, 0));
+      await tester.pump();
+      expect(f.boards.currentColumnIndex, 1);
+      await gesture.cancel();
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox());
+      f.dispose();
+    },
+  );
+
   testWidgets(
     'selector exchanges flat layers and the latest destination wins',
     (tester) async {

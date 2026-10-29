@@ -35,33 +35,36 @@ class _AndroidBoardCarouselState extends State<AndroidBoardCarousel>
   int _dragAnchor = 2;
   double _dragOrigin = 2;
   double _dragExtent = 1;
+  bool _dragging = false;
 
-  void _changed() => _selected.value = _rotation.value.round();
+  void _changed() {
+    final visible = _rotation.value.round();
+    if (_selected.value == visible) return;
+    _selected.value = visible;
+    if (_dragging) widget.onColumnChanged?.call(visible);
+  }
 
-  Future<void> _select(int index) async {
+  void _select(int index) {
+    if (!mounted) return;
+    _dragging = false;
     final destination = index.clamp(0, 2).toDouble();
+    // Remember intent before an app pause or disposal can cancel the motion.
+    widget.onColumnChanged?.call(destination.toInt());
     if (MediaQuery.disableAnimationsOf(context)) {
       _rotation.value = destination;
-      widget.onColumnChanged?.call(destination.toInt());
       return;
     }
     final distance = (destination - _rotation.value).abs();
-    try {
-      await _rotation
-          .animateTo(
-            destination,
-            duration: Duration(milliseconds: 260 + (distance * 100).round()),
-            curve: AppMotion.curve,
-          )
-          .orCancel;
-      if (mounted) widget.onColumnChanged?.call(destination.toInt());
-    } on TickerCanceled {
-      // A new gesture, destination or board replaced this transition.
-    }
+    _rotation.animateTo(
+      destination,
+      duration: Duration(milliseconds: 260 + (distance * 100).round()),
+      curve: AppMotion.curve,
+    );
   }
 
   void _start(DragStartDetails details) {
     _rotation.stop();
+    _dragging = true;
     _dragOrigin = _rotation.value;
     _dragAnchor = _dragOrigin.round();
   }
