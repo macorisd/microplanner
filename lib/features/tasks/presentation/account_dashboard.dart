@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/data/workspace_controller.dart';
 import '../../../core/theme/app_motion.dart';
+import '../../../core/widgets/startup_loading_screen.dart';
 import '../../auth/data/auth_service.dart';
 import '../../boards/providers/boards_provider.dart';
 import 'dashboard_screen.dart';
@@ -90,6 +91,9 @@ class _AccountDashboardState extends State<AccountDashboard>
     final restoringBoard = context.select<BoardsProvider, bool>(
       (boards) => boards.isRestoringSelection,
     );
+    if ((workspace.isLoading && !workspace.hasData) || restoringBoard) {
+      return const StartupLoadingScreen();
+    }
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
       body: SafeArea(
@@ -134,11 +138,7 @@ class _AccountDashboardState extends State<AccountDashboard>
                     ),
                   ),
                 Expanded(
-                  child:
-                      (workspace.isLoading && !workspace.hasData) ||
-                          restoringBoard
-                      ? const Center(child: CircularProgressIndicator())
-                      : !workspace.hasData
+                  child: !workspace.hasData
                       ? Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,

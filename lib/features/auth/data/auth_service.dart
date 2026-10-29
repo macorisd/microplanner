@@ -37,6 +37,7 @@ class AuthService extends ChangeNotifier {
   String? _token;
   DateTime? _expiresAt;
   bool _isLoading = true;
+  bool _isInitializing = true;
   bool _signingIn = false;
   bool _cancelRequested = false;
   String? _error;
@@ -54,6 +55,7 @@ class AuthService extends ChangeNotifier {
   String? get token => _token;
   bool get isAuthenticated => _currentUser != null;
   bool get isLoading => _isLoading;
+  bool get isInitializing => _isInitializing;
   bool get canCancelSignIn => _signingIn && !_cancelRequested;
   String? get error => _error;
   bool get sessionValid => _expiresAt?.isAfter(DateTime.now()) ?? false;
@@ -100,6 +102,7 @@ class AuthService extends ChangeNotifier {
         /* Keep access closed. */
       }
     } finally {
+      _isInitializing = false;
       _isLoading = false;
       notifyListeners();
     }
