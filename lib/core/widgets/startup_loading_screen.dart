@@ -9,13 +9,15 @@ class StartupLoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
-    body: SafeArea(
-      child: Center(
-        child: Semantics(
-          label: 'Loading microplanner',
-          liveRegion: true,
-          image: true,
-          child: const ExcludeSemantics(child: AnimatedAppLogo()),
+    body: Center(
+      child: Semantics(
+        label: 'Loading microplanner',
+        liveRegion: true,
+        image: true,
+        child: ExcludeSemantics(
+          child: AnimatedAppLogo(
+            animate: Theme.of(context).platform != TargetPlatform.android,
+          ),
         ),
       ),
     ),

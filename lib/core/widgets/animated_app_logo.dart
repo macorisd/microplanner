@@ -52,7 +52,8 @@ class _LogoTimeline extends InheritedWidget {
 
 /// The three original logo leaves take turns slipping to the back of the deck.
 class AnimatedAppLogo extends StatefulWidget {
-  const AnimatedAppLogo({super.key});
+  final bool animate;
+  const AnimatedAppLogo({super.key, this.animate = true});
 
   static const cycleDuration = Duration(milliseconds: 3600);
 
@@ -69,6 +70,16 @@ class _AnimatedAppLogoState extends State<AnimatedAppLogo>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _configure();
+  }
+
+  @override
+  void didUpdateWidget(covariant AnimatedAppLogo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animate != widget.animate) _configure();
+  }
+
+  void _configure() {
     final host = context
         .dependOnInheritedWidgetOfExactType<_LogoTimeline>()
         ?.host;
@@ -76,7 +87,7 @@ class _AnimatedAppLogoState extends State<AnimatedAppLogo>
       _host?.detach(this);
       _host = host;
     }
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (!widget.animate || MediaQuery.disableAnimationsOf(context)) {
       _host?.detach(this);
       _controller?.stop();
       _progress = kAlwaysDismissedAnimation;
@@ -108,6 +119,19 @@ class _AnimatedAppLogoState extends State<AnimatedAppLogo>
       height: 200,
       child: CustomPaint(painter: _ShufflePainter(_progress)),
     ),
+  );
+}
+
+/// Shared artwork for the static mark, Windows shuffle and Android reveal.
+class AppLogoArt {
+  AppLogoArt._();
+  static const colors = _ShufflePainter._colors;
+  static const slots = _ShufflePainter._slots;
+  static final leaf = _ShufflePainter._leaf;
+  static const sourceSize = Size(1290, 1286);
+  static double heightForViewport(Size size) => math.min(
+    math.min(size.width, 280) / 2.5,
+    math.min(size.height, 200) / 1.8,
   );
 }
 

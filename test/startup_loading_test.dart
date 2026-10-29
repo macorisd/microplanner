@@ -22,7 +22,30 @@ import 'package:microplanner/features/tasks/presentation/dashboard_screen.dart';
 import 'support/fakes.dart';
 
 void main() {
-  testWidgets(
+  _windowsTest(
+    'loading logo shares the native full-window center despite system insets',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(padding: EdgeInsets.only(top: 32, bottom: 12)),
+            child: StartupLoadingScreen(),
+          ),
+        ),
+      );
+      expect(
+        tester.getCenter(find.byType(AnimatedAppLogo)),
+        const Offset(160, 350),
+      );
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  _windowsTest(
     'logo motion continues when bootstrap hands off to a new session tree',
     (tester) async {
       final ready = Completer<Widget>();
@@ -43,7 +66,7 @@ void main() {
     },
   );
 
-  testWidgets(
+  _windowsTest(
     'shared logo ticker stops when loading ends or motion is reduced',
     (tester) async {
       Widget app({bool loading = true, bool reduced = false}) => LogoMotionHost(
@@ -70,7 +93,7 @@ void main() {
     },
   );
 
-  testWidgets(
+  _windowsTest(
     'the shuffle keeps moving throughout a turn without parked intervals',
     (tester) async {
       await tester.pumpWidget(const MaterialApp(home: StartupLoadingScreen()));
@@ -89,7 +112,7 @@ void main() {
     },
   );
 
-  testWidgets(
+  _windowsTest(
     'the first logo frame is painted before platform initialization starts',
     (tester) async {
       final ready = Completer<Widget>();
@@ -122,7 +145,7 @@ void main() {
     },
   );
 
-  testWidgets(
+  _windowsTest(
     'platform initialization can be retried without duplicate attempts',
     (tester) async {
       final ready = Completer<Widget>();
@@ -150,7 +173,7 @@ void main() {
     },
   );
 
-  testWidgets(
+  _windowsTest(
     'finishing bootstrap after disposal does not update an unmounted view',
     (tester) async {
       final ready = Completer<Widget>();
@@ -163,7 +186,7 @@ void main() {
   );
 
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
-    testWidgets(
+    _windowsTest(
       'icon-only startup reaches the workspace without login flash on $platform',
       (tester) async {
         final f = _Startup();
@@ -205,7 +228,7 @@ void main() {
     );
   }
 
-  testWidgets(
+  _windowsTest(
     'signed-out startup keeps interactive Google sign-in and cancellation',
     (tester) async {
       final f = _Startup();
@@ -237,7 +260,7 @@ void main() {
     },
   );
 
-  testWidgets(
+  _windowsTest(
     'failed session restore exits loading and exposes sign-in recovery',
     (tester) async {
       final f = _Startup();
@@ -258,7 +281,7 @@ void main() {
   );
 
   for (final cached in [false, true]) {
-    testWidgets(
+    _windowsTest(
       'offline startup exposes ${cached ? 'cached data' : 'retry and sign out'}',
       (tester) async {
         final f = _Startup();
@@ -287,21 +310,22 @@ void main() {
     );
   }
 
-  testWidgets('logo motion changes frames and closes its loop without a jump', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MaterialApp(home: StartupLoadingScreen()));
-    final start = await _frame(tester);
-    await tester.pump(const Duration(milliseconds: 500));
-    final middle = await _frame(tester);
-    expect(listEquals(start, middle), isFalse);
-    await tester.pump(const Duration(milliseconds: 3100));
-    expect(listEquals(start, await _frame(tester)), isTrue);
-    await tester.pumpWidget(const SizedBox());
-    expect(tester.takeException(), isNull);
-  });
+  _windowsTest(
+    'logo motion changes frames and closes its loop without a jump',
+    (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: StartupLoadingScreen()));
+      final start = await _frame(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+      final middle = await _frame(tester);
+      expect(listEquals(start, middle), isFalse);
+      await tester.pump(const Duration(milliseconds: 3100));
+      expect(listEquals(start, await _frame(tester)), isTrue);
+      await tester.pumpWidget(const SizedBox());
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('reducing motion stops and restores the static logo', (
+  _windowsTest('reducing motion stops and restores the static logo', (
     tester,
   ) async {
     Widget app(bool reduced) => MaterialApp(
@@ -324,7 +348,7 @@ void main() {
     expect(tester.hasRunningAnimations, isFalse);
   });
 
-  testWidgets(
+  _windowsTest(
     'icon-only screen fits small windows and exposes one loading description',
     (tester) async {
       tester.view.physicalSize = const Size(220, 180);
@@ -429,3 +453,12 @@ class _Startup {
     auth.dispose();
   }
 }
+
+void _windowsTest(
+  String description,
+  Future<void> Function(WidgetTester) body,
+) => testWidgets(
+  description,
+  body,
+  variant: TargetPlatformVariant.only(TargetPlatform.windows),
+);

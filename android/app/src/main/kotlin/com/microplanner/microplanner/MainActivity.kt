@@ -8,7 +8,7 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Flutter already painted its loader; a native fade would overlap two moving logos.
+            // Avoid overlapping native and Flutter artwork during the handoff.
             splashScreen.setOnExitAnimationListener { view -> view.remove() }
         }
     }

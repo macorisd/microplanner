@@ -16,6 +16,7 @@ import 'features/boards/data/models/board.dart';
 import 'features/boards/data/models/subject.dart';
 import 'features/boards/providers/boards_provider.dart';
 import 'features/boards/data/board_selection_storage.dart';
+import 'features/boards/data/board_column_storage.dart';
 import 'features/tasks/data/models/task.dart';
 import 'features/tasks/providers/tasks_provider.dart';
 
@@ -44,6 +45,9 @@ Future<Widget> _initializeApplication() async {
   final boards = BoardsProvider(
     workspace,
     selectionStorage: const PrivateBoardSelectionStorage(storage),
+    columnStorage: defaultTargetPlatform == TargetPlatform.android
+        ? const PrivateBoardColumnStorage(storage)
+        : null,
   );
   final tasks = TasksProvider(workspace, boards);
   unawaited(auth.initialize());

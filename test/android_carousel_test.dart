@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:microplanner/core/constants/app_constants.dart';
+import 'package:microplanner/core/widgets/animated_app_logo.dart';
 import 'package:microplanner/core/data/workspace_controller.dart';
 import 'package:microplanner/core/theme/app_theme.dart';
 import 'package:microplanner/features/auth/data/auth_service.dart';
@@ -173,7 +174,7 @@ void main() {
   }
 
   testWidgets(
-    'refresh preserves the page; switching boards resets to Upcoming',
+    'refresh preserves the page; each board remembers its last column',
     (tester) async {
       _viewport(tester, const Size(393, 800));
       final f = _Fixture();
@@ -195,7 +196,7 @@ void main() {
       await _next(tester, 393);
       f.boards.selectBoard(f.boards.boards.first.id);
       await tester.pumpAndSettle();
-      expect(tester.getRect(_column('Upcoming')).right, closeTo(381, .1));
+      expect(tester.getRect(_column('Late')).right, closeTo(381, .1));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       f.dispose();
@@ -407,7 +408,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 200));
         await tester.pump(const Duration(milliseconds: 250));
         expect(find.text('Loading your data'), findsOneWidget);
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.byType(AnimatedAppLogo), findsOneWidget);
         expect(
           find.descendant(
             of: find.byType(DashboardScreen),

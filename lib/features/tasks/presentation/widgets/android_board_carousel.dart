@@ -10,10 +10,14 @@ import '../../../../core/theme/app_motion.dart';
 class AndroidBoardCarousel extends StatefulWidget {
   final List<Widget> columns;
   final VoidCallback onAdd;
+  final int initialColumn;
+  final ValueChanged<int>? onColumnChanged;
   const AndroidBoardCarousel({
     super.key,
     required this.columns,
     required this.onAdd,
+    this.initialColumn = 2,
+    this.onColumnChanged,
   });
   @override
   State<AndroidBoardCarousel> createState() => _AndroidBoardCarouselState();
@@ -25,27 +29,35 @@ class _AndroidBoardCarouselState extends State<AndroidBoardCarousel>
     vsync: this,
     lowerBound: 0,
     upperBound: 2,
-    value: 2,
+    value: widget.initialColumn.clamp(0, 2).toDouble(),
   )..addListener(_changed);
-  final _selected = ValueNotifier(2);
+  late final _selected = ValueNotifier(widget.initialColumn.clamp(0, 2));
   int _dragAnchor = 2;
   double _dragOrigin = 2;
   double _dragExtent = 1;
 
   void _changed() => _selected.value = _rotation.value.round();
 
-  void _select(int index) {
+  Future<void> _select(int index) async {
     final destination = index.clamp(0, 2).toDouble();
     if (MediaQuery.disableAnimationsOf(context)) {
       _rotation.value = destination;
+      widget.onColumnChanged?.call(destination.toInt());
       return;
     }
     final distance = (destination - _rotation.value).abs();
-    _rotation.animateTo(
-      destination,
-      duration: Duration(milliseconds: 260 + (distance * 100).round()),
-      curve: AppMotion.curve,
-    );
+    try {
+      await _rotation
+          .animateTo(
+            destination,
+            duration: Duration(milliseconds: 260 + (distance * 100).round()),
+            curve: AppMotion.curve,
+          )
+          .orCancel;
+      if (mounted) widget.onColumnChanged?.call(destination.toInt());
+    } on TickerCanceled {
+      // A new gesture, destination or board replaced this transition.
+    }
   }
 
   void _start(DragStartDetails details) {

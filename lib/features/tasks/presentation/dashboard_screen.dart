@@ -279,6 +279,8 @@ class _TaskAreaState extends State<_TaskArea> {
         return AndroidBoardCarousel(
           key: ValueKey(identity),
           columns: columns,
+          initialColumn: context.read<BoardsProvider>().currentColumnIndex,
+          onColumnChanged: context.read<BoardsProvider>().selectColumn,
           onAdd: () => DashboardScreen._add(context),
         );
       }

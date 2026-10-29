@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/data/workspace_controller.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
+import '../../../../core/widgets/animated_app_logo.dart';
 
 /// A single cloud notice layered over the workspace instead of taking its space.
 class CloudStatusCard extends StatefulWidget {
@@ -105,27 +106,26 @@ class _CloudStatusCardState extends State<CloudStatusCard> {
                     padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
                     child: Row(
                       children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: busy
-                                ? const SizedBox.square(
-                                    dimension: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.cloud_off_outlined,
-                                    color: Theme.of(context).colorScheme.error,
-                                    size: 22,
+                        SizedBox(
+                          width: busy ? 56 : 38,
+                          height: busy ? 40 : 38,
+                          child: busy
+                              ? const AnimatedAppLogo()
+                              : Container(
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryLight,
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                          ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.cloud_off_outlined,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.error,
+                                      size: 22,
+                                    ),
+                                  ),
+                                ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
