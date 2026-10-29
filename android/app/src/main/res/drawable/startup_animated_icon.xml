@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/startup_system_icon">
+    <target android:name="green_sheet" android:animation="@animator/startup_green" />
+    <target android:name="yellow_sheet" android:animation="@animator/startup_yellow" />
+    <target android:name="blue_sheet" android:animation="@animator/startup_blue" />
+</animated-vector>

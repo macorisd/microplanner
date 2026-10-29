@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:microplanner/core/data/api_client.dart';
 import 'package:microplanner/core/data/workspace_controller.dart';
 import 'package:microplanner/core/widgets/animated_app_logo.dart';
+import 'package:microplanner/core/widgets/app_bootstrap.dart';
 import 'package:microplanner/core/widgets/startup_loading_screen.dart';
 import 'package:microplanner/features/auth/data/auth_service.dart';
 import 'package:microplanner/features/auth/presentation/login_screen.dart';
@@ -21,6 +22,79 @@ import 'package:microplanner/features/tasks/presentation/dashboard_screen.dart';
 import 'support/fakes.dart';
 
 void main() {
+  testWidgets(
+    'the first logo frame is painted before platform initialization starts',
+    (tester) async {
+      final ready = Completer<Widget>();
+      var paintedBeforeInitialization = false;
+      await tester.pumpWidget(
+        AppBootstrap(
+          initialize: () {
+            final boundary = tester.renderObject<RenderRepaintBoundary>(
+              find
+                  .descendant(
+                    of: find.byType(AnimatedAppLogo),
+                    matching: find.byType(RepaintBoundary),
+                  )
+                  .first,
+            );
+            paintedBeforeInitialization = !boundary.debugNeedsPaint;
+            return ready.future;
+          },
+        ),
+      );
+      expect(paintedBeforeInitialization, isTrue);
+      _expectOnlyLogo();
+      final first = await _frame(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(listEquals(first, await _frame(tester)), isFalse);
+      ready.complete(const MaterialApp(home: Text('Ready')));
+      await tester.pump();
+      expect(find.text('Ready'), findsOneWidget);
+      expect(find.byType(StartupLoadingScreen), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'platform initialization can be retried without duplicate attempts',
+    (tester) async {
+      final ready = Completer<Widget>();
+      var attempts = 0;
+      await tester.pumpWidget(
+        AppBootstrap(
+          initialize: () {
+            attempts++;
+            if (attempts == 1) throw StateError('Unavailable platform storage');
+            return ready.future;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.byType(StartupLoadingScreen), findsNothing);
+      await tester.tap(find.text('Retry'));
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      expect(attempts, 2);
+      _expectOnlyLogo();
+      ready.complete(const MaterialApp(home: Text('Ready')));
+      await tester.pumpAndSettle();
+      expect(find.text('Ready'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'finishing bootstrap after disposal does not update an unmounted view',
+    (tester) async {
+      final ready = Completer<Widget>();
+      await tester.pumpWidget(AppBootstrap(initialize: () => ready.future));
+      await tester.pumpWidget(const SizedBox());
+      ready.completeError(StateError('Initialization finished after shutdown'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
     testWidgets(
       'icon-only startup reaches the workspace without login flash on $platform',

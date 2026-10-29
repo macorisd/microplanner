@@ -5,11 +5,13 @@
     android:viewportWidth="288" android:viewportHeight="288">
     <group android:translateX="87.826" android:translateY="88"
         android:scaleX="0.08709176" android:scaleY="0.08709176">
-        <path android:fillColor="#8DD4A0" android:pathData="M340,0 H424 A340,340 0,0 1,764,340 V946 A340,340 0,0 1,424,1286 H340 A340,340 0,0 1,0,946 V340 A340,340 0,0 1,340,0 Z" />
-        <group android:translateX="267">
+        <group android:name="green_sheet">
+            <path android:fillColor="#8DD4A0" android:pathData="M340,0 H424 A340,340 0,0 1,764,340 V946 A340,340 0,0 1,424,1286 H340 A340,340 0,0 1,0,946 V340 A340,340 0,0 1,340,0 Z" />
+        </group>
+        <group android:name="yellow_sheet" android:translateX="267">
             <path android:fillColor="#F5D68A" android:pathData="M340,0 H424 A340,340 0,0 1,764,340 V946 A340,340 0,0 1,424,1286 H340 A340,340 0,0 1,0,946 V340 A340,340 0,0 1,340,0 Z" />
         </group>
-        <group android:translateX="526">
+        <group android:name="blue_sheet" android:translateX="526">
             <path android:fillColor="#88B6E7" android:pathData="M340,0 H424 A340,340 0,0 1,764,340 V946 A340,340 0,0 1,424,1286 H340 A340,340 0,0 1,0,946 V340 A340,340 0,0 1,340,0 Z" />
         </group>
     </group>
