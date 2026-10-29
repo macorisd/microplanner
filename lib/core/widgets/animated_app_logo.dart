@@ -1,6 +1,55 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+/// Keep one motion timeline across bootstrap, session and workspace loading.
+/// The ticker runs only while at least one visible loader uses it.
+class LogoMotionHost extends StatefulWidget {
+  final Widget child;
+  const LogoMotionHost({super.key, required this.child});
+  @override
+  State<LogoMotionHost> createState() => _LogoMotionHostState();
+}
+
+class _LogoMotionHostState extends State<LogoMotionHost>
+    with SingleTickerProviderStateMixin {
+  late final controller = AnimationController(
+    vsync: this,
+    duration: AnimatedAppLogo.cycleDuration,
+  );
+  final _clients = <Object>{};
+  bool _disposed = false;
+
+  void attach(Object client) {
+    _clients.add(client);
+    if (!controller.isAnimating) controller.repeat();
+  }
+
+  void detach(Object client) {
+    if (_clients.remove(client) && _clients.isEmpty && !_disposed) {
+      controller.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      _LogoTimeline(host: this, child: widget.child);
+}
+
+class _LogoTimeline extends InheritedWidget {
+  final _LogoMotionHostState host;
+  const _LogoTimeline({required this.host, required super.child});
+  @override
+  bool updateShouldNotify(covariant _LogoTimeline oldWidget) =>
+      host != oldWidget.host;
+}
+
 /// The three original logo leaves take turns slipping to the back of the deck.
 class AnimatedAppLogo extends StatefulWidget {
   const AnimatedAppLogo({super.key});
@@ -13,25 +62,42 @@ class AnimatedAppLogo extends StatefulWidget {
 
 class _AnimatedAppLogoState extends State<AnimatedAppLogo>
     with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(
-    vsync: this,
-    duration: AnimatedAppLogo.cycleDuration,
-  );
+  AnimationController? _controller;
+  _LogoMotionHostState? _host;
+  Animation<double> _progress = kAlwaysDismissedAnimation;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final host = context
+        .dependOnInheritedWidgetOfExactType<_LogoTimeline>()
+        ?.host;
+    if (host != _host) {
+      _host?.detach(this);
+      _host = host;
+    }
     if (MediaQuery.disableAnimationsOf(context)) {
-      _controller.stop();
-      _controller.value = 0;
-    } else if (!_controller.isAnimating) {
-      _controller.repeat();
+      _host?.detach(this);
+      _controller?.stop();
+      _progress = kAlwaysDismissedAnimation;
+    } else if (_host != null) {
+      _controller?.stop();
+      _host!.attach(this);
+      _progress = _host!.controller;
+    } else {
+      final controller = _controller ??= AnimationController(
+        vsync: this,
+        duration: AnimatedAppLogo.cycleDuration,
+      );
+      if (!controller.isAnimating) controller.repeat();
+      _progress = controller;
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _host?.detach(this);
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -40,7 +106,7 @@ class _AnimatedAppLogoState extends State<AnimatedAppLogo>
     child: SizedBox(
       width: 280,
       height: 200,
-      child: CustomPaint(painter: _ShufflePainter(_controller)),
+      child: CustomPaint(painter: _ShufflePainter(_progress)),
     ),
   );
 }
@@ -62,7 +128,7 @@ class _ShufflePainter extends CustomPainter {
   );
 
   double _ease(double value) =>
-      Curves.easeInOutCubic.transform(value.clamp(0.0, 1.0));
+      Curves.easeInOutSine.transform(value.clamp(0.0, 1.0));
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -79,12 +145,10 @@ class _ShufflePainter extends CustomPainter {
     final turn = cycle.floor() % 3;
     final t = cycle - cycle.floor();
     final order = List.generate(3, (rank) => (rank - turn + 3) % 3);
-    final outgoing = _ease((t - 0.10) / 0.32);
-    final incoming = _ease((t - 0.42) / 0.48);
-    final following = _ease((t - 0.16) / 0.58);
-    final travel = Curves.easeInOutSine.transform(
-      ((t - 0.10) / 0.80).clamp(0.0, 1.0),
-    );
+    final outgoing = _ease(t / 0.42);
+    final incoming = _ease((t - 0.42) / 0.58);
+    final following = _ease(t);
+    final travel = _ease(t);
     final lift = math.sin(math.pi * travel);
     final frontX = t < 0.42
         ? _slots[2] + (1368 - _slots[2]) * outgoing
@@ -92,20 +156,7 @@ class _ShufflePainter extends CustomPainter {
 
     void draw(int color, double x, {bool moving = false}) {
       canvas.save();
-      canvas.translate(x + 382, 643 - (moving ? 1286 * 0.13 * lift : 0));
-      if (moving) {
-        canvas.rotate(math.sin(math.pi * 2 * travel) * 0.06);
-        canvas.scale(1 - 0.065 * lift);
-      }
-      canvas.translate(-382.0, -643.0);
-      if (moving && lift > 0) {
-        canvas.drawShadow(
-          Path()..addRRect(_leaf),
-          Colors.black.withValues(alpha: 0.14 * lift),
-          24 * lift,
-          false,
-        );
-      }
+      canvas.translate(x, moving ? -1286 * 0.07 * lift : 0);
       canvas.drawRRect(_leaf, Paint()..color = _colors[color]);
       canvas.restore();
     }

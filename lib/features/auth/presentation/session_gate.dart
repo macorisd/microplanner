@@ -14,10 +14,7 @@ class SessionGate extends StatelessWidget {
     final auth = context.watch<AuthService>();
     if (auth.isInitializing) return const StartupLoadingScreen();
     if (auth.isAuthenticated) {
-      return MotionEntrance(
-        key: ValueKey(auth.currentUser!.id),
-        child: const AccountDashboard(),
-      );
+      return const AccountDashboard();
     }
     return const MotionEntrance(key: ValueKey('sign-in'), child: LoginScreen());
   }

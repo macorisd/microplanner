@@ -5,6 +5,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/system_bars.dart';
 import 'startup_loading_screen.dart';
+import 'animated_app_logo.dart';
 
 /// Draw the logo before starting any platform storage or session initialization.
 class AppBootstrap extends StatefulWidget {
@@ -45,44 +46,46 @@ class _AppBootstrapState extends State<AppBootstrap> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      _application ??
-      MaterialApp(
-        title: 'microplanner',
-        debugShowCheckedModeBanner: false,
-        // Loading does not need fonts or any other asynchronously loaded assets.
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: AppTheme.lightColorScheme,
-          scaffoldBackgroundColor: AppColors.background,
-        ),
-        builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
-          value: appSystemBars,
-          child: child!,
-        ),
-        home: !_failed
-            ? const StartupLoadingScreen()
-            : Scaffold(
-                body: SafeArea(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'Could not start microplanner. Please try again.',
-                          ),
-                          const SizedBox(height: 12),
-                          FilledButton(
-                            onPressed: _busy ? null : _initialize,
-                            child: const Text('Retry'),
-                          ),
-                        ],
+  Widget build(BuildContext context) => LogoMotionHost(
+    child:
+        _application ??
+        MaterialApp(
+          title: 'microplanner',
+          debugShowCheckedModeBanner: false,
+          // Loading does not need fonts or any other asynchronously loaded assets.
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: AppTheme.lightColorScheme,
+            scaffoldBackgroundColor: AppColors.background,
+          ),
+          builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+            value: appSystemBars,
+            child: child!,
+          ),
+          home: !_failed
+              ? const StartupLoadingScreen()
+              : Scaffold(
+                  body: SafeArea(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Could not start microplanner. Please try again.',
+                            ),
+                            const SizedBox(height: 12),
+                            FilledButton(
+                              onPressed: _busy ? null : _initialize,
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-      );
+        ),
+  );
 }

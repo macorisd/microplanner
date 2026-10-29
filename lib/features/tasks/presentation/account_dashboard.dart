@@ -157,7 +157,7 @@ class _AccountDashboardState extends State<AccountDashboard>
                             ],
                           ),
                         )
-                      : const DashboardScreen(),
+                      : const MotionEntrance(child: DashboardScreen()),
                 ),
               ],
             ),

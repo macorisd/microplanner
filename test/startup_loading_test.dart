@@ -23,6 +23,73 @@ import 'support/fakes.dart';
 
 void main() {
   testWidgets(
+    'logo motion continues when bootstrap hands off to a new session tree',
+    (tester) async {
+      final ready = Completer<Widget>();
+      await tester.pumpWidget(AppBootstrap(initialize: () => ready.future));
+      await tester.pump(const Duration(milliseconds: 500));
+      final before = await _frame(tester);
+      ready.complete(
+        const KeyedSubtree(
+          key: ValueKey('restored-session'),
+          child: MaterialApp(home: StartupLoadingScreen()),
+        ),
+      );
+      await tester.pump();
+      expect(listEquals(before, await _frame(tester)), isTrue);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(listEquals(before, await _frame(tester)), isFalse);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'shared logo ticker stops when loading ends or motion is reduced',
+    (tester) async {
+      Widget app({bool loading = true, bool reduced = false}) => LogoMotionHost(
+        child: MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(disableAnimations: reduced),
+            child: loading ? const StartupLoadingScreen() : const Text('Ready'),
+          ),
+        ),
+      );
+      await tester.pumpWidget(app());
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.hasRunningAnimations, isTrue);
+      await tester.pumpWidget(app(loading: false));
+      await tester.pumpAndSettle();
+      expect(tester.hasRunningAnimations, isFalse);
+      await tester.pumpWidget(app(reduced: true));
+      await tester.pumpAndSettle();
+      expect(tester.hasRunningAnimations, isFalse);
+      await tester.pumpWidget(app());
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.hasRunningAnimations, isTrue);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'the shuffle keeps moving throughout a turn without parked intervals',
+    (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: StartupLoadingScreen()));
+      var previous = await _frame(tester);
+      for (var i = 0; i < 16; i++) {
+        await tester.pump(const Duration(milliseconds: 75));
+        final current = await _frame(tester);
+        expect(
+          listEquals(previous, current),
+          isFalse,
+          reason: 'Motion paused at ${(i + 1) * 75}ms',
+        );
+        previous = current;
+      }
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
     'the first logo frame is painted before platform initialization starts',
     (tester) async {
       final ready = Completer<Widget>();
