@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/data/workspace_controller.dart';
 import '../../../core/theme/app_motion.dart';
+import '../../../core/widgets/startup_loading_screen.dart';
+import '../../../core/widgets/android_startup_reveal.dart';
 import '../../auth/data/auth_service.dart';
 import '../../boards/providers/boards_provider.dart';
 import 'dashboard_screen.dart';
@@ -19,6 +21,7 @@ class _AccountDashboardState extends State<AccountDashboard>
     with WidgetsBindingObserver {
   Timer? _expiry;
   bool _wasInBackground = false;
+  bool _opened = false;
   @override
   void initState() {
     super.initState();
@@ -90,8 +93,20 @@ class _AccountDashboardState extends State<AccountDashboard>
     final restoringBoard = context.select<BoardsProvider, bool>(
       (boards) => boards.isRestoringSelection,
     );
+    final android = Theme.of(context).platform == TargetPlatform.android;
+    final restoringColumns = context.select<BoardsProvider, bool>(
+      (boards) => boards.isRestoringColumns,
+    );
+    if ((workspace.isLoading && (!_opened || !workspace.hasData)) ||
+        restoringBoard ||
+        (android && restoringColumns)) {
+      return const StartupLoadingScreen();
+    }
+    // Initial synchronization stays behind the logo, including a cached launch.
+    // Later refreshes keep the workspace visible with its floating status card.
+    _opened = true;
     final colors = Theme.of(context).colorScheme;
-    return Scaffold(
+    final content = Scaffold(
       body: SafeArea(
         child: Stack(
           children: [
@@ -134,11 +149,7 @@ class _AccountDashboardState extends State<AccountDashboard>
                     ),
                   ),
                 Expanded(
-                  child:
-                      (workspace.isLoading && !workspace.hasData) ||
-                          restoringBoard
-                      ? const Center(child: CircularProgressIndicator())
-                      : !workspace.hasData
+                  child: !workspace.hasData
                       ? Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -157,7 +168,9 @@ class _AccountDashboardState extends State<AccountDashboard>
                             ],
                           ),
                         )
-                      : const DashboardScreen(),
+                      : android
+                      ? const DashboardScreen()
+                      : const MotionEntrance(child: DashboardScreen()),
                 ),
               ],
             ),
@@ -177,5 +190,11 @@ class _AccountDashboardState extends State<AccountDashboard>
         ),
       ),
     );
+    return android && workspace.hasData
+        ? AndroidStartupReveal(
+            column: context.read<BoardsProvider>().currentColumnIndex,
+            child: content,
+          )
+        : content;
   }
 }

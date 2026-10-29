@@ -5,7 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:microplanner/core/constants/app_constants.dart';
+import 'package:microplanner/core/widgets/animated_app_logo.dart';
 import 'package:microplanner/core/data/workspace_controller.dart';
+import 'package:microplanner/core/widgets/android_startup_reveal.dart';
+import 'package:microplanner/features/boards/data/board_column_storage.dart';
 import 'package:microplanner/core/theme/app_theme.dart';
 import 'package:microplanner/features/auth/data/auth_service.dart';
 import 'package:microplanner/features/boards/providers/boards_provider.dart';
@@ -19,6 +22,169 @@ import 'package:microplanner/features/tasks/providers/tasks_provider.dart';
 import 'support/fakes.dart';
 
 void main() {
+  for (var source = 0; source < 3; source++) {
+    for (var destination = 0; destination < 3; destination++) {
+      testWidgets(
+        'swipe $source to $destination survives pause and a cold restore with matching zoom',
+        (tester) async {
+          _viewport(tester, const Size(393, 800));
+          final vault = MemoryPrivateStorage();
+          final storage = PrivateBoardColumnStorage(vault);
+          final f = _Fixture(columnStorage: storage);
+          await tester.runAsync(f.initialize);
+          await tester.pumpWidget(f.app(basicTheme: true));
+          await tester.pumpAndSettle();
+          const labels = ['Completed', 'Late', 'Upcoming'];
+          await tester.tap(find.byTooltip(labels[source]));
+          await tester.pumpAndSettle();
+          var current = source;
+          while (current != destination) {
+            final direction = destination > current ? 1 : -1;
+            await tester.dragFrom(
+              const Offset(200, 300),
+              Offset(-direction * 240, 0),
+            );
+            current += direction;
+            if (current != destination) await tester.pumpAndSettle();
+          }
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.inactive,
+          );
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.hidden,
+          );
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.paused,
+          );
+          expect(f.boards.currentColumnIndex, destination);
+          await tester.runAsync(settleAsync);
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+          await tester.pumpWidget(const SizedBox());
+          f.dispose();
+          final reopened = _Fixture(columnStorage: storage);
+          await tester.runAsync(reopened.initialize);
+          await tester.pumpWidget(reopened.app(basicTheme: true));
+          expect(reopened.boards.currentColumnIndex, destination);
+          expect(
+            tester
+                .widget<AndroidStartupReveal>(find.byType(AndroidStartupReveal))
+                .column,
+            destination,
+          );
+          expect(
+            tester
+                .widget<AndroidBoardCarousel>(find.byType(AndroidBoardCarousel))
+                .initialColumn,
+            destination,
+          );
+          await tester.pumpAndSettle();
+          expect(
+            tester.getRect(_column(labels[destination])).right,
+            closeTo(381, .1),
+          );
+          expect(reopened.h.server.writes, 0);
+          await tester.pumpWidget(const SizedBox());
+          reopened.dispose();
+        },
+      );
+    }
+  }
+
+  testWidgets(
+    'a drag interrupting manual motion remembers the visible column before release',
+    (tester) async {
+      _viewport(tester, const Size(393, 800));
+      final f = _Fixture();
+      await tester.runAsync(f.initialize);
+      await tester.pumpWidget(f.app());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Completed'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(f.boards.currentColumnIndex, 0);
+      final gesture = await tester.startGesture(const Offset(200, 300));
+      await gesture.moveBy(const Offset(24, 0));
+      await tester.pump();
+      expect(f.boards.currentColumnIndex, 1);
+      await gesture.cancel();
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox());
+      f.dispose();
+    },
+  );
+
+  testWidgets(
+    'an outgoing carousel cannot overwrite another board or account',
+    (tester) async {
+      _viewport(tester, const Size(393, 800));
+      final f = _Fixture();
+      await tester.runAsync(() async {
+        await f.initialize();
+        await f.boards.addBoard(name: 'Second board');
+        f.boards.selectColumn(1);
+        f.boards.selectBoard(f.boards.boards.first.id);
+      });
+      await tester.pumpWidget(f.app());
+      await tester.pumpAndSettle();
+      final outgoing = tester
+          .widget<AndroidBoardCarousel>(find.byType(AndroidBoardCarousel))
+          .onColumnChanged!;
+      f.boards.selectBoard(f.boards.boards.last.id);
+      outgoing(0);
+      expect(f.boards.currentColumnIndex, 1);
+      await tester.runAsync(() async {
+        await f.h.auth.signOut();
+        await f.h.login('B');
+      });
+      outgoing(0);
+      expect(f.boards.currentColumnIndex, 2);
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox());
+      f.dispose();
+    },
+  );
+
+  for (final (label, column) in [('Late', 1), ('Completed', 0)]) {
+    testWidgets(
+      '$label is remembered immediately even if the carousel is disposed mid-transition',
+      (tester) async {
+        _viewport(tester, const Size(393, 800));
+        final f = _Fixture();
+        await tester.runAsync(f.initialize);
+        await tester.pumpWidget(f.app());
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip(label));
+        expect(f.boards.currentColumnIndex, column);
+        await tester.pumpWidget(const SizedBox());
+        expect(f.boards.currentColumnIndex, column);
+        f.dispose();
+      },
+    );
+  }
+
+  testWidgets(
+    'the visible drag column is remembered before the finger is released',
+    (tester) async {
+      _viewport(tester, const Size(393, 800));
+      final f = _Fixture();
+      await tester.runAsync(f.initialize);
+      await tester.pumpWidget(f.app());
+      await tester.pumpAndSettle();
+      final gesture = await tester.startGesture(const Offset(100, 300));
+      await gesture.moveBy(const Offset(24, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(210, 0));
+      await tester.pump();
+      expect(f.boards.currentColumnIndex, 1);
+      await gesture.cancel();
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox());
+      f.dispose();
+    },
+  );
+
   testWidgets(
     'selector exchanges flat layers and the latest destination wins',
     (tester) async {
@@ -173,7 +339,7 @@ void main() {
   }
 
   testWidgets(
-    'refresh preserves the page; switching boards resets to Upcoming',
+    'refresh preserves the page; each board remembers its last column',
     (tester) async {
       _viewport(tester, const Size(393, 800));
       final f = _Fixture();
@@ -195,7 +361,7 @@ void main() {
       await _next(tester, 393);
       f.boards.selectBoard(f.boards.boards.first.id);
       await tester.pumpAndSettle();
-      expect(tester.getRect(_column('Upcoming')).right, closeTo(381, .1));
+      expect(tester.getRect(_column('Late')).right, closeTo(381, .1));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       f.dispose();
@@ -407,7 +573,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 200));
         await tester.pump(const Duration(milliseconds: 250));
         expect(find.text('Loading your data'), findsOneWidget);
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.byType(AnimatedAppLogo), findsOneWidget);
         expect(
           find.descendant(
             of: find.byType(DashboardScreen),
@@ -445,8 +612,10 @@ void _viewport(WidgetTester tester, Size size) {
 }
 
 class _Fixture {
+  _Fixture({this.columnStorage});
+  final BoardColumnStorage? columnStorage;
   final h = Harness();
-  late final boards = BoardsProvider(h.workspace);
+  late final boards = BoardsProvider(h.workspace, columnStorage: columnStorage);
   late final tasks = TasksProvider(h.workspace, boards);
   Future<void> initialize() async {
     await h.initialize();
@@ -466,6 +635,7 @@ class _Fixture {
     TargetPlatform platform = TargetPlatform.android,
     double scale = 1,
     bool reducedMotion = false,
+    bool basicTheme = false,
   }) => MultiProvider(
     providers: [
       ChangeNotifierProvider<AuthService>.value(value: h.auth),
@@ -474,7 +644,9 @@ class _Fixture {
       ChangeNotifierProvider<TasksProvider>.value(value: tasks),
     ],
     child: MaterialApp(
-      theme: AppTheme.lightTheme.copyWith(platform: platform),
+      theme: basicTheme
+          ? ThemeData(platform: platform)
+          : AppTheme.lightTheme.copyWith(platform: platform),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

@@ -6,10 +6,12 @@ import '../../../core/data/same_list.dart';
 import '../data/models/board.dart';
 import '../data/models/subject.dart';
 import '../data/board_selection_storage.dart';
+import '../data/board_column_storage.dart';
 
 class BoardsProvider extends ChangeNotifier {
   final WorkspaceController workspace;
   final BoardSelectionStorage? selectionStorage;
+  final BoardColumnStorage? columnStorage;
   String? _currentBoardId;
   String? _subjectsBoardId;
   String? _owner;
@@ -26,7 +28,12 @@ class BoardsProvider extends ChangeNotifier {
   bool _selectionLoaded = true;
   bool _preferenceAvailable = true;
   bool _confirmed = false;
-  BoardsProvider(this.workspace, {this.selectionStorage}) {
+  Map<String, int> _columns = {};
+  final _columnWrites = <String, Future<void>>{};
+  int _columnGeneration = 0;
+  bool _columnsLoaded = true;
+  bool _columnsAvailable = true;
+  BoardsProvider(this.workspace, {this.selectionStorage, this.columnStorage}) {
     workspace.addListener(_changed);
     _changed();
   }
@@ -35,6 +42,8 @@ class BoardsProvider extends ChangeNotifier {
   bool get isLoading => workspace.isLoading;
   bool get showSubjectsView => _showSubjectsView;
   bool get isRestoringSelection => !_selectionLoaded;
+  bool get isRestoringColumns => !_columnsLoaded;
+  int get currentColumnIndex => _columns[currentBoardId] ?? 2;
   String? get currentBoardId =>
       _selectionLoaded ? _currentBoardId ?? _boards.firstOrNull?.id : null;
   Board? get currentBoard => _boardIndex[currentBoardId];
@@ -76,6 +85,13 @@ class BoardsProvider extends ChangeNotifier {
     }
     if (ownerChanged) {
       _owner = workspace.ownerId;
+      _columns = {};
+      ++_columnGeneration;
+      _columnsAvailable = true;
+      _columnsLoaded = columnStorage == null || _owner == null;
+      if (!_columnsLoaded) {
+        unawaited(_restoreColumns(_owner!, _columnGeneration));
+      }
       _currentBoardId = null;
       _subjectsBoardId = null;
       _showSubjectsView = false;
@@ -115,6 +131,58 @@ class BoardsProvider extends ChangeNotifier {
         previousSelection != _currentBoardId) {
       notifyListeners();
     }
+  }
+
+  Future<void> _restoreColumns(String owner, int generation) async {
+    Map<String, int> saved = {};
+    var available = true;
+    try {
+      await _columnWrites[owner]?.timeout(const Duration(seconds: 2));
+      saved = await columnStorage!
+          .read(owner)
+          .timeout(const Duration(seconds: 2));
+    } catch (_) {
+      available = false;
+    }
+    if (generation != _columnGeneration || owner != _owner) return;
+    _columns = Map.of(saved);
+    _columnsAvailable = available;
+    _columnsLoaded = true;
+    notifyListeners();
+  }
+
+  void selectColumn(int index) {
+    final owner = _owner;
+    final board = currentBoardId;
+    if (!_columnsLoaded ||
+        owner == null ||
+        board == null ||
+        index < 0 ||
+        index > 2) {
+      return;
+    }
+    if (_columns[board] == index) return;
+    _columns[board] = index;
+    final storage = columnStorage;
+    if (storage != null) {
+      final snapshot = Map<String, int>.of(_columns);
+      if (_confirmed) {
+        snapshot.removeWhere((id, _) => !_boardIndex.containsKey(id));
+      }
+      final available = _columnsAvailable;
+      final previous = _columnWrites[owner] ?? Future<void>.value();
+      _columnWrites[owner] = previous
+          .then((_) async {
+            // If the initial read failed, merge a fresh read rather than replacing
+            // other boards' unknown preferences with defaults.
+            final existing = available
+                ? <String, int>{}
+                : await storage.read(owner).timeout(const Duration(seconds: 2));
+            await storage.write(owner, {...existing, ...snapshot});
+          })
+          .catchError((Object _) {});
+    }
+    notifyListeners();
   }
 
   Future<void> _restoreSelection(String owner, int generation) async {
@@ -315,6 +383,7 @@ class BoardsProvider extends ChangeNotifier {
   @override
   void dispose() {
     ++_selectionGeneration;
+    ++_columnGeneration;
     workspace.removeListener(_changed);
     super.dispose();
   }

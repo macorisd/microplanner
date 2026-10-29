@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:microplanner/core/constants/app_constants.dart';
 import 'package:microplanner/core/data/workspace_controller.dart';
 import 'package:microplanner/core/theme/app_motion.dart';
+import 'package:microplanner/core/widgets/animated_app_logo.dart';
 import 'package:microplanner/features/auth/data/auth_service.dart';
 import 'package:microplanner/features/boards/providers/boards_provider.dart';
 import 'package:microplanner/features/tasks/presentation/account_dashboard.dart';
@@ -42,6 +43,8 @@ void main() {
       expect(tester.getRect(find.byType(TaskColumn).first), rect);
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Loading your data'), findsOneWidget);
+      expect(find.byType(AnimatedAppLogo), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(tester.getRect(find.byType(TaskColumn).first), rect);
       pending.complete(jsonResponse(f.h.server.states['A']!.toJson()));
       await tester.runAsync(() async => refresh);

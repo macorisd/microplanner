@@ -276,9 +276,18 @@ class _TaskAreaState extends State<_TaskArea> {
         final identity = context.select<BoardsProvider, (String?, String?)>(
           (boards) => (boards.workspace.ownerId, boards.currentBoardId),
         );
+        final boards = context.read<BoardsProvider>();
         return AndroidBoardCarousel(
           key: ValueKey(identity),
           columns: columns,
+          initialColumn: boards.currentColumnIndex,
+          onColumnChanged: (column) {
+            // A cancelled gesture from an outgoing surface belongs to its owner.
+            if (boards.workspace.ownerId == identity.$1 &&
+                boards.currentBoardId == identity.$2) {
+              boards.selectColumn(column);
+            }
+          },
           onAdd: () => DashboardScreen._add(context),
         );
       }

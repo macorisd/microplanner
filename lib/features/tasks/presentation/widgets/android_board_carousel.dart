@@ -10,10 +10,14 @@ import '../../../../core/theme/app_motion.dart';
 class AndroidBoardCarousel extends StatefulWidget {
   final List<Widget> columns;
   final VoidCallback onAdd;
+  final int initialColumn;
+  final ValueChanged<int>? onColumnChanged;
   const AndroidBoardCarousel({
     super.key,
     required this.columns,
     required this.onAdd,
+    this.initialColumn = 2,
+    this.onColumnChanged,
   });
   @override
   State<AndroidBoardCarousel> createState() => _AndroidBoardCarouselState();
@@ -25,17 +29,27 @@ class _AndroidBoardCarouselState extends State<AndroidBoardCarousel>
     vsync: this,
     lowerBound: 0,
     upperBound: 2,
-    value: 2,
+    value: widget.initialColumn.clamp(0, 2).toDouble(),
   )..addListener(_changed);
-  final _selected = ValueNotifier(2);
+  late final _selected = ValueNotifier(widget.initialColumn.clamp(0, 2));
   int _dragAnchor = 2;
   double _dragOrigin = 2;
   double _dragExtent = 1;
+  bool _dragging = false;
 
-  void _changed() => _selected.value = _rotation.value.round();
+  void _changed() {
+    final visible = _rotation.value.round();
+    if (_selected.value == visible) return;
+    _selected.value = visible;
+    if (_dragging) widget.onColumnChanged?.call(visible);
+  }
 
   void _select(int index) {
+    if (!mounted) return;
+    _dragging = false;
     final destination = index.clamp(0, 2).toDouble();
+    // Remember intent before an app pause or disposal can cancel the motion.
+    widget.onColumnChanged?.call(destination.toInt());
     if (MediaQuery.disableAnimationsOf(context)) {
       _rotation.value = destination;
       return;
@@ -50,8 +64,11 @@ class _AndroidBoardCarouselState extends State<AndroidBoardCarousel>
 
   void _start(DragStartDetails details) {
     _rotation.stop();
+    _dragging = true;
     _dragOrigin = _rotation.value;
     _dragAnchor = _dragOrigin.round();
+    // A new drag replaces any unfinished manual destination with what is visible.
+    widget.onColumnChanged?.call(_dragAnchor);
   }
 
   void _drag(DragUpdateDetails details) {
