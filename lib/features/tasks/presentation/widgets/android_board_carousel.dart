@@ -67,6 +67,8 @@ class _AndroidBoardCarouselState extends State<AndroidBoardCarousel>
     _dragging = true;
     _dragOrigin = _rotation.value;
     _dragAnchor = _dragOrigin.round();
+    // A new drag replaces any unfinished manual destination with what is visible.
+    widget.onColumnChanged?.call(_dragAnchor);
   }
 
   void _drag(DragUpdateDetails details) {

@@ -3,11 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:microplanner/core/data/workspace_controller.dart';
+import 'package:microplanner/core/data/workspace_snapshot.dart';
 import 'package:microplanner/features/auth/data/auth_service.dart';
 import 'package:microplanner/features/boards/data/board_column_storage.dart';
+import 'package:microplanner/features/boards/data/board_selection_storage.dart';
+import 'package:microplanner/features/boards/data/models/board.dart';
 import 'package:microplanner/features/boards/providers/boards_provider.dart';
 import 'package:microplanner/features/tasks/providers/tasks_provider.dart';
 import 'package:microplanner/features/tasks/presentation/account_dashboard.dart';
@@ -19,6 +23,97 @@ import 'package:microplanner/core/widgets/startup_loading_screen.dart';
 import 'support/fakes.dart';
 
 void main() {
+  for (final cloudFirst in [false, true]) {
+    testWidgets(
+      'startup color follows the final restored board when ${cloudFirst ? 'cloud' : 'preferences'} arrive first',
+      (tester) async {
+        _viewport(tester, const Size(393, 850));
+        final h = Harness();
+        await tester.runAsync(h.initialize);
+        final cached = snapshot('Cached board');
+        h.cache.values['A'] = cached;
+        final cloud = WorkspaceSnapshot(
+          boards: [
+            cached.boards.single,
+            Board.create(id: 'remote-board', name: 'Remembered board'),
+          ],
+        );
+        h.server.states['A'] = cloud;
+        final response = Completer<http.Response>();
+        h.server.nextRead = response;
+        final selection = PrivateBoardSelectionStorage(h.storage);
+        await tester.runAsync(() => selection.write('A', 'remote-board'));
+        final columns = _DelayedColumns();
+        final boards = BoardsProvider(
+          h.workspace,
+          selectionStorage: selection,
+          columnStorage: columns,
+        );
+        final tasks = TasksProvider(h.workspace, boards);
+        await tester.runAsync(() => h.login('A'));
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<AuthService>.value(value: h.auth),
+              ChangeNotifierProvider<WorkspaceController>.value(
+                value: h.workspace,
+              ),
+              ChangeNotifierProvider<BoardsProvider>.value(value: boards),
+              ChangeNotifierProvider<TasksProvider>.value(value: tasks),
+            ],
+            child: MaterialApp(
+              theme: ThemeData(platform: TargetPlatform.android),
+              home: const AccountDashboard(),
+            ),
+          ),
+        );
+        expect(h.workspace.hasData, isTrue);
+        expect(find.byType(StartupLoadingScreen), findsOneWidget);
+        Future<void> finishCloud() => tester.runAsync(() async {
+          response.complete(jsonResponse(cloud.toJson()));
+          await settleAsync();
+        });
+        if (cloudFirst) {
+          await finishCloud();
+          await tester.pump();
+          expect(find.byType(StartupLoadingScreen), findsOneWidget);
+          await tester.runAsync(() async {
+            columns.readGate.complete({'default-board': 2, 'remote-board': 0});
+            await settleAsync();
+          });
+        } else {
+          await tester.runAsync(() async {
+            columns.readGate.complete({'default-board': 2, 'remote-board': 0});
+            await settleAsync();
+          });
+          await tester.pump();
+          expect(find.byType(StartupLoadingScreen), findsOneWidget);
+          await finishCloud();
+        }
+        await tester.pump();
+        expect(boards.currentBoardId, 'remote-board');
+        expect(
+          tester
+              .widget<AndroidStartupReveal>(find.byType(AndroidStartupReveal))
+              .column,
+          0,
+        );
+        expect(
+          tester
+              .widget<AndroidBoardCarousel>(find.byType(AndroidBoardCarousel))
+              .initialColumn,
+          0,
+        );
+        expect(find.text('Loading your data'), findsNothing);
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(const SizedBox());
+        tasks.dispose();
+        boards.dispose();
+        h.dispose();
+      },
+    );
+  }
+
   testWidgets(
     'account waits for column memory, reveals that page, and never replays on refresh',
     (tester) async {
