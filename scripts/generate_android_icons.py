@@ -21,15 +21,13 @@ for density, factor in [('mdpi', 1), ('hdpi', 1.5), ('xhdpi', 2), ('xxhdpi', 3),
     directory = RES / f'mipmap-{density}'
     directory.mkdir(exist_ok=True)
     icon(round(48 * factor), round(48 * factor), (0, 0, 0, 0)).save(directory / 'ic_launcher.png')
-    # Fill the launcher's 72dp viewport, preserving the source transparency.
-    icon(round(108 * factor), round(72 * factor), (0, 0, 0, 0)).save(directory / 'ic_launcher_foreground.png')
 
 adaptive = RES / 'mipmap-anydpi-v26'
 adaptive.mkdir(exist_ok=True)
 (adaptive / 'ic_launcher.xml').write_text('''<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/launcher_background" />
-    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
 </adaptive-icon>
 ''', encoding='utf-8')
 (RES / 'values/launcher_colors.xml').write_text('''<?xml version="1.0" encoding="utf-8"?>
