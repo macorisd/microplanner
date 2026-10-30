@@ -3,9 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/data/workspace_controller.dart';
+import '../../../core/data/workspace_delta.dart';
 import '../../../core/data/same_list.dart';
 import '../../boards/providers/boards_provider.dart';
 import '../data/models/task.dart';
+import 'task_transitions.dart';
 
 class TasksProvider extends ChangeNotifier {
   final WorkspaceController workspace;
@@ -21,14 +23,48 @@ class TasksProvider extends ChangeNotifier {
   DateTime? _classifiedAt;
   DateTime? _nextBoundary;
   Timer? _clock;
+  late final TaskTransitions transitions = TaskTransitions(
+    now: _now,
+    changed: _transitionChanged,
+  );
+  int _transitionRevision = 0;
+  String? _startupOwner;
+  bool _startupReady = false;
+  bool _startupSeeded = false;
   TasksProvider(this.workspace, this.boards, {DateTime Function()? now})
     : _now = now ?? DateTime.now {
     workspace.addListener(_changed);
     boards.addListener(_changed);
     _changed();
   }
-  void _changed() {
-    final source = workspace.snapshot.tasks;
+  void _changed() => _rebuild();
+  void _transitionChanged() => _rebuild(force: true);
+  void _rebuild({bool force = false}) {
+    final current = workspace.snapshot.tasks;
+    final queue = workspace.outbox;
+    if (_startupOwner != workspace.ownerId) {
+      _startupOwner = workspace.ownerId;
+      _startupReady = false;
+      _startupSeeded = false;
+    }
+    if (queue != null) {
+      if (!_startupReady && workspace.isLoading) {
+        final seen = workspace.cachedSeenAt;
+        if (!_startupSeeded &&
+            workspace.ownerId != null &&
+            workspace.hasData &&
+            seen != null) {
+          transitions.seed(workspace.ownerId!, current, seen);
+          _startupSeeded = true;
+        }
+      } else {
+        _startupReady = true;
+        transitions.update(workspace.ownerId, current, queue.operations);
+      }
+    }
+    final transitionChanged = _transitionRevision != transitions.revision;
+    _transitionRevision = transitions.revision;
+    final source = queue == null ? current : transitions.present(current);
     final now = _now();
     final dataChanged = !sameList(_allTasks, source, _sameTask);
     _allTasks = source;
@@ -36,7 +72,12 @@ class TasksProvider extends ChangeNotifier {
         _classifiedAt == null ||
         now.isBefore(_classifiedAt!) ||
         (_nextBoundary != null && now.isAfter(_nextBoundary!));
-    if (!dataChanged &&
+    if (timeChanged && _classifiedAt != null && workspace.hasData) {
+      workspace.markSeen();
+    }
+    if (!force &&
+        !transitionChanged &&
+        !dataChanged &&
         !timeChanged &&
         _owner == workspace.ownerId &&
         _board == boards.currentBoardId) {
@@ -58,10 +99,13 @@ class TasksProvider extends ChangeNotifier {
     final upcoming = <Task>[];
     DateTime? boundary;
     for (final task in _tasks) {
-      if (task.isCompleted) {
+      final column = queue == null
+          ? TaskTransitions.column(task, now)
+          : transitions.displayedColumn(task, now);
+      if (column == TaskColumnKind.completed) {
         completed.add(task);
       } else {
-        (now.isAfter(task.deadline) ? late : upcoming).add(task);
+        (column == TaskColumnKind.late ? late : upcoming).add(task);
         for (final candidate in [
           task.deadline,
           task.deadline.subtract(const Duration(hours: 24)),
@@ -146,21 +190,37 @@ class TasksProvider extends ChangeNotifier {
     return workspace.mutate((s) => s.copyWith(tasks: [...s.tasks, task]));
   }
 
-  Future<bool> updateTask(Task task) => workspace.mutate(
-    (s) => !s.tasks.any((t) => t.id == task.id)
-        ? null
-        : s.copyWith(
-            tasks: s.tasks.map((t) => t.id == task.id ? task : t).toList(),
-          ),
-  );
-  Future<bool> deleteTask(String id) => workspace.mutate(
-    (s) => s.copyWith(tasks: s.tasks.where((t) => t.id != id).toList()),
-  );
+  Future<bool> updateTask(Task task, {Task? original}) {
+    if (transitions.locked(task.id)) return Future.value(false);
+    if (original == null) {
+      return workspace.mutate(
+        (s) => !s.tasks.any((item) => item.id == task.id)
+            ? null
+            : s.copyWith(
+                tasks: s.tasks.map((t) => t.id == task.id ? task : t).toList(),
+              ),
+      );
+    }
+    // Only submit the fields changed in the form; do not undo remote edits to
+    // other fields, or silently overwrite a concurrent edit to the same field.
+    final snapshot = workspace.outbox?.projected ?? workspace.snapshot;
+    final others = snapshot.tasks.where((item) => item.id != task.id).toList();
+    final before = snapshot.copyWith(tasks: [...others, original]);
+    final after = snapshot.copyWith(tasks: [...others, task]);
+    return workspace.applyDelta(WorkspaceDelta.between(before, after));
+  }
+
+  Future<bool> deleteTask(String id) => transitions.locked(id)
+      ? Future.value(false)
+      : workspace.mutate(
+          (s) => s.copyWith(tasks: s.tasks.where((t) => t.id != id).toList()),
+        );
   Future<bool> clearCompletedTasks({
     required String boardId,
     required Set<String> taskIds,
   }) {
     final intended = Set<String>.of(taskIds);
+    if (intended.any(transitions.locked)) return Future.value(false);
     return workspace.mutate((s) {
       final remaining = s.tasks
           .where(
@@ -175,21 +235,25 @@ class TasksProvider extends ChangeNotifier {
     });
   }
 
-  Future<bool> toggleTaskCompletion(String id) => workspace.mutate(
-    (s) => !s.tasks.any((t) => t.id == id)
-        ? null
-        : s.copyWith(
-            tasks: s.tasks
-                .map(
-                  (t) =>
-                      t.id == id ? t.copyWith(isCompleted: !t.isCompleted) : t,
-                )
-                .toList(),
-          ),
-  );
+  Future<bool> toggleTaskCompletion(String id) => transitions.locked(id)
+      ? Future.value(false)
+      : workspace.mutate(
+          (s) => !s.tasks.any((t) => t.id == id)
+              ? null
+              : s.copyWith(
+                  tasks: s.tasks
+                      .map(
+                        (t) => t.id == id
+                            ? t.copyWith(isCompleted: !t.isCompleted)
+                            : t,
+                      )
+                      .toList(),
+                ),
+        );
   @override
   void dispose() {
     _clock?.cancel();
+    transitions.dispose();
     workspace.removeListener(_changed);
     boards.removeListener(_changed);
     super.dispose();

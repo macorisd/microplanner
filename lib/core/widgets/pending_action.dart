@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../data/workspace_controller.dart';
 
 /// Guards both pointer and keyboard submissions before the first async gap.
 mixin PendingActionState<T extends StatefulWidget> on State<T> {
@@ -35,7 +37,28 @@ mixin PendingActionState<T extends StatefulWidget> on State<T> {
     });
     var saved = false;
     try {
-      saved = await action();
+      final workspace = context.read<WorkspaceController?>();
+      final queue = workspace?.outbox;
+      final before = queue?.operations.length;
+      final failedBefore = queue?.operations
+          .where((item) => item.failure != null)
+          .length;
+      final future = action();
+      // Only dismiss after an intent has actually been accepted into the
+      // account-scoped queue. Validation failures keep the form open.
+      if (queue != null &&
+          identical(queue, workspace?.outbox) &&
+          (queue.operations.length > before! ||
+              queue.operations.where((item) => item.failure != null).length <
+                  failedBefore!)) {
+        saved = true;
+        // The route is about to close; do not show its old inline spinner
+        // during the exit animation. The cloud notice owns progress now.
+        isSubmitting = false;
+        future.catchError((Object _) => false);
+        return true;
+      }
+      saved = await future;
       if (!saved && mounted) {
         submissionError =
             'The action could not be completed. Please try again.';

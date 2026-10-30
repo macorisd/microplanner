@@ -325,6 +325,7 @@ class _BoardCardState extends State<_BoardCard>
   bool _isSubjectsHovered = false;
   bool _isEditing = false;
   late TextEditingController _nameController;
+  Board? _editingOriginal;
 
   @override
   void initState() {
@@ -342,6 +343,7 @@ class _BoardCardState extends State<_BoardCard>
     if (isSubmitting) return;
     setState(() {
       _isEditing = true;
+      _editingOriginal = widget.board;
       _nameController.text = widget.board.name;
     });
   }
@@ -357,9 +359,10 @@ class _BoardCardState extends State<_BoardCard>
       return;
     }
     final boards = context.read<BoardsProvider>();
-    final updated = widget.board.copyWith(name: newName);
+    final original = _editingOriginal ?? widget.board;
+    final updated = original.copyWith(name: newName);
     if (await submitOnce(
-          () => boards.updateBoard(updated),
+          () => boards.updateBoard(updated, original: original),
           lockAfterSuccess: false,
         ) &&
         mounted) {
@@ -800,15 +803,16 @@ class _SubjectItemState extends State<_SubjectItem> {
 
   void _showEditDialog(BuildContext context) {
     final boardsProvider = context.read<BoardsProvider>();
+    final original = widget.subject;
     showMotionDialog(
       context: context,
       builder: (dialogContext) => SubjectDialog(
         title: 'Edit Subject',
-        initialName: widget.subject.name,
-        initialColor: widget.subject.color,
+        initialName: original.name,
+        initialColor: original.color,
         onSave: (name, color) {
-          final updated = widget.subject.copyWith(name: name, color: color);
-          return boardsProvider.updateSubject(updated);
+          final updated = original.copyWith(name: name, color: color);
+          return boardsProvider.updateSubject(updated, original: original);
         },
       ),
     );

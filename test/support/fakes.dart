@@ -162,10 +162,13 @@ class FakeServer {
 }
 
 class Harness {
-  final server = FakeServer();
+  Harness({FakeServer? server, MemoryCache? cache})
+    : server = server ?? FakeServer(),
+      cache = cache ?? MemoryCache();
+  final FakeServer server;
   final storage = MemoryPrivateStorage();
   final google = FakeGoogle();
-  final cache = MemoryCache();
+  final MemoryCache cache;
   final legacy = FakeLegacy();
   late final api = ApiClient(
     'http://localhost:3000',

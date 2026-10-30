@@ -45,6 +45,43 @@ void main() {
     },
   );
   test(
+    'pending journal is encrypted, account isolated and survives reopening',
+    () async {
+      final secure = MemoryPrivateStorage();
+      final cache = EncryptedWorkspaceCache(secure);
+      await cache.writeJournal('A', 'A pending private draft');
+      await cache.writeJournal('B', 'B pending private draft');
+      await Hive.close();
+      final reopened = EncryptedWorkspaceCache(secure);
+      expect(await reopened.readJournal('A'), 'A pending private draft');
+      expect(await reopened.readJournal('B'), 'B pending private draft');
+      await Hive.close();
+      for (final file in temporary.listSync().whereType<File>().where(
+        (file) => file.path.endsWith('.hive'),
+      )) {
+        expect(
+          String.fromCharCodes(await file.readAsBytes()),
+          isNot(contains('pending private draft')),
+        );
+      }
+    },
+  );
+  test(
+    'cached observation time survives restart and stays account scoped',
+    () async {
+      final secure = MemoryPrivateStorage();
+      final cache = EncryptedWorkspaceCache(secure);
+      await cache.write('A', snapshot('A'));
+      await cache.write('B', snapshot('B'));
+      final seen = DateTime.utc(2030, 1, 1);
+      await cache.markSeenAt('A', seen);
+      await Hive.close();
+      final reopened = EncryptedWorkspaceCache(secure);
+      expect((await reopened.readSeenAt('A'))!.toUtc(), seen);
+      expect((await reopened.readSeenAt('B'))!.toUtc(), isNot(seen));
+    },
+  );
+  test(
     'legacy normalization repairs old relations without changing original Hive data',
     () async {
       final tasks = await Hive.openBox<Task>('tasks');

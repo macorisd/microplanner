@@ -9,6 +9,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/input_mode.dart';
 import '../../../boards/data/models/subject.dart';
 import '../../../boards/providers/boards_provider.dart';
+import '../../data/models/task.dart';
 import 'save_status.dart';
 import '../../../../core/data/workspace_limits.dart';
 import '../../../../core/widgets/limited_text_field.dart';
@@ -20,6 +21,7 @@ import 'task_date_picker.dart';
 /// Dialog for creating a new task
 /// All fields are displayed in a clean, Cashew-inspired form
 class AddTaskDialog extends StatefulWidget {
+  final Task? draft;
   final Future<bool> Function({
     required String name,
     required DateTime deadline,
@@ -30,7 +32,7 @@ class AddTaskDialog extends StatefulWidget {
   })
   onSave;
 
-  const AddTaskDialog({super.key, required this.onSave});
+  const AddTaskDialog({super.key, required this.onSave, this.draft});
 
   @override
   State<AddTaskDialog> createState() => _AddTaskDialogState();
@@ -61,6 +63,16 @@ class _AddTaskDialogState extends State<AddTaskDialog>
   @override
   void initState() {
     super.initState();
+    final draft = widget.draft;
+    if (draft != null) {
+      _nameController.text = draft.name;
+      _descriptionController.text = draft.description ?? '';
+      _deadline = draft.deadline;
+      _deadlineTime = TimeOfDay.fromDateTime(draft.deadline);
+      _type = draft.type;
+      _priority = draft.priority;
+      _selectedSubjectId = draft.subjectId;
+    }
     _nameController.addListener(_textChanged);
     _descriptionController.addListener(_textChanged);
   }
@@ -111,7 +123,11 @@ class _AddTaskDialogState extends State<AddTaskDialog>
     final compact = touch || MediaQuery.sizeOf(context).width < 600;
     final short = MediaQuery.sizeOf(context).height < 420;
     final boardsProvider = context.watch<BoardsProvider>();
-    final subjects = boardsProvider.currentBoardSubjects;
+    final subjects = widget.draft == null
+        ? boardsProvider.currentBoardSubjects
+        : boardsProvider.subjects
+              .where((subject) => subject.boardId == widget.draft!.boardId)
+              .toList();
     if (_selectedSubjectId != null &&
         !subjects.any((s) => s.id == _selectedSubjectId)) {
       _selectedSubjectId = null;
