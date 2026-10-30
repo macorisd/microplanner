@@ -45,7 +45,7 @@ WorkspaceSnapshot data() => WorkspaceSnapshot(
   ],
 );
 final _clear = find.byWidgetPredicate(
-  (w) => w is IconButton && w.tooltip == 'Clear Complete Tasks',
+  (w) => w is IconButton && w.tooltip == 'Clear Completed Tasks',
 );
 
 void main() {
@@ -79,7 +79,7 @@ void main() {
       );
       await tester.pump();
       final column = find.byWidgetPredicate(
-        (w) => w is TaskColumn && w.title == 'Complete',
+        (w) => w is TaskColumn && w.title == 'Completed',
       );
       expect(
         find.descendant(of: column, matching: find.byType(TaskCard)),
@@ -229,12 +229,22 @@ void main() {
         if (platform == TargetPlatform.android) {
           await tester.tap(find.byTooltip('Completed'));
           await tester.pumpAndSettle();
+        } else {
+          final mouse = await tester.createGesture(
+            kind: PointerDeviceKind.mouse,
+          );
+          await mouse.addPointer(location: const Offset(0, 0));
+          expect(_clear.hitTestable(), findsNothing);
+          final countBefore = tester.getRect(find.text('2').first);
+          await mouse.moveTo(tester.getCenter(find.text('Completed')));
+          await tester.pumpAndSettle();
+          expect(_clear.hitTestable(), findsOneWidget);
+          expect(tester.getRect(find.text('2').first), countBefore);
+          addTearDown(mouse.removePointer);
         }
         expect(_clear, findsOneWidget);
         final column = find.byWidgetPredicate(
-          (w) =>
-              w is TaskColumn &&
-              (w.title == 'Complete' || w.title == 'Completed'),
+          (w) => w is TaskColumn && (w.title == 'Completed'),
         );
         final count = find.descendant(of: column, matching: find.text('2'));
         expect(
@@ -297,6 +307,14 @@ void main() {
         if (platform == TargetPlatform.android) {
           await tester.tap(find.byTooltip('Completed'));
           await tester.pumpAndSettle();
+        } else {
+          final mouse = await tester.createGesture(
+            kind: PointerDeviceKind.mouse,
+          );
+          await mouse.addPointer();
+          await mouse.moveTo(tester.getCenter(find.text('Completed')));
+          await tester.pumpAndSettle();
+          addTearDown(mouse.removePointer);
         }
         expect(tester.widget<IconButton>(_clear).onPressed, isNull);
         await tester.runAsync(() async {
@@ -415,7 +433,22 @@ void main() {
           final headerRect = tester.getRect(header);
           expect(buttonRect.top, greaterThanOrEqualTo(headerRect.top));
           expect(buttonRect.bottom, lessThanOrEqualTo(headerRect.bottom));
-          expect(_clear.hitTestable(), findsOneWidget);
+          if (platform == TargetPlatform.android) {
+            expect(_clear.hitTestable(), findsOneWidget);
+          } else {
+            expect(_clear.hitTestable(), findsNothing);
+            final mouse = await tester.createGesture(
+              kind: PointerDeviceKind.mouse,
+            );
+            await mouse.addPointer();
+            await mouse.moveTo(tester.getCenter(find.text('Completed')));
+            await tester.pumpAndSettle();
+            expect(_clear.hitTestable(), findsOneWidget);
+            await mouse.moveTo(const Offset(0, 899));
+            await tester.pumpAndSettle();
+            expect(_clear.hitTestable(), findsNothing);
+            await mouse.removePointer();
+          }
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox());
           f.dispose();

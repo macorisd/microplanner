@@ -46,7 +46,6 @@ class TaskColumn extends StatelessWidget {
     final headerPadding = !touch && MediaQuery.sizeOf(context).height < 360
         ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
         : EdgeInsets.all(touch ? 12 : AppTheme.spacingMedium);
-    final contentPadding = EdgeInsets.symmetric(vertical: headerPadding.top);
 
     return MotionEntrance(
       fade: false,
@@ -60,81 +59,131 @@ class TaskColumn extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Header
-              AnimatedContainer(
-                duration: AppMotion.duration(context, AppMotion.normal),
-                padding: EdgeInsets.symmetric(horizontal: headerPadding.left),
-                decoration: BoxDecoration(
-                  color: effectiveHeaderBgColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(AppTheme.radiusXLarge),
-                    topRight: Radius.circular(AppTheme.radiusXLarge),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: contentPadding,
-                        child: Row(
-                          children: [
-                            Icon(icon, color: effectiveHeaderColor, size: 22),
-                            const SizedBox(width: AppTheme.spacingSmall),
-                            Expanded(
-                              child: Text(
-                                title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      color: effectiveHeaderColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (onClearCompleted != null)
-                      _ClearCompletedButton(
-                        hasTasks: tasks.isNotEmpty,
-                        onClear: onClearCompleted!,
-                      ),
-                    Padding(
-                      padding: contentPadding,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.spacingSmall,
-                          vertical: AppTheme.spacingXSmall,
-                        ),
-                        decoration: BoxDecoration(
-                          color: effectiveHeaderColor.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.radiusSmall,
-                          ),
-                        ),
-                        child: MotionSwap(
-                          child: Text(
-                            '${tasks.length}',
-                            key: ValueKey(tasks.length),
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: effectiveHeaderColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              _TaskColumnHeader(
+                title: title,
+                icon: icon,
+                tasks: tasks,
+                color: effectiveHeaderColor,
+                background: effectiveHeaderBgColor,
+                padding: headerPadding,
+                onClear: onClearCompleted,
               ),
 
               // Task list
               Expanded(child: _TaskList(column: this)),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TaskColumnHeader extends StatefulWidget {
+  final String title;
+  final IconData icon;
+  final List<Task> tasks;
+  final Color color;
+  final Color background;
+  final EdgeInsets padding;
+  final Future<void> Function()? onClear;
+  const _TaskColumnHeader({
+    required this.title,
+    required this.icon,
+    required this.tasks,
+    required this.color,
+    required this.background,
+    required this.padding,
+    required this.onClear,
+  });
+  @override
+  State<_TaskColumnHeader> createState() => _TaskColumnHeaderState();
+}
+
+class _TaskColumnHeaderState extends State<_TaskColumnHeader> {
+  bool _hovered = false;
+  @override
+  Widget build(BuildContext context) {
+    final contentPadding = EdgeInsets.symmetric(vertical: widget.padding.top);
+    final showClear =
+        Theme.of(context).platform != TargetPlatform.windows || _hovered;
+    final trackHover =
+        widget.onClear != null &&
+        Theme.of(context).platform == TargetPlatform.windows;
+    return MouseRegion(
+      onEnter: trackHover ? (_) => setState(() => _hovered = true) : null,
+      onExit: trackHover ? (_) => setState(() => _hovered = false) : null,
+      child: AnimatedContainer(
+        duration: AppMotion.duration(context, AppMotion.normal),
+        padding: EdgeInsets.symmetric(horizontal: widget.padding.left),
+        decoration: BoxDecoration(
+          color: widget.background,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(AppTheme.radiusXLarge),
+            topRight: Radius.circular(AppTheme.radiusXLarge),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: contentPadding,
+                child: Row(
+                  children: [
+                    Icon(widget.icon, color: widget.color, size: 22),
+                    const SizedBox(width: AppTheme.spacingSmall),
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: widget.color,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (widget.onClear != null)
+              Visibility(
+                visible: showClear,
+                maintainState: true,
+                maintainAnimation: true,
+                maintainSize: true,
+                child: _ClearCompletedButton(
+                  hasTasks: widget.tasks.isNotEmpty,
+                  onClear: widget.onClear!,
+                ),
+              ),
+            Padding(
+              padding: contentPadding,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spacingSmall,
+                  vertical: AppTheme.spacingXSmall,
+                ),
+                decoration: BoxDecoration(
+                  color: widget.color.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                ),
+                child: MotionSwap(
+                  child: Text(
+                    '${widget.tasks.length}',
+                    key: ValueKey(widget.tasks.length),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: widget.color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -169,7 +218,7 @@ class _ClearCompletedButtonState extends State<_ClearCompletedButton> {
     return SizedBox.square(
       dimension: usesTouchControls(context) ? 48 : 30,
       child: IconButton(
-        tooltip: 'Clear Complete Tasks',
+        tooltip: 'Clear Completed Tasks',
         onPressed: widget.hasTasks && writable && !_opening ? _open : null,
         padding: EdgeInsets.zero,
         color: AppColors.textSecondary,

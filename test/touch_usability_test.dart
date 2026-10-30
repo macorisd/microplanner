@@ -172,40 +172,36 @@ void main() {
   }
 
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
-    testWidgets('$platform edit dialog focuses the name only on desktop', (
-      tester,
-    ) async {
-      final fixture = _Fixture();
-      await tester.runAsync(fixture.initialize);
-      final task = Task.create(
-        id: 'edit-focus',
-        name: 'Existing task',
-        deadline: DateTime(2030, 6, 15),
-        type: TaskType.unassigned,
-        priority: TaskPriority.low,
-      );
-      await tester.pumpWidget(
-        fixture.app(
-          platform,
-          EditTaskDialog(task: task, onSave: (_) async => true),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final name = find.byType(EditableText).first;
-      expect(
-        tester.widget<EditableText>(name).focusNode.hasFocus,
-        platform == TargetPlatform.windows,
-      );
-      if (platform == TargetPlatform.android) {
+    testWidgets(
+      '$platform edit dialog waits for a tap before focusing the name',
+      (tester) async {
+        final fixture = _Fixture();
+        await tester.runAsync(fixture.initialize);
+        final task = Task.create(
+          id: 'edit-focus',
+          name: 'Existing task',
+          deadline: DateTime(2030, 6, 15),
+          type: TaskType.unassigned,
+          priority: TaskPriority.low,
+        );
+        await tester.pumpWidget(
+          fixture.app(
+            platform,
+            EditTaskDialog(task: task, onSave: (_) async => true),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final name = find.byType(EditableText).first;
+        expect(tester.widget<EditableText>(name).focusNode.hasFocus, isFalse);
         expect(tester.testTextInput.isVisible, isFalse);
         await tester.tap(name);
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isTrue);
-      }
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox());
-      fixture.dispose();
-    });
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+        fixture.dispose();
+      },
+    );
   }
 
   testWidgets(
