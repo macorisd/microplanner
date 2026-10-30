@@ -91,6 +91,63 @@ class _RejectFirstServer extends FakeServer {
 }
 
 void main() {
+  testWidgets(
+    'a confirmed card waits for the entire cloud queue before moving',
+    (tester) async {
+      final h = Harness(cache: _Cache());
+      final one = Task.create(
+        id: 'one',
+        name: 'One',
+        boardId: 'default-board',
+        deadline: DateTime(2030),
+        type: TaskType.unassigned,
+        priority: TaskPriority.low,
+      );
+      final two = one.copyWith(id: 'two', name: 'Two');
+      h.server.states['A'] = h.server.states['A']!.copyWith(tasks: [one, two]);
+      await tester.runAsync(() async {
+        await h.initialize();
+        await h.login('A');
+      });
+      final boards = BoardsProvider(h.workspace);
+      var now = DateTime.now();
+      final tasks = TasksProvider(h.workspace, boards, now: () => now);
+      final firstGate = Completer<http.Response>();
+      final secondGate = Completer<http.Response>();
+      h.server.nextWrite = firstGate;
+      final first = tasks.toggleTaskCompletion('one');
+      await tester.runAsync(settleAsync);
+      final second = tasks.toggleTaskCompletion('two');
+      h.server.nextWrite = secondGate;
+      await tester.runAsync(() async {
+        firstGate.complete(jsonResponse(h.server.states['A']!.toJson()));
+        await settleAsync();
+      });
+      expect(await first, isTrue);
+      expect(h.workspace.isSaving, isTrue);
+      now = now.add(const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 3));
+      expect(tasks.transitions['one']!.phase, TaskTransitionPhase.source);
+      expect(tasks.upcomingTasks.map((task) => task.id), contains('one'));
+      await tester.runAsync(() async {
+        secondGate.complete(jsonResponse(h.server.states['A']!.toJson()));
+        await settleAsync();
+      });
+      expect(await second, isTrue);
+      expect(h.workspace.isSaving, isFalse);
+      expect(tasks.transitions['one']!.phase, TaskTransitionPhase.source);
+      now = now.add(const Duration(milliseconds: 121));
+      await tester.pump(const Duration(milliseconds: 121));
+      expect(tasks.transitions['one']!.phase, TaskTransitionPhase.destination);
+      expect(
+        tasks.completedTasks.map((task) => task.id),
+        containsAll(['one', 'two']),
+      );
+      tasks.dispose();
+      boards.dispose();
+      h.dispose();
+    },
+  );
   testWidgets('a form keeps its draft when local acceptance fails', (
     tester,
   ) async {
@@ -324,11 +381,11 @@ void main() {
         await settleAsync();
       });
       expect(await result, isTrue);
-      now = now.add(const Duration(milliseconds: 501));
-      await tester.pump(const Duration(milliseconds: 501));
+      now = now.add(const Duration(milliseconds: 1001));
+      await tester.pump(const Duration(milliseconds: 1001));
       expect(tasks.completedTasks.map((task) => task.id), contains('one'));
-      now = now.add(const Duration(milliseconds: 381));
-      await tester.pump(const Duration(milliseconds: 381));
+      now = now.add(const Duration(milliseconds: 1001));
+      await tester.pump(const Duration(milliseconds: 1001));
       expect(tasks.transitions.locked('one'), isFalse);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
@@ -399,10 +456,10 @@ void main() {
         server.first.complete();
         await settleAsync();
       });
-      transitionTime = transitionTime.add(const Duration(milliseconds: 510));
-      await tester.pump(const Duration(milliseconds: 510));
-      transitionTime = transitionTime.add(const Duration(milliseconds: 390));
-      await tester.pump(const Duration(milliseconds: 390));
+      transitionTime = transitionTime.add(const Duration(milliseconds: 1010));
+      await tester.pump(const Duration(milliseconds: 1010));
+      transitionTime = transitionTime.add(const Duration(milliseconds: 1010));
+      await tester.pump(const Duration(milliseconds: 1010));
       expect(h.workspace.outbox!.hasFailures, isTrue);
       await tester.tap(find.text('Review'));
       await tester.pumpAndSettle();

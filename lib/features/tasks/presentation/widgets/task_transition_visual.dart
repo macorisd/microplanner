@@ -22,7 +22,8 @@ Color _color(TaskColumnKind? target) => switch (target) {
 double _fraction(Duration elapsed, Duration total) =>
     (elapsed.inMicroseconds / total.inMicroseconds).clamp(0.0, 1.0);
 
-double _strength(TaskVisual state, DateTime now) {
+@visibleForTesting
+double taskTransitionStrength(TaskVisual state, DateTime now) {
   final base = _fraction(
     now.difference(state.started),
     TaskTransitions.baseDuration,
@@ -129,7 +130,7 @@ class _NebulaPainter extends CustomPainter {
                   visual.phase == TaskTransitionPhase.creating
               ? 0.45
               : 0.0)
-        : _strength(visual, DateTime.now());
+        : taskTransitionStrength(visual, DateTime.now());
     if (strength <= 0) return;
     final color = _color(visual.target);
     final bounds = Offset.zero & size;

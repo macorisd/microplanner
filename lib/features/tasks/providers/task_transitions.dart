@@ -1,6 +1,7 @@
 import 'dart:async';
 import '../../../core/data/workspace_operation.dart';
 import '../../../core/data/workspace_snapshot.dart';
+import '../../../core/theme/app_motion.dart';
 import '../data/models/task.dart';
 
 enum TaskColumnKind { completed, late, upcoming }
@@ -35,8 +36,8 @@ class TaskTransition {
 
 /// Tracks transitions independently of rendered rows, scroll position and page.
 class TaskTransitions {
-  static const baseDuration = Duration(milliseconds: 500);
-  static const settleDuration = Duration(milliseconds: 380);
+  static const baseDuration = Duration(seconds: 1);
+  static const settleDuration = Duration(seconds: 1);
   final DateTime Function() now;
   final void Function() changed;
   final Map<String, TaskTransition> _items = {};
@@ -44,6 +45,8 @@ class TaskTransitions {
   DateTime? _previousAt;
   String? _owner;
   Timer? _timer;
+  bool _syncing = false;
+  DateTime? _noticeClearedAt;
   int revision = 0;
 
   TaskTransitions({required this.now, required this.changed});
@@ -81,9 +84,17 @@ class TaskTransitions {
   void update(
     String? owner,
     List<Task> tasks,
-    List<WorkspaceOperation> operations,
-  ) {
+    List<WorkspaceOperation> operations, {
+    bool syncing = false,
+  }) {
     final time = now();
+    if (_syncing && !syncing) {
+      // The notice has an outgoing animation after the network queue drains.
+      _noticeClearedAt = time.add(AppMotion.fast);
+    } else if (syncing) {
+      _noticeClearedAt = null;
+    }
+    _syncing = syncing;
     if (_owner != owner) {
       _timer?.cancel();
       _items.clear();
@@ -181,6 +192,9 @@ class TaskTransitions {
   }
 
   void _advance(DateTime time) {
+    final noticeFinished =
+        !_syncing &&
+        (_noticeClearedAt == null || !time.isBefore(_noticeClearedAt!));
     for (final entry in _items.entries.toList()) {
       final t = entry.value;
       final elapsed = time.difference(t.phaseAt);
@@ -190,7 +204,7 @@ class TaskTransitions {
         revision++;
       } else if ((t.phase == TaskTransitionPhase.source ||
               t.phase == TaskTransitionPhase.creating) &&
-          (t.confirmed || t.failed) &&
+          (t.failed || (t.confirmed && noticeFinished)) &&
           time.difference(t.started) >= baseDuration) {
         if (t.failed) {
           t.phase = TaskTransitionPhase.rollback;
@@ -217,8 +231,13 @@ class TaskTransitions {
       if (t.phase == TaskTransitionPhase.rollback ||
           t.phase == TaskTransitionPhase.destination) {
         deadline = t.phaseAt.add(settleDuration);
-      } else if (t.confirmed || t.failed) {
+      } else if (t.failed || (t.confirmed && !_syncing)) {
         deadline = t.started.add(baseDuration);
+        if (!t.failed &&
+            _noticeClearedAt != null &&
+            _noticeClearedAt!.isAfter(deadline)) {
+          deadline = _noticeClearedAt;
+        }
       }
       if (deadline == null) continue;
       final remaining = deadline.difference(time);

@@ -59,7 +59,12 @@ class TasksProvider extends ChangeNotifier {
         }
       } else {
         _startupReady = true;
-        transitions.update(workspace.ownerId, current, queue.operations);
+        transitions.update(
+          workspace.ownerId,
+          current,
+          queue.operations,
+          syncing: workspace.isLoading || workspace.isSaving,
+        );
       }
     }
     final transitionChanged = _transitionRevision != transitions.revision;
