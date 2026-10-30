@@ -29,6 +29,7 @@ class WorkspaceOutbox extends ChangeNotifier {
   WorkspaceSnapshot _confirmed;
   final _operations = <WorkspaceOperation>[];
   final _results = <String, Completer<bool>>{};
+  final _durability = <String, Future<bool>>{};
   bool _alive = true;
   bool _working = false;
   Completer<void>? _idle;
@@ -62,9 +63,19 @@ class WorkspaceOutbox extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _persistInBackground() {
-    unawaited(_persist().catchError((Object _) => _storageFailed()));
+  void _persistAcceptance(WorkspaceOperation operation) {
+    final saved = _persist().then(
+      (_) => true,
+      onError: (Object _) {
+        _storageFailed();
+        return false;
+      },
+    );
+    _durability[operation.id] = saved;
   }
+
+  /// An action is accepted only after its encrypted journal write completes.
+  Future<bool> durable(String id) => _durability[id] ?? Future.value(false);
 
   WorkspaceOutbox({
     required this.owner,
@@ -211,7 +222,7 @@ class WorkspaceOutbox extends ChangeNotifier {
           'This item changed elsewhere. Review the saved draft.';
       _operations.add(operation);
       notifyListeners();
-      _persistInBackground();
+      _persistAcceptance(operation);
       return Future.value(false);
     }
     return _accept(operation);
@@ -242,7 +253,7 @@ class WorkspaceOutbox extends ChangeNotifier {
     _results[operation.id] = result;
     notifyListeners();
     // Persist every acceptance, including those queued behind a slow request.
-    _persistInBackground();
+    _persistAcceptance(operation);
     unawaited(_pump());
     return result.future;
   }
@@ -265,7 +276,7 @@ class WorkspaceOutbox extends ChangeNotifier {
     final result = Completer<bool>();
     _results[id] = result;
     notifyListeners();
-    _persistInBackground();
+    _persistAcceptance(operation);
     unawaited(_pump());
     return result.future;
   }
@@ -292,7 +303,7 @@ class WorkspaceOutbox extends ChangeNotifier {
     final result = Completer<bool>();
     _results[id] = result;
     notifyListeners();
-    _persistInBackground();
+    _persistAcceptance(operation);
     unawaited(_pump());
     return result.future;
   }
@@ -322,6 +333,7 @@ class WorkspaceOutbox extends ChangeNotifier {
 
   void _finish(WorkspaceOperation operation, bool value) {
     final result = _results.remove(operation.id);
+    _durability.remove(operation.id);
     if (result != null && !result.isCompleted) result.complete(value);
   }
 
@@ -448,6 +460,7 @@ class WorkspaceOutbox extends ChangeNotifier {
       if (!result.isCompleted) result.complete(false);
     }
     _results.clear();
+    _durability.clear();
     super.dispose();
   }
 }

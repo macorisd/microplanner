@@ -34,6 +34,26 @@ class _Cache extends MemoryCache implements WorkspaceJournal, WorkspaceHistory {
   }
 }
 
+class _GatedCache extends _Cache {
+  bool block = false;
+  bool fail = false;
+  final gate = Completer<void>();
+  Future<void> tail = Future.value();
+  @override
+  Future<void> writeJournal(String ownerId, String value) {
+    final next = tail.then((_) async {
+      if (block) {
+        block = false;
+        await gate.future;
+      }
+      if (fail) throw StateError('disk failure');
+      await super.writeJournal(ownerId, value);
+    });
+    tail = next;
+    return next;
+  }
+}
+
 class _IdempotentServer extends FakeServer {
   final committed = <String, Set<String>>{};
   @override
@@ -71,6 +91,133 @@ class _RejectFirstServer extends FakeServer {
 }
 
 void main() {
+  testWidgets('a form keeps its draft when local acceptance fails', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final cache = _GatedCache();
+    final h = Harness(cache: cache);
+    await tester.runAsync(() async {
+      await h.initialize();
+      await h.login('A');
+      await settleAsync();
+    });
+    final boards = BoardsProvider(h.workspace);
+    final tasks = TasksProvider(h.workspace, boards);
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<WorkspaceController>.value(value: h.workspace),
+          ChangeNotifierProvider<BoardsProvider>.value(value: boards),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => AddTaskDialog(onSave: tasks.addTask),
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Keep this draft');
+    await tester.pump();
+    cache.fail = true;
+    await tester.tap(find.text('Create Task'));
+    await tester.runAsync(settleAsync);
+    await tester.pump();
+    expect(find.byType(AddTaskDialog), findsOneWidget);
+    expect(
+      tester
+          .widget<TextFormField>(find.byType(TextFormField).first)
+          .controller!
+          .text,
+      'Keep this draft',
+    );
+    expect(find.textContaining('could not be stored'), findsOneWidget);
+    expect(h.server.writes, 0);
+    await tester.pumpWidget(const SizedBox());
+    tasks.dispose();
+    boards.dispose();
+    h.dispose();
+  });
+  testWidgets('a form waits only for durable local acceptance before closing', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final cache = _GatedCache();
+    final h = Harness(cache: cache);
+    await tester.runAsync(() async {
+      await h.initialize();
+      await h.login('A');
+      await settleAsync();
+    });
+    final boards = BoardsProvider(h.workspace);
+    final tasks = TasksProvider(h.workspace, boards);
+    final network = Completer<http.Response>();
+    h.server.nextWrite = network;
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<WorkspaceController>.value(value: h.workspace),
+          ChangeNotifierProvider<BoardsProvider>.value(value: boards),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => AddTaskDialog(onSave: tasks.addTask),
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Durable draft');
+    await tester.pump();
+    cache.block = true;
+    await tester.tap(find.text('Create Task'));
+    await tester.pump();
+    expect(find.byType(AddTaskDialog), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(h.server.writes, 0);
+    await tester.runAsync(() async {
+      cache.gate.complete();
+      await settleAsync();
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.byType(AddTaskDialog), findsNothing);
+    expect(h.workspace.outbox!.hasPending, isTrue);
+    await tester.runAsync(() async {
+      await settleAsync();
+      network.complete(jsonResponse(h.server.states['A']!.toJson()));
+      await settleAsync();
+    });
+    await tester.pumpWidget(const SizedBox());
+    tasks.dispose();
+    boards.dispose();
+    h.dispose();
+  });
   test(
     'startup compares the cached observation with the first cloud snapshot',
     () async {

@@ -7,8 +7,9 @@ mixin PendingActionState<T extends StatefulWidget> on State<T> {
   bool isSubmitting = false;
   String? submissionError;
   bool _closing = false;
+  bool _accepting = false;
   bool _pickerOpen = false;
-  bool get actionBlocked => isSubmitting || _closing;
+  bool get actionBlocked => isSubmitting || _accepting || _closing;
   Future<R?> pickOnce<R>(Future<R?> Function() open) async {
     if (actionBlocked || _pickerOpen) return null;
     _pickerOpen = true;
@@ -39,23 +40,38 @@ mixin PendingActionState<T extends StatefulWidget> on State<T> {
     try {
       final workspace = context.read<WorkspaceController?>();
       final queue = workspace?.outbox;
-      final before = queue?.operations.length;
-      final failedBefore = queue?.operations
-          .where((item) => item.failure != null)
-          .length;
+      final before = {
+        for (final item in queue?.operations ?? [])
+          item.id: item.failure != null,
+      };
       final future = action();
-      // Only dismiss after an intent has actually been accepted into the
-      // account-scoped queue. Validation failures keep the form open.
+      final accepted = queue?.operations
+          .where(
+            (item) =>
+                !before.containsKey(item.id) ||
+                (before[item.id] == true && item.failure == null),
+          )
+          .firstOrNull;
       if (queue != null &&
-          identical(queue, workspace?.outbox) &&
-          (queue.operations.length > before! ||
-              queue.operations.where((item) => item.failure != null).length <
-                  failedBefore!)) {
-        saved = true;
-        // The route is about to close; do not show its old inline spinner
-        // during the exit animation. The cloud notice owns progress now.
-        isSubmitting = false;
+          accepted != null &&
+          identical(queue, workspace?.outbox)) {
+        // The cloud notice owns progress; briefly keep input locked while the
+        // encrypted local write completes, before the route can be dismissed.
         future.catchError((Object _) => false);
+        setState(() {
+          isSubmitting = false;
+          _accepting = true;
+        });
+        final stored = await queue.durable(accepted.id);
+        _accepting = false;
+        if (!stored || !identical(queue, workspace?.outbox)) {
+          if (mounted) {
+            submissionError =
+                'The action could not be stored on this device. Your draft is still here.';
+          }
+          return false;
+        }
+        saved = true;
         return true;
       }
       saved = await future;
@@ -72,7 +88,10 @@ mixin PendingActionState<T extends StatefulWidget> on State<T> {
       return false;
     } finally {
       if (mounted && (!saved || !lockAfterSuccess)) {
-        setState(() => isSubmitting = false);
+        setState(() {
+          isSubmitting = false;
+          _accepting = false;
+        });
       }
     }
   }
