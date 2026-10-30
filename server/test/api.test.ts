@@ -114,6 +114,28 @@ test('retries are idempotent and stale or concurrent edits do not overwrite data
   assert.deepEqual(results.map(r => r.statusCode).sort(), [200, 409]);
   assert.equal((await state(token)).revision, 2);
 });
+test('a delayed retry stays idempotent after more than fifty later saves', async () => {
+  const { token } = await login();
+  const first = await state(token);
+  const operation = randomUUID();
+  first.boards[0]!.name = 'Initial operation';
+  assert.equal((await save(token, first, operation)).statusCode, 200);
+  for (let i = 0; i < 52; i++) {
+    const current = await state(token);
+    current.boards[0]!.name = `Later change ${i}`;
+    assert.equal((await save(token, current)).statusCode, 200);
+  }
+  const beforeRetry = await state(token);
+  const retry = await save(token, first, operation);
+  assert.equal(retry.statusCode, 200, retry.body);
+  assert.deepEqual(await state(token), beforeRetry);
+  const changedPayload = structuredClone(first);
+  changedPayload.boards[0]!.name = 'Different operation';
+  const mismatch = await save(token, changedPayload, operation);
+  assert.equal(mismatch.statusCode, 409);
+  assert.equal(mismatch.json().code, 'operation_id_reused');
+  assert.deepEqual(await state(token), beforeRetry);
+});
 test('invalid domain values and duplicate or cross-board references are rejected', async () => {
   const { token } = await login(); const original = await state(token);
   original.boards.push({ ...original.boards[0]! });
