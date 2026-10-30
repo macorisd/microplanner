@@ -18,6 +18,119 @@ import 'support/fakes.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_date_picker.dart';
 
 void main() {
+  testWidgets('Windows edit opens without selecting a text field', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final f = _Fixture();
+    await tester.runAsync(f.initialize);
+    await _open(
+      tester,
+      f,
+      EditTaskDialog(task: f.task, onSave: (_) async => true),
+    );
+    for (final editable in tester.widgetList<EditableText>(
+      find.byType(EditableText),
+    )) {
+      expect(editable.focusNode.hasFocus, isFalse);
+    }
+    expect(tester.testTextInput.isVisible, isFalse);
+    await tester.tap(find.byType(TextFormField).first);
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
+    await tester.pumpWidget(const SizedBox());
+    f.dispose();
+  });
+
+  for (final editing in [false, true]) {
+    testWidgets(
+      'Windows Ctrl+Enter in ${editing ? 'edit' : 'create'} description submits once only when enabled',
+      (tester) async {
+        tester.view.physicalSize = const Size(900, 1100);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final f = _Fixture();
+        await tester.runAsync(f.initialize);
+        final pending = Completer<bool>();
+        var calls = 0;
+        Future<bool> save() {
+          calls++;
+          return pending.future;
+        }
+
+        final Widget dialog = editing
+            ? EditTaskDialog(task: f.task, onSave: (_) => save())
+            : AddTaskDialog(
+                onSave:
+                    ({
+                      required name,
+                      required deadline,
+                      required type,
+                      required priority,
+                      subjectId,
+                      description,
+                    }) => save(),
+              );
+        await _open(tester, f, dialog);
+        final description = find.byType(TextFormField).last;
+        await tester.tap(description);
+        await tester.pump();
+        Future<void> shortcut() async {
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+          await tester.pump();
+        }
+
+        await shortcut();
+        expect(
+          calls,
+          0,
+          reason: 'The unchanged or incomplete form is disabled.',
+        );
+        if (!editing) {
+          await tester.enterText(find.byType(TextFormField).first, 'New task');
+        }
+        await tester.enterText(description, 'First line');
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(
+          calls,
+          0,
+          reason: 'Plain Enter must never submit a description.',
+        );
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(
+            text: 'First line\n',
+            selection: TextSelection.collapsed(offset: 11),
+          ),
+        );
+        await tester.pump();
+        expect(
+          tester.widget<TextFormField>(description).controller!.text,
+          'First line\n',
+        );
+        await shortcut();
+        expect(calls, 1);
+        await shortcut();
+        expect(
+          calls,
+          1,
+          reason: 'An in-flight submission cannot be duplicated.',
+        );
+        pending.complete(false);
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(const SizedBox());
+        f.dispose();
+      },
+    );
+  }
+
   for (final form in [
     'new task',
     'edit task',

@@ -24,7 +24,7 @@ void main() {
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
     for (final (title, color, background, icon) in [
       (
-        'Complete',
+        'Completed',
         AppColors.completeHeader,
         AppColors.completeHeaderLight,
         Icons.check_circle_rounded,

@@ -49,6 +49,10 @@ class _AddTaskDialogState extends State<AddTaskDialog>
   TaskPriority _priority = TaskPriority.low;
   String? _selectedSubjectId;
   bool get _isLoading => actionBlocked;
+  bool get _canSubmit =>
+      !_isLoading &&
+      WorkspaceLimits.nameError(_nameController.text) == null &&
+      WorkspaceLimits.descriptionError(_descriptionController.text) == null;
 
   void _textChanged() {
     if (mounted) setState(() {});
@@ -70,7 +74,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
   }
 
   Future<void> _submit() async {
-    if (_isLoading) return;
+    if (!_canSubmit) return;
     if (!_formKey.currentState!.validate()) return;
 
     // Combine date and time
@@ -124,6 +128,12 @@ class _AddTaskDialogState extends State<AddTaskDialog>
           onKeyEvent: (node, event) {
             if (event is KeyDownEvent &&
                 event.logicalKey == LogicalKeyboardKey.enter) {
+              if (Theme.of(context).platform == TargetPlatform.windows &&
+                  _descriptionFocusNode.hasFocus &&
+                  HardwareKeyboard.instance.isControlPressed) {
+                _submit();
+                return KeyEventResult.handled;
+              }
               if (!_descriptionFocusNode.hasFocus) {
                 _submit();
                 return KeyEventResult.handled;
@@ -251,18 +261,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
                           child: const Text('Cancel'),
                         ),
                         ElevatedButton(
-                          onPressed:
-                              _isLoading ||
-                                  WorkspaceLimits.nameError(
-                                        _nameController.text,
-                                      ) !=
-                                      null ||
-                                  WorkspaceLimits.descriptionError(
-                                        _descriptionController.text,
-                                      ) !=
-                                      null
-                              ? null
-                              : _submit,
+                          onPressed: _canSubmit ? _submit : null,
                           child: isSubmitting
                               ? const SizedBox(
                                   width: 20,

@@ -158,9 +158,7 @@ class DashboardScreen extends StatelessWidget {
     );
     return [
       column(
-        Theme.of(context).platform == TargetPlatform.android
-            ? 'Completed'
-            : 'Complete',
+        'Completed',
         (provider) => provider.completedTasks,
         AppColors.completeHeader,
         AppColors.completeHeaderLight,
@@ -233,7 +231,7 @@ class DashboardScreen extends StatelessWidget {
     await showMotionDialog(
       context: context,
       builder: (_) => ActionConfirmationDialog(
-        title: 'Clear Complete Tasks',
+        title: 'Clear Completed Tasks',
         message:
             'Delete $count completed ${count == 1 ? 'task' : 'tasks'} from "${board.name}"?',
         actionLabel: 'Clear',

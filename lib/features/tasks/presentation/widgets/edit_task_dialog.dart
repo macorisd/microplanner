@@ -42,6 +42,11 @@ class _EditTaskDialogState extends State<EditTaskDialog>
   late TaskPriority _priority;
   String? _selectedSubjectId;
   bool get _isLoading => actionBlocked;
+  bool get _canSubmit =>
+      !_isLoading &&
+      _hasChanges &&
+      WorkspaceLimits.nameError(_nameController.text) == null &&
+      WorkspaceLimits.descriptionError(_descriptionController.text) == null;
 
   void _textChanged() {
     if (mounted) setState(() {});
@@ -90,7 +95,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
   }
 
   Future<void> _submit() async {
-    if (_isLoading || !_hasChanges) return;
+    if (!_canSubmit) return;
     if (!_formKey.currentState!.validate()) return;
 
     final deadlineWithTime = _selectedDeadline;
@@ -163,6 +168,12 @@ class _EditTaskDialogState extends State<EditTaskDialog>
           onKeyEvent: (node, event) {
             if (event is KeyDownEvent &&
                 event.logicalKey == LogicalKeyboardKey.enter) {
+              if (Theme.of(context).platform == TargetPlatform.windows &&
+                  _descriptionFocusNode.hasFocus &&
+                  HardwareKeyboard.instance.isControlPressed) {
+                _submit();
+                return KeyEventResult.handled;
+              }
               if (!_descriptionFocusNode.hasFocus) {
                 _submit();
                 return KeyEventResult.handled;
@@ -225,7 +236,6 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                         hintText: 'e.g., Math homework chapter 5',
                       ),
                       validator: WorkspaceLimits.nameError,
-                      autofocus: !touch,
                       onSubmitted: (_) => _submit(),
                     ),
                     const SizedBox(height: AppTheme.spacingMedium),
@@ -290,19 +300,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                           child: const Text('Cancel'),
                         ),
                         ElevatedButton(
-                          onPressed:
-                              _isLoading ||
-                                  WorkspaceLimits.nameError(
-                                        _nameController.text,
-                                      ) !=
-                                      null ||
-                                  WorkspaceLimits.descriptionError(
-                                        _descriptionController.text,
-                                      ) !=
-                                      null ||
-                                  !_hasChanges
-                              ? null
-                              : _submit,
+                          onPressed: _canSubmit ? _submit : null,
                           child: isSubmitting
                               ? const SizedBox(
                                   width: 20,
