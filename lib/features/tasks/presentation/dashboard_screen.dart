@@ -195,7 +195,10 @@ class DashboardScreen extends StatelessWidget {
     final provider = context.read<TasksProvider>();
     showMotionDialog(
       context: context,
-      builder: (_) => EditTaskDialog(task: task, onSave: provider.updateTask),
+      builder: (_) => EditTaskDialog(
+        task: task,
+        onSave: (updated) => provider.updateTask(updated, original: task),
+      ),
     );
   }
 

@@ -96,12 +96,19 @@ not permit unencrypted HTTP; the exception exists only in the debug manifest.
 MongoDB is accessed **only by the API** using the `readWrite` role restricted to
 the configured database. Boards, subjects and tasks have an `ownerId` generated
 from the authenticated session; clients cannot set it. Workspace snapshots save
-in a MongoDB transaction with revision checks and idempotency keys. Conflicting
-edits reload the remote version and report that the stale edit was not saved.
+in a MongoDB transaction with revision checks and durable idempotency receipts.
+Conflicting edits are rebased only when they do not overwrite a remotely changed
+field; overlapping changes are retained for review. Receipt records are retained
+without an automatic expiry so an interrupted request remains safe to retry even
+after many later saves.
 
 The UI loads on sign-in, on app resume and on explicit refresh. Changes are
 visible on another device after reload; this version does not push live updates.
-Writes require a connection to the API. Only confirmed remote data are cached,
+New writes require a connection to the API. Accepted actions are queued in an
+encrypted, account-scoped journal and resume only for the same account after a
+restart or sign-in. An unconfirmed network outcome remains pending rather than
+being treated as a failure. Definitive failures appear in the cloud notice, with
+safe retry or draft review where applicable. Confirmed remote data are cached,
 encrypted with a distinct Hive key per user. Keys and session tokens use platform
 secure storage. Logout immediately clears visible state; when offline, the API
 session revocation is retained securely for retry. Unexpired local sessions may

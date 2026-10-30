@@ -50,6 +50,126 @@ final _clear = find.byWidgetPredicate(
 
 void main() {
   testWidgets(
+    'inserting a task above the viewport preserves the visible anchor',
+    (tester) async {
+      _viewport(tester, TargetPlatform.android);
+      final f = _Fixture();
+      await tester.runAsync(f.initialize);
+      var entries = [for (var i = 0; i < 35; i++) task('row$i')];
+      late StateSetter update;
+      await tester.pumpWidget(
+        f.app(
+          TargetPlatform.android,
+          StatefulBuilder(
+            builder: (context, setState) {
+              update = setState;
+              return Scaffold(
+                body: TaskColumn(
+                  title: 'Upcoming',
+                  tasks: entries,
+                  headerColor: Colors.blue,
+                  headerBackgroundColor: Colors.blue.shade50,
+                  icon: Icons.schedule,
+                  onToggleComplete: (_) {},
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(AnimatedList), const Offset(0, -1300));
+      await tester.pumpAndSettle();
+      final viewport = tester.getRect(find.byType(AnimatedList));
+      final visible = tester.widgetList<TaskCard>(find.byType(TaskCard)).where((
+        card,
+      ) {
+        final rect = tester.getRect(find.byWidget(card));
+        return rect.top >= viewport.top && rect.bottom <= viewport.bottom;
+      }).first;
+      final before = tester.getTopLeft(find.byWidget(visible)).dy;
+      update(() {
+        entries = [task('inserted'), ...entries];
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 160));
+      final after = tester
+          .getTopLeft(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is TaskCard && widget.task.id == visible.task.id,
+            ),
+          )
+          .dy;
+      expect(after, closeTo(before, 2));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      f.dispose();
+    },
+  );
+  testWidgets(
+    'removing a task above the viewport preserves the visible anchor',
+    (tester) async {
+      _viewport(tester, TargetPlatform.android);
+      final f = _Fixture();
+      await tester.runAsync(f.initialize);
+      var entries = [for (var i = 0; i < 35; i++) task('row$i')];
+      late StateSetter update;
+      await tester.pumpWidget(
+        f.app(
+          TargetPlatform.android,
+          StatefulBuilder(
+            builder: (context, setState) {
+              update = setState;
+              return Scaffold(
+                body: TaskColumn(
+                  title: 'Upcoming',
+                  tasks: entries,
+                  headerColor: Colors.blue,
+                  headerBackgroundColor: Colors.blue.shade50,
+                  icon: Icons.schedule,
+                  onToggleComplete: (_) {},
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(AnimatedList), const Offset(0, -1300));
+      await tester.pumpAndSettle();
+      final viewport = tester.getRect(find.byType(AnimatedList));
+      final visible = tester.widgetList<TaskCard>(find.byType(TaskCard)).where((
+        card,
+      ) {
+        final rect = tester.getRect(find.byWidget(card));
+        return rect.top >= viewport.top && rect.bottom <= viewport.bottom;
+      }).first;
+      final before = tester.getTopLeft(find.byWidget(visible)).dy;
+      update(() {
+        entries = entries.sublist(1);
+      });
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 160));
+      final after = tester
+          .getTopLeft(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is TaskCard && widget.task.id == visible.task.id,
+            ),
+          )
+          .dy;
+      expect(after, closeTo(before, 2));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      f.dispose();
+    },
+  );
+  testWidgets(
     'large clear removes the list without retaining hundreds of outgoing controls',
     (tester) async {
       _viewport(tester, TargetPlatform.windows);

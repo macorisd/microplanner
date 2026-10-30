@@ -13,10 +13,56 @@ import 'package:microplanner/features/tasks/presentation/account_dashboard.dart'
 import 'package:microplanner/features/tasks/presentation/widgets/task_card.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/android_board_carousel.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_column.dart';
+import 'package:microplanner/features/tasks/presentation/widgets/cloud_status_card.dart';
 import 'package:microplanner/features/tasks/providers/tasks_provider.dart';
 import 'support/fakes.dart';
 
 void main() {
+  testWidgets('a busy cloud notice does not intercept workspace gestures', (
+    tester,
+  ) async {
+    final f = _Fixture();
+    await tester.runAsync(f.initialize);
+    var taps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 100,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => taps++,
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: CloudStatusCard(workspace: f.h.workspace),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    final gate = Completer<http.Response>();
+    f.h.server.nextRead = gate;
+    final refresh = f.h.workspace.refresh();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Loading your data'), findsOneWidget);
+    await tester.tap(find.text('Loading your data'), warnIfMissed: false);
+    expect(taps, 1);
+    gate.complete(jsonResponse(f.h.server.states['A']!.toJson()));
+    await tester.runAsync(() async => refresh);
+    await tester.pumpWidget(const SizedBox());
+    f.dispose();
+  });
   for (final (width, scale) in [
     (320.0, 1.0),
     (393.0, 1.0),

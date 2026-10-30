@@ -5,6 +5,9 @@ import { ApiError, assertWorkspaceSize, dataSchema, type Profile, type Workspace
 type User = Profile & { _id: string; googleSub: string; revision: number; operations: string[] };
 type Session = { _id: string; ownerId: string; expiresAt: Date };
 type Owned<T> = T & { _id: string; ownerId: string };
+type OperationReceipt = {
+  _id: string; ownerId: string; operationId: string; digest: string; committedAt: Date;
+};
 type Challenge = {
   _id: string; nonce: string; codeChallenge: string; redirectUri: string; expiresAt: Date;
 };
@@ -27,6 +30,8 @@ export class Repository {
     await this.sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
     await this.challenges.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
     await this.db.collection('requestLimits').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+    await this.db.collection<OperationReceipt>('operationReceipts')
+      .createIndex({ ownerId: 1, operationId: 1 }, { unique: true });
     for (const kind of ['boards', 'subjects', 'tasks']) {
       await this.db.collection(kind).createIndex({ ownerId: 1, id: 1 }, { unique: true });
       await this.db.collection(kind).createIndex({ ownerId: 1, boardId: 1 });
@@ -142,6 +147,16 @@ export class Repository {
     return this.client.withSession(session => session.withTransaction(async () => {
       const user = await this.users.findOne({ _id: ownerId }, { session });
       if (!user) throw new ApiError(401, 'unauthorized', 'Please sign in again.');
+      const receipts = this.db.collection<OperationReceipt>('operationReceipts');
+      const receiptId = hash(`${ownerId}:${operationId}`);
+      const digest = hash(JSON.stringify({ revision, data, sourceId: sourceId ?? null }));
+      const operationReceipt = await receipts.findOne({ _id: receiptId, ownerId }, { session });
+      if (operationReceipt) {
+        if (operationReceipt.digest !== digest) {
+          throw new ApiError(409, 'operation_id_reused', 'This operation identifier was already used.');
+        }
+        return this.read(ownerId, session);
+      }
       if (sourceId) {
         const receipt = await this.db.collection<{ _id: string; ownerId: string }>('imports')
           .findOne({ _id: sourceId }, { session });
@@ -175,6 +190,11 @@ export class Repository {
       }
       dataSchema.parse(next);
       assertWorkspaceSize({ ...next, revision: revision + 1 });
+      // The receipt and data are committed together, so a delayed retry remains
+      // idempotent even after the legacy 50-operation history rolls over.
+      await receipts.insertOne({
+        _id: receiptId, ownerId, operationId, digest, committedAt: new Date(),
+      }, { session });
       const updated = await this.users.updateOne({ _id: ownerId, revision }, {
         $inc: { revision: 1 }, $push: { operations: { $each: [operationId], $slice: -50 } },
       }, { session });

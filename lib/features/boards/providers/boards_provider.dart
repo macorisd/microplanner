@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/data/workspace_controller.dart';
+import '../../../core/data/workspace_delta.dart';
 import '../../../core/data/same_list.dart';
 import '../data/models/board.dart';
 import '../data/models/subject.dart';
@@ -252,6 +253,7 @@ class BoardsProvider extends ChangeNotifier {
   Future<bool> addBoard({String? name}) async {
     final id = const Uuid().v4();
     final owner = workspace.ownerId;
+    final selectionVersion = _selectionVersion;
     final success = await workspace.mutate(
       (s) => s.copyWith(
         boards: [
@@ -269,19 +271,38 @@ class BoardsProvider extends ChangeNotifier {
         ],
       ),
     );
-    if (success && owner == workspace.ownerId) {
+    if (success &&
+        owner == workspace.ownerId &&
+        selectionVersion == _selectionVersion) {
       selectBoard(id);
     }
     return success;
   }
 
-  Future<bool> updateBoard(Board board) => workspace.mutate(
-    (s) => !s.boards.any((b) => b.id == board.id)
-        ? null
-        : s.copyWith(
-            boards: s.boards.map((b) => b.id == board.id ? board : b).toList(),
-          ),
-  );
+  Future<bool> updateBoard(Board board, {Board? original}) {
+    if (original != null) {
+      final snapshot = workspace.outbox?.projected ?? workspace.snapshot;
+      final others = snapshot.boards
+          .where((item) => item.id != board.id)
+          .toList();
+      return workspace.applyDelta(
+        WorkspaceDelta.between(
+          snapshot.copyWith(boards: [...others, original]),
+          snapshot.copyWith(boards: [...others, board]),
+        ),
+      );
+    }
+    return workspace.mutate(
+      (s) => !s.boards.any((b) => b.id == board.id)
+          ? null
+          : s.copyWith(
+              boards: s.boards
+                  .map((b) => b.id == board.id ? board : b)
+                  .toList(),
+            ),
+    );
+  }
+
   Future<bool> deleteBoard(String id) async {
     if (boards.length <= 1) return false;
     return workspace.mutate(
@@ -362,15 +383,30 @@ class BoardsProvider extends ChangeNotifier {
     );
   }
 
-  Future<bool> updateSubject(Subject subject) => workspace.mutate(
-    (s) => !s.subjects.any((item) => item.id == subject.id)
-        ? null
-        : s.copyWith(
-            subjects: s.subjects
-                .map((item) => item.id == subject.id ? subject : item)
-                .toList(),
-          ),
-  );
+  Future<bool> updateSubject(Subject subject, {Subject? original}) {
+    if (original != null) {
+      final snapshot = workspace.outbox?.projected ?? workspace.snapshot;
+      final others = snapshot.subjects
+          .where((item) => item.id != subject.id)
+          .toList();
+      return workspace.applyDelta(
+        WorkspaceDelta.between(
+          snapshot.copyWith(subjects: [...others, original]),
+          snapshot.copyWith(subjects: [...others, subject]),
+        ),
+      );
+    }
+    return workspace.mutate(
+      (s) => !s.subjects.any((item) => item.id == subject.id)
+          ? null
+          : s.copyWith(
+              subjects: s.subjects
+                  .map((item) => item.id == subject.id ? subject : item)
+                  .toList(),
+            ),
+    );
+  }
+
   Future<bool> deleteSubject(String id) => workspace.mutate(
     (s) => s.copyWith(
       subjects: s.subjects.where((item) => item.id != id).toList(),

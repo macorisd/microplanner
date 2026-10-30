@@ -4,6 +4,7 @@ import '../../../../core/data/workspace_controller.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/widgets/animated_app_logo.dart';
+import 'failed_actions_dialog.dart';
 
 /// A single cloud notice layered over the workspace instead of taking its space.
 class CloudStatusCard extends StatefulWidget {
@@ -36,7 +37,9 @@ class _CloudStatusCardState extends State<CloudStatusCard> {
     if (busy == _busy) return;
     _busy = busy;
     _delay?.cancel();
-    _ready = busy && (!workspace.isOnline || workspace.error != null);
+    _ready =
+        busy &&
+        (workspace.isSaving || !workspace.isOnline || workspace.error != null);
     if (busy && !_ready) {
       _delay = Timer(const Duration(milliseconds: 160), () {
         if (mounted && _busy) setState(() => _ready = true);
@@ -66,20 +69,29 @@ class _CloudStatusCardState extends State<CloudStatusCard> {
   Widget build(BuildContext context) {
     final workspace = widget.workspace;
     final busy = workspace.isLoading || workspace.isSaving;
-    final failed = !busy && (workspace.error != null || !workspace.isOnline);
-    final visible = (busy && _ready) || failed;
+    final hasFailures = workspace.outbox?.hasFailures ?? false;
+    final failed =
+        !busy &&
+        (workspace.error != null || !workspace.isOnline || hasFailures);
+    final visible = (busy && (_ready || hasFailures)) || failed;
     final title = workspace.isSaving
         ? 'Saving your changes'
         : busy
         ? 'Loading your data'
+        : hasFailures
+        ? 'Actions need attention'
         : 'Connection needs attention';
     final detail = busy
         ? (workspace.isSaving
               ? 'Keeping your workspace up to date.'
               : 'Checking your latest cloud copy.')
-        : workspace.error ?? 'Read-only local copy. Connect to edit.';
+        : workspace.error ??
+              (hasFailures
+                  ? 'Review your saved actions.'
+                  : 'Read-only local copy. Connect to edit.');
     return IgnorePointer(
-      ignoring: !visible,
+      // Progress is informational; let gestures reach the workspace beneath it.
+      ignoring: !visible || (busy && !hasFailures),
       child: MotionSwap(
         alignment: Alignment.topCenter,
         slideOffset: const Offset(0, -0.12),
@@ -147,10 +159,22 @@ class _CloudStatusCardState extends State<CloudStatusCard> {
                             ],
                           ),
                         ),
-                        if (failed)
+                        if (hasFailures && workspace.ownerId != null)
+                          TextButton(
+                            onPressed: () => showMotionDialog(
+                              context: context,
+                              builder: (_) => FailedActionsDialog(
+                                owner: workspace.ownerId!,
+                              ),
+                            ),
+                            child: const Text('Review'),
+                          )
+                        else if (failed)
                           PressFeedback(
                             child: TextButton(
-                              onPressed: workspace.refresh,
+                              onPressed: workspace.outbox?.storageError != null
+                                  ? workspace.repairStorage
+                                  : workspace.refresh,
                               child: const Text('Retry'),
                             ),
                           ),

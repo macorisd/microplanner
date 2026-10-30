@@ -38,6 +38,7 @@ class _AccountDashboardState extends State<AccountDashboard>
     if (state == AppLifecycleState.hidden ||
         state == AppLifecycleState.paused) {
       _wasInBackground = true;
+      context.read<WorkspaceController>().markSeen();
     }
     if (state == AppLifecycleState.resumed) {
       final auth = context.read<AuthService>();

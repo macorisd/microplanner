@@ -13,9 +13,23 @@ abstract interface class WorkspaceCache {
   Future<void> write(String ownerId, WorkspaceSnapshot data);
 }
 
-class EncryptedWorkspaceCache implements WorkspaceCache {
+/// Pending commands and recovery drafts live alongside the encrypted cache.
+abstract interface class WorkspaceJournal {
+  Future<String?> readJournal(String ownerId);
+  Future<void> writeJournal(String ownerId, String value);
+}
+
+/// Last observation time of the cached workspace, stored per account.
+abstract interface class WorkspaceHistory {
+  Future<DateTime?> readSeenAt(String ownerId);
+  Future<void> markSeenAt(String ownerId, DateTime time);
+}
+
+class EncryptedWorkspaceCache
+    implements WorkspaceCache, WorkspaceJournal, WorkspaceHistory {
   final PrivateStorage storage;
   final Map<String, Future<Box<String>>> _boxes = {};
+  final Map<String, Future<void>> _journalWrites = {};
   EncryptedWorkspaceCache(this.storage);
   Future<Box<String>> _box(String ownerId) =>
       _boxes.putIfAbsent(ownerId, () async {
@@ -41,7 +55,36 @@ class EncryptedWorkspaceCache implements WorkspaceCache {
 
   @override
   Future<void> write(String ownerId, WorkspaceSnapshot data) async =>
-      (await _box(ownerId)).put('snapshot', jsonEncode(data.toJson()));
+      (await _box(ownerId)).putAll({
+        'snapshot': jsonEncode(data.toJson()),
+        'seenAt': DateTime.now().toUtc().toIso8601String(),
+      });
+
+  @override
+  Future<DateTime?> readSeenAt(String ownerId) async {
+    final raw = (await _box(ownerId)).get('seenAt');
+    return raw == null ? null : DateTime.tryParse(raw)?.toLocal();
+  }
+
+  @override
+  Future<void> markSeenAt(String ownerId, DateTime time) async =>
+      (await _box(ownerId)).put('seenAt', time.toUtc().toIso8601String());
+
+  @override
+  Future<String?> readJournal(String ownerId) async {
+    await _journalWrites[ownerId];
+    return (await _box(ownerId)).get('journal');
+  }
+
+  @override
+  Future<void> writeJournal(String ownerId, String value) {
+    final previous = _journalWrites[ownerId] ?? Future<void>.value();
+    final next = previous.catchError((Object _) {}).then((_) async {
+      await (await _box(ownerId)).put('journal', value);
+    });
+    _journalWrites[ownerId] = next;
+    return next;
+  }
 }
 
 abstract interface class LegacyWorkspace {

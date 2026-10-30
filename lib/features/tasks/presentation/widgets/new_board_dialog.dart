@@ -6,7 +6,12 @@ import '../../../../core/widgets/pending_action.dart';
 
 class NewBoardDialog extends StatefulWidget {
   final Future<bool> Function(String? name) onSave;
-  const NewBoardDialog({super.key, required this.onSave});
+  final String initialName;
+  const NewBoardDialog({
+    super.key,
+    required this.onSave,
+    this.initialName = '',
+  });
   @override
   State<NewBoardDialog> createState() => _NewBoardDialogState();
 }
@@ -20,6 +25,7 @@ class _NewBoardDialogState extends State<NewBoardDialog>
   @override
   void initState() {
     super.initState();
+    _controller.text = widget.initialName;
     _controller.addListener(_textChanged);
   }
 

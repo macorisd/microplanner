@@ -21,9 +21,15 @@ import 'task_date_picker.dart';
 /// Dialog for editing an existing task
 class EditTaskDialog extends StatefulWidget {
   final Task task;
+  final Task? draft;
   final Future<bool> Function(Task updatedTask) onSave;
 
-  const EditTaskDialog({super.key, required this.task, required this.onSave});
+  const EditTaskDialog({
+    super.key,
+    required this.task,
+    required this.onSave,
+    this.draft,
+  });
 
   @override
   State<EditTaskDialog> createState() => _EditTaskDialogState();
@@ -55,18 +61,19 @@ class _EditTaskDialogState extends State<EditTaskDialog>
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.task.name);
+    final draft = widget.draft ?? widget.task;
+    _nameController = TextEditingController(text: draft.name);
     _descriptionController = TextEditingController(
-      text: widget.task.description ?? '',
+      text: draft.description ?? '',
     );
-    _deadline = widget.task.deadline;
+    _deadline = draft.deadline;
     _deadlineTime = TimeOfDay(
-      hour: widget.task.deadline.hour,
-      minute: widget.task.deadline.minute,
+      hour: draft.deadline.hour,
+      minute: draft.deadline.minute,
     );
-    _type = widget.task.type;
-    _priority = widget.task.priority;
-    _selectedSubjectId = widget.task.subjectId;
+    _type = draft.type;
+    _priority = draft.priority;
+    _selectedSubjectId = draft.subjectId;
     _nameController.addListener(_textChanged);
     _descriptionController.addListener(_textChanged);
   }
@@ -77,9 +84,9 @@ class _EditTaskDialogState extends State<EditTaskDialog>
     // Validate that the selected subject still exists
     if (_selectedSubjectId != null) {
       final boardsProvider = context.read<BoardsProvider>();
-      final subjectExists = boardsProvider.currentBoardSubjects.any(
-        (s) => s.id == _selectedSubjectId,
-      );
+      final subjectExists = boardsProvider.subjects
+          .where((s) => s.boardId == widget.task.boardId)
+          .any((s) => s.id == _selectedSubjectId);
       if (!subjectExists) {
         _selectedSubjectId = null;
       }
@@ -151,7 +158,9 @@ class _EditTaskDialogState extends State<EditTaskDialog>
     final compact = touch || MediaQuery.sizeOf(context).width < 600;
     final short = MediaQuery.sizeOf(context).height < 420;
     final boardsProvider = context.watch<BoardsProvider>();
-    final subjects = boardsProvider.currentBoardSubjects;
+    final subjects = boardsProvider.subjects
+        .where((s) => s.boardId == widget.task.boardId)
+        .toList();
     if (_selectedSubjectId != null &&
         !subjects.any((s) => s.id == _selectedSubjectId)) {
       _selectedSubjectId = null;

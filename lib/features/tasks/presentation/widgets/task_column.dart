@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/data/workspace_controller.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -307,13 +308,21 @@ class _TaskList extends StatefulWidget {
   State<_TaskList> createState() => _TaskListState();
 }
 
-class _TaskListState extends State<_TaskList> {
+class _TaskListState extends State<_TaskList>
+    with SingleTickerProviderStateMixin {
   var _listKey = GlobalKey<AnimatedListState>();
+  final _viewportKey = GlobalKey();
+  final _scroll = ScrollController();
+  final _anchors = <String, GlobalKey>{};
+  late final Ticker _anchorTicker;
+  GlobalKey? _anchor;
+  double? _anchorTop;
   late List<Task> _items;
 
   @override
   void initState() {
     super.initState();
+    _anchorTicker = createTicker(_preserveAnchor);
     _items = List.of(widget.column.tasks);
   }
 
@@ -336,6 +345,15 @@ class _TaskListState extends State<_TaskList> {
       return;
     }
     final ids = next.map((task) => task.id).toSet();
+    _captureAnchor(ids);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final current = _items.map((task) => task.id).toSet();
+        _anchors.removeWhere(
+          (id, key) => !current.contains(id) && key.currentContext == null,
+        );
+      }
+    });
     if (_items.where((task) => !ids.contains(task.id)).take(21).length > 20) {
       // Bulk removal should not create an animation/controller for every row.
       _items = List.of(next);
@@ -346,6 +364,10 @@ class _TaskListState extends State<_TaskList> {
       if (!ids.contains(_items[i].id)) _remove(state, i);
     }
     for (var i = 0; i < next.length; i++) {
+      if (i < _items.length && _items[i].id == next[i].id) {
+        _items[i] = next[i];
+        continue;
+      }
       final oldIndex = _items.indexWhere((task) => task.id == next[i].id);
       if (oldIndex == i) {
         _items[i] = next[i];
@@ -358,6 +380,73 @@ class _TaskListState extends State<_TaskList> {
         );
       }
     }
+  }
+
+  void _captureAnchor(Set<String> remaining) {
+    if (!_scroll.hasClients || _scroll.position.isScrollingNotifier.value) {
+      return;
+    }
+    final viewport = _viewportKey.currentContext?.findRenderObject();
+    if (viewport is! RenderBox || !viewport.hasSize) return;
+    final top = viewport.localToGlobal(Offset.zero).dy;
+    final bottom = top + viewport.size.height;
+    GlobalKey? selected;
+    double? selectedTop;
+    for (final item in _items) {
+      if (!remaining.contains(item.id)) continue;
+      final key = _anchors[item.id];
+      final box = key?.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize || !box.attached) continue;
+      final y = box.localToGlobal(Offset.zero).dy;
+      if (y + box.size.height <= top || y >= bottom) continue;
+      if (selectedTop == null || y < selectedTop) {
+        selected = key;
+        selectedTop = y;
+      }
+    }
+    if (selected == null) return;
+    _anchor = selected;
+    _anchorTop = selectedTop;
+    _anchorTicker.stop();
+    _anchorTicker.start();
+  }
+
+  void _preserveAnchor(Duration elapsed) {
+    if (elapsed > const Duration(milliseconds: 350)) {
+      _anchorTicker.stop();
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !_scroll.hasClients ||
+          _scroll.position.isScrollingNotifier.value) {
+        _anchorTicker.stop();
+        return;
+      }
+      final box = _anchor?.currentContext?.findRenderObject();
+      if (box is! RenderBox ||
+          !box.attached ||
+          !box.hasSize ||
+          _anchorTop == null) {
+        return;
+      }
+      final delta = box.localToGlobal(Offset.zero).dy - _anchorTop!;
+      if (delta.abs() > 0.5) {
+        final position = _scroll.position;
+        _scroll.jumpTo(
+          (position.pixels + delta).clamp(
+            position.minScrollExtent,
+            position.maxScrollExtent,
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _anchorTicker.dispose();
+    _scroll.dispose();
+    super.dispose();
   }
 
   void _remove(AnimatedListState state, int index) {
@@ -384,19 +473,22 @@ class _TaskListState extends State<_TaskList> {
       axisAlignment: -1,
       child: FadeTransition(
         opacity: animation,
-        child: TaskCard(
-          key: ValueKey(task.id),
-          task: task,
-          hoverBorderColor: column.headerColor,
-          onToggleComplete: removed
-              ? () {}
-              : () => column.onToggleComplete(task),
-          onEdit: column.onEditTask != null
-              ? (removed ? () {} : () => column.onEditTask!(task))
-              : null,
-          onDelete: column.onDeleteTask != null
-              ? (removed ? () {} : () => column.onDeleteTask!(task))
-              : null,
+        child: KeyedSubtree(
+          key: removed ? null : _anchors.putIfAbsent(task.id, GlobalKey.new),
+          child: TaskCard(
+            key: ValueKey(task.id),
+            task: task,
+            hoverBorderColor: column.headerColor,
+            onToggleComplete: removed
+                ? () {}
+                : () => column.onToggleComplete(task),
+            onEdit: column.onEditTask != null
+                ? (removed ? () {} : () => column.onEditTask!(task))
+                : null,
+            onDelete: column.onDeleteTask != null
+                ? (removed ? () {} : () => column.onDeleteTask!(task))
+                : null,
+          ),
         ),
       ),
     );
@@ -404,6 +496,7 @@ class _TaskListState extends State<_TaskList> {
 
   @override
   Widget build(BuildContext context) => Stack(
+    key: _viewportKey,
     children: [
       Positioned.fill(
         child: ScrollbarTheme(
@@ -413,6 +506,7 @@ class _TaskListState extends State<_TaskList> {
           ),
           child: AnimatedList(
             key: _listKey,
+            controller: _scroll,
             initialItemCount: _items.length,
             padding: EdgeInsets.fromLTRB(
               usesTouchControls(context) ? 8 : AppTheme.spacingMedium,

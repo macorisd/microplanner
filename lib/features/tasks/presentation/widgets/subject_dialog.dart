@@ -12,6 +12,7 @@ class SubjectDialog extends StatefulWidget {
   final String initialName;
   final int initialColor;
   final Future<bool> Function(String name, int color) onSave;
+  final bool allowUnchanged;
 
   const SubjectDialog({
     super.key,
@@ -19,6 +20,7 @@ class SubjectDialog extends StatefulWidget {
     required this.initialName,
     required this.initialColor,
     required this.onSave,
+    this.allowUnchanged = false,
   });
 
   @override
@@ -33,7 +35,8 @@ class _SubjectDialogState extends State<SubjectDialog>
   bool get _canSave =>
       !_saving &&
       WorkspaceLimits.nameError(_controller.text) == null &&
-      (_controller.text.trim() != widget.initialName.trim() ||
+      (widget.allowUnchanged ||
+          _controller.text.trim() != widget.initialName.trim() ||
           _selectedColor != widget.initialColor);
   void _textChanged() {
     if (mounted) setState(() {});
