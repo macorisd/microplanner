@@ -53,3 +53,11 @@ export function assertWorkspaceSize(workspace: Workspace) {
 export class ApiError extends Error {
   constructor(public statusCode: number, public code: string, message: string) { super(message); }
 }
+
+// Existing longer names remain readable; only creating/renaming is restricted.
+export function assertBoardNames(data: WorkspaceData, previous?: Pick<WorkspaceData, 'boards'>) {
+  const old = new Map(previous?.boards.map(board => [board.id, board.name]));
+  if (data.boards.some(board => board.name.length > 50 && old.get(board.id) !== board.name)) {
+    throw new ApiError(400, 'invalid_board_name', 'Board names must use at most 50 characters.');
+  }
+}

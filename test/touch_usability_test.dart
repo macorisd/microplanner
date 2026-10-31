@@ -58,17 +58,7 @@ void main() {
           final delete = find.byTooltip('Delete');
           TestGesture? mouse;
           if (platform == TargetPlatform.windows) {
-            expect(edit.hitTestable(), findsNothing);
-            expect(
-              tester
-                  .widget<IconButton>(
-                    find
-                        .ancestor(of: edit, matching: find.byType(IconButton))
-                        .first,
-                  )
-                  .onPressed,
-              isNull,
-            );
+            expect(edit, findsNothing);
             mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
             await mouse.addPointer(location: const Offset(700, 500));
             await mouse.moveTo(tester.getCenter(find.byType(TaskCard)));
@@ -78,12 +68,8 @@ void main() {
             expect(tester.getSize(delete).height, greaterThanOrEqualTo(48));
           }
           expect(delete.hitTestable(), findsOneWidget);
-          if (platform == TargetPlatform.windows) {
-            expect(edit.hitTestable(), findsOneWidget);
-            await tester.tap(edit);
-          } else {
-            await tester.tap(find.text('A task with a long title'));
-          }
+          expect(edit, findsNothing);
+          await tester.tap(find.text('A task with a long title'));
           await tester.tap(delete);
           expect(edits, 1);
           expect(deletes, 1);

@@ -16,6 +16,149 @@ import 'package:microplanner/features/tasks/presentation/widgets/subject_dropdow
 import 'support/fakes.dart';
 
 void main() {
+  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+    for (final editing in [false, true]) {
+      Widget form(_Fixture f, Future<bool> Function() save) => editing
+          ? EditTaskDialog(task: f.task, onSave: (_) => save())
+          : AddTaskDialog(
+              onSave:
+                  ({
+                    required name,
+                    required deadline,
+                    required type,
+                    required priority,
+                    subjectId,
+                    description,
+                  }) => save(),
+            );
+      testWidgets(
+        '$platform ${editing ? "edit" : "new"} Enter saves after every picker',
+        (tester) async {
+          _viewport(tester);
+          final f = _Fixture();
+          await tester.runAsync(f.initialize);
+          var calls = 0;
+          await _open(
+            tester,
+            f,
+            platform,
+            form(f, () async {
+              calls++;
+              return false;
+            }),
+          );
+          await tester.enterText(
+            find.byType(TextFormField).first,
+            'Changed title',
+          );
+          await tester.pump();
+          for (final picker in ['Deadline', 'Time']) {
+            await tester.tap(find.text(picker));
+            await tester.pumpAndSettle();
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+            expect(
+              calls,
+              0,
+              reason: 'Picker Enter must not submit its parent.',
+            );
+            // Depending on the picker focus, Enter may already have accepted it.
+            if (find.text('OK').evaluate().isNotEmpty) {
+              await tester.tap(find.text('OK').last);
+              await tester.pumpAndSettle();
+            }
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+            expect(
+              calls,
+              1,
+              reason: 'Enter must reach the form after $picker.',
+            );
+            calls = 0;
+          }
+          await tester.pumpWidget(const SizedBox());
+          f.dispose();
+        },
+      );
+
+      testWidgets(
+        '$platform ${editing ? "edit" : "new"} expanded description preserves draft and keyboard rules',
+        (tester) async {
+          _viewport(tester);
+          final f = _Fixture();
+          await tester.runAsync(f.initialize);
+          var calls = 0;
+          await _open(
+            tester,
+            f,
+            platform,
+            form(f, () async {
+              calls++;
+              return false;
+            }),
+          );
+          await tester.enterText(
+            find.byType(TextFormField).first,
+            'Retained task title',
+          );
+          await tester.enterText(
+            find.byType(TextFormField).last,
+            'Original draft',
+          );
+          final originalSize = tester.getSize(
+            find.byType(SingleChildScrollView).first,
+          );
+          await tester.tap(find.byTooltip('Expand description'));
+          await tester.pumpAndSettle();
+          final expanded = find.byKey(
+            const ValueKey('expanded-description-panel'),
+          );
+          expect(tester.getSize(expanded), originalSize);
+          expect(
+            find.descendant(
+              of: expanded,
+              matching: find.text('Retained task title'),
+            ),
+            findsOneWidget,
+          );
+          final description = find.descendant(
+            of: expanded,
+            matching: find.byType(TextFormField),
+          );
+          expect(description, findsOneWidget);
+          await tester.enterText(description, 'Expanded text\nSecond line');
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+          await tester.pump();
+          expect(calls, 0);
+          expect(expanded, findsOneWidget);
+          await tester.tap(find.byType(BackButton));
+          await tester.pumpAndSettle();
+          expect(find.text('Retained task title'), findsOneWidget);
+          expect(find.text('Expanded text\nSecond line'), findsOneWidget);
+          expect(tester.testTextInput.isVisible, isFalse);
+          expect(calls, 0);
+          await tester.tap(find.byTooltip('Expand description'));
+          await tester.pumpAndSettle();
+          expect(
+            find.descendant(
+              of: expanded,
+              matching: find.text('Expanded text\nSecond line'),
+            ),
+            findsOneWidget,
+          );
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+          await tester.pumpAndSettle();
+          expect(find.byTooltip('Expand description'), findsOneWidget);
+          await tester.pumpWidget(const SizedBox());
+          f.dispose();
+        },
+      );
+    }
+  }
+
   testWidgets(
     'Windows dropdowns remain usable with Tab, Space and arrow keys',
     (tester) async {

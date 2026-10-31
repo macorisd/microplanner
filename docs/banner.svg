@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title description">
+  <title id="title">microplanner</title>
+  <desc id="description">The three green, yellow and blue leaves of the app icon beside the words: A little space for everything you need to do.</desc>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1"><stop stop-color="#F0F6FD"/><stop offset=".5" stop-color="#F5F5F7"/><stop offset="1" stop-color="#F0FDF4"/></linearGradient>
+  </defs>
+  <rect width="1200" height="320" rx="32" fill="url(#background)"/>
+  <g opacity=".4" fill="none" stroke-width="2">
+    <rect x="1030" y="-70" width="154" height="380" rx="58" stroke="#8DD4A0" transform="rotate(18 1107 120)"/>
+    <rect x="1080" y="-48" width="154" height="380" rx="58" stroke="#F5D68A" transform="rotate(18 1157 142)"/>
+    <rect x="1130" y="-26" width="154" height="380" rx="58" stroke="#88B6E7" transform="rotate(18 1207 164)"/>
+  </g>
+  <g transform="translate(74 77) scale(.128)">
+    <rect width="764" height="1286" rx="340" fill="#8DD4A0"/>
+    <rect x="267" width="764" height="1286" rx="340" fill="#F5D68A"/>
+    <rect x="526" width="764" height="1286" rx="340" fill="#88B6E7"/>
+  </g>
+  <text x="282" y="145" fill="#3D4156" font-family="Segoe UI,Arial,sans-serif" font-size="64" font-weight="650" letter-spacing="-2">microplanner</text>
+  <text x="285" y="194" fill="#64697C" font-family="Segoe UI,Arial,sans-serif" font-size="23">A little space for everything you need to do.</text>
+  <g font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#5A8D84">
+    <text x="286" y="241">WINDOWS</text><circle cx="390" cy="236" r="3" fill="#8BB8E8"/>
+    <text x="410" y="241">ANDROID</text><circle cx="510" cy="236" r="3" fill="#F5D68A"/>
+    <text x="530" y="241">IN SYNC</text>
+  </g>
+</svg>

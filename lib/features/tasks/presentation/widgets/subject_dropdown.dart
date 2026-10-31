@@ -26,7 +26,10 @@ class SubjectDropdown extends StatelessWidget {
       child: DropdownButton<String?>(
         value: value,
         isExpanded: true,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded),
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: AppColors.textSecondary,
+        ),
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         items: [
           const DropdownMenuItem<String?>(

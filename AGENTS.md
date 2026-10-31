@@ -14,3 +14,9 @@
 - Keep credentials in ignored local configuration. Never commit, print, or
   package database credentials, OAuth secrets, or session tokens.
 - Preserve user data when rebuilding or updating the application.
+- PR descriptions contain only `## Changes`, with nonempty `### Major`,
+  `### Minor` and `### Patch` subsections in that order. Use one concise,
+  user-facing bullet per requested change; retain required hidden release metadata.
+- Delete residual branches belonging to merged PRs when convenient during
+  tests/builds, after verifying they contain no unpublished work. Preserve main,
+  active worktrees and unmerged branches.

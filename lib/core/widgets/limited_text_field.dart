@@ -43,6 +43,7 @@ class LimitedTextField extends StatelessWidget {
   final bool enabled;
   final int? maxLines;
   final int? minLines;
+  final bool expands;
   final FocusNode? focusNode;
   final ValueChanged<String>? onSubmitted;
   final TextStyle? style;
@@ -57,6 +58,7 @@ class LimitedTextField extends StatelessWidget {
     this.enabled = true,
     this.maxLines = 1,
     this.minLines,
+    this.expands = false,
     this.focusNode,
     this.onSubmitted,
     this.style,
@@ -70,6 +72,8 @@ class LimitedTextField extends StatelessWidget {
     enabled: enabled,
     maxLines: maxLines,
     minLines: minLines,
+    expands: expands,
+    textAlignVertical: expands ? TextAlignVertical.top : null,
     focusNode: focusNode,
     style: style,
     keyboardType: keyboardType,

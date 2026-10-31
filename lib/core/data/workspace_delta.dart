@@ -118,7 +118,9 @@ class WorkspaceDelta {
     }
     try {
       final snapshot = WorkspaceSnapshot.fromJson(result);
-      return WorkspaceLimits.validate(snapshot) == null ? snapshot : null;
+      return WorkspaceLimits.validate(snapshot, previous: current) == null
+          ? snapshot
+          : null;
     } catch (_) {
       return null;
     }

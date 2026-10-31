@@ -373,7 +373,10 @@ class WorkspaceController extends ChangeNotifier {
   }
 
   Future<bool> _save(WorkspaceSnapshot data, {String? sourceId}) async {
-    final validationError = WorkspaceLimits.validate(data);
+    final validationError = WorkspaceLimits.validate(
+      data,
+      previous: sourceId == null ? _snapshot : null,
+    );
     if (validationError != null) {
       _error = validationError;
       notifyListeners();

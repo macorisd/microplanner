@@ -350,7 +350,7 @@ class _BoardCardState extends State<_BoardCard>
 
   Future<void> _finishEditing() async {
     if (isSubmitting ||
-        WorkspaceLimits.nameError(_nameController.text) != null) {
+        WorkspaceLimits.boardNameError(_nameController.text) != null) {
       return;
     }
     final newName = _nameController.text.trim();
@@ -473,8 +473,8 @@ class _BoardCardState extends State<_BoardCard>
                             child: _isEditing
                                 ? LimitedTextField(
                                     key: const ValueKey('editing'),
-                                    limit: WorkspaceLimits.name,
-                                    validator: WorkspaceLimits.nameError,
+                                    limit: WorkspaceLimits.boardName,
+                                    validator: WorkspaceLimits.boardNameError,
                                     enabled: !isSubmitting,
                                     controller: _nameController,
                                     autofocus: true,

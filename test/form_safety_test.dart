@@ -18,6 +18,42 @@ import 'support/fakes.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_date_picker.dart';
 
 void main() {
+  testWidgets('new board limits pasted titles to 50 characters', (
+    tester,
+  ) async {
+    final f = _Fixture();
+    await tester.runAsync(f.initialize);
+    String? saved;
+    await _open(
+      tester,
+      f,
+      NewBoardDialog(
+        onSave: (name) async {
+          saved = name;
+          return true;
+        },
+      ),
+    );
+    await tester.enterText(
+      find.byType(TextFormField),
+      List.filled(51, 'x').join(),
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<TextFormField>(find.byType(TextFormField))
+          .controller!
+          .text
+          .length,
+      50,
+    );
+    await tester.tap(find.text('Create'));
+    await tester.pumpAndSettle();
+    expect(saved?.length, 50);
+    await tester.pumpWidget(const SizedBox());
+    f.dispose();
+  });
+
   testWidgets('Windows edit opens without selecting a text field', (
     tester,
   ) async {

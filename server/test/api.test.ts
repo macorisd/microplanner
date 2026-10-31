@@ -266,3 +266,26 @@ test('runtime retries initialization failures and shares initialization across w
     assert.equal(initializations, 2);
   } finally { await runtime.close(); t.mock.restoreAll(); }
 });
+
+
+test('board title limits apply to writes without blocking unchanged legacy titles', async () => {
+  const { token, user } = await login();
+  const original = await state(token);
+  original.boards[0]!.name = 'a'.repeat(51);
+  assert.equal((await save(token, original)).statusCode, 400);
+  assert.equal((await state(token)).revision, 0);
+  original.boards[0]!.name = 'a'.repeat(50);
+  assert.equal((await save(token, original)).statusCode, 200);
+  await repo.db.collection('boards').updateOne({ ownerId: user.id, id: 'default-board' }, { $set: { name: 'legacy'.repeat(20) } });
+  const legacy = await state(token);
+  legacy.subjects.push({ id: 'new-subject', name: 'Math', boardId: 'default-board', color: 7 });
+  assert.equal((await save(token, legacy)).statusCode, 200);
+  const renamed = await state(token);
+  renamed.boards[0]!.name = 'b'.repeat(51);
+  assert.equal((await save(token, renamed)).statusCode, 400);
+  assert.equal((await state(token)).boards[0]!.name, 'legacy'.repeat(20));
+  const imported = { boards: [{ ...renamed.boards[0]!, id: 'another-board' }], tasks: [], subjects: [] };
+  assert.equal((await app.inject({ method: 'POST', url: '/workspace/import', headers: headers(token),
+    payload: { revision: renamed.revision, operationId: randomUUID(), sourceId: randomUUID(), data: imported } })).statusCode, 400);
+  assert.equal((await state(token)).boards.length, 1);
+});

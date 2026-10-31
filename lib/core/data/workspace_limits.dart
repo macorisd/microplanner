@@ -5,6 +5,7 @@ import 'workspace_snapshot.dart';
 class WorkspaceLimits {
   WorkspaceLimits._();
   static const name = 300;
+  static const boardName = 50;
   static const description = 20000;
   static const boards = 300;
   static const subjects = 3000;
@@ -19,6 +20,14 @@ class WorkspaceLimits {
     return null;
   }
 
+  static String? boardNameError(String? value) {
+    final error = nameError(value);
+    if (error != null) return error;
+    return value!.trim().length > boardName
+        ? 'Use at most $boardName characters.'
+        : null;
+  }
+
   static String? descriptionError(String? value) =>
       (value?.length ?? 0) > description
       ? 'Use at most $description characters.'
@@ -30,7 +39,10 @@ class WorkspaceLimits {
       date.toUtc().year >= 1 &&
       date.toUtc().year <= 9999;
 
-  static String? validate(WorkspaceSnapshot data) {
+  static String? validate(
+    WorkspaceSnapshot data, {
+    WorkspaceSnapshot? previous,
+  }) {
     if (data.revision < 0 || data.revision >= 9007199254740991) {
       return 'Invalid workspace revision. Refresh and try again.';
     }
@@ -53,7 +65,15 @@ class WorkspaceLimits {
           !validDate(board.createdAt)) {
         return 'Invalid board data. Refresh and try again.';
       }
-      final error = nameError(board.name);
+      // Unchanged legacy names never block unrelated saves or get truncated.
+      final unchanged =
+          previous?.boards.any(
+            (old) => old.id == board.id && old.name == board.name,
+          ) ??
+          false;
+      final error = unchanged
+          ? nameError(board.name)
+          : boardNameError(board.name);
       if (error != null) return 'Board name: $error';
     }
     for (final subject in data.subjects) {

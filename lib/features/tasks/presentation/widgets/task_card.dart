@@ -14,7 +14,7 @@ import '../../data/models/task.dart';
 import '../../providers/tasks_provider.dart';
 import 'task_transition_visual.dart';
 
-/// Android edits through the card; completion and deletion stay independent.
+/// Tasks edit through the card; completion and deletion stay independent.
 class TaskCard extends StatefulWidget {
   final Task task;
   final FutureOr<void> Function() onToggleComplete;
@@ -97,12 +97,9 @@ class _TaskCardState extends State<TaskCard> {
               workspace?.outbox?.pendingTaskIds.contains(widget.task.id) ??
               false,
         );
-    final android = Theme.of(context).platform == TargetPlatform.android;
-    final showEdit = !android && widget.onEdit != null;
     final task = widget.task;
-    final hasActions = showEdit || widget.onDelete != null;
-    final actionWidth =
-        48.0 * ((showEdit ? 1 : 0) + (widget.onDelete != null ? 1 : 0));
+    final hasActions = widget.onDelete != null;
+    final actionWidth = widget.onDelete != null ? 48.0 : 0.0;
     final actions = ValueListenableBuilder<bool>(
       valueListenable: _hovered,
       builder: (context, hovered, _) {
@@ -117,13 +114,6 @@ class _TaskCardState extends State<TaskCard> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (showEdit)
-                    _ActionButton(
-                      icon: Icons.edit_outlined,
-                      tooltip: 'Edit',
-                      onPressed: showActions && !pending ? widget.onEdit : null,
-                      touch: touch,
-                    ),
                   if (widget.onDelete != null)
                     _ActionButton(
                       icon: Icons.delete_outline_rounded,
@@ -193,9 +183,7 @@ class _TaskCardState extends State<TaskCard> {
           child: Builder(
             builder: (context) {
               final content = InkWell(
-                onTap: pending
-                    ? null
-                    : (android ? widget.onEdit ?? widget.onTap : widget.onTap),
+                onTap: pending ? null : (widget.onEdit ?? widget.onTap),
                 borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
                 child: Stack(
                   children: [
