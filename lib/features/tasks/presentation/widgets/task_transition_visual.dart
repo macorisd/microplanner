@@ -10,6 +10,7 @@ typedef TaskVisual = ({
   bool afterCompleted,
   DateTime started,
   DateTime phaseAt,
+  TaskTransitionCarry? carry,
 });
 
 Color _color(TaskColumnKind? target) => switch (target) {
@@ -22,6 +23,40 @@ Color _color(TaskColumnKind? target) => switch (target) {
 double _fraction(Duration elapsed, Duration total) =>
     (elapsed.inMicroseconds / total.inMicroseconds).clamp(0.0, 1.0);
 
+double _destinationStrength(DateTime phaseAt, DateTime at) =>
+    1 -
+    Curves.easeOutCubic.transform(
+      _fraction(
+        at.difference(phaseAt) - TaskTransitions.destinationHoldDuration,
+        TaskTransitions.destinationDuration -
+            TaskTransitions.destinationHoldDuration,
+      ),
+    );
+
+double _creationStrength(DateTime started, DateTime confirmedAt, DateTime at) {
+  final hold = started.add(
+    TaskTransitions.standaloneDuration - TaskTransitions.settleDuration,
+  );
+  final fadeAt = confirmedAt.isAfter(hold) ? confirmedAt : hold;
+  return Curves.easeOutCubic.transform(
+        _fraction(at.difference(started), TaskTransitions.baseDuration),
+      ) *
+      (1 -
+          Curves.easeOutCubic.transform(
+            _fraction(at.difference(fadeAt), TaskTransitions.settleDuration),
+          ));
+}
+
+@visibleForTesting
+double taskTransitionCarryStrength(TaskVisual state, DateTime now) {
+  final carry = state.carry;
+  if (state.phase != TaskTransitionPhase.source || carry == null) return 0;
+  final captured = carry.phase == TaskTransitionPhase.creationFinish
+      ? _creationStrength(carry.started, carry.destinationAt, carry.capturedAt)
+      : _destinationStrength(carry.destinationAt, carry.capturedAt);
+  return captured * (1 - taskTransitionStrength(state, now));
+}
+
 @visibleForTesting
 double taskTransitionStrength(TaskVisual state, DateTime now) {
   final base = _fraction(
@@ -33,12 +68,10 @@ double taskTransitionStrength(TaskVisual state, DateTime now) {
     return Curves.easeOutCubic.transform(base);
   }
   if (state.phase == TaskTransitionPhase.destination) {
-    final fade = _fraction(
-      now.difference(state.phaseAt) - TaskTransitions.destinationHoldDuration,
-      TaskTransitions.destinationDuration -
-          TaskTransitions.destinationHoldDuration,
-    );
-    return 1 - Curves.easeOutCubic.transform(fade);
+    return _destinationStrength(state.phaseAt, now);
+  }
+  if (state.phase == TaskTransitionPhase.creationFinish) {
+    return _creationStrength(state.started, state.phaseAt, now);
   }
   final elapsed = _fraction(
     now.difference(state.phaseAt),
@@ -59,6 +92,7 @@ double _strike(TaskVisual state, DateTime now) {
   final from = state.beforeCompleted ? 1.0 : 0.0;
   final to = state.afterCompleted ? 1.0 : 0.0;
   if (state.phase == TaskTransitionPhase.destination ||
+      state.phase == TaskTransitionPhase.creationFinish ||
       state.phase == TaskTransitionPhase.creating) {
     return to;
   }
@@ -133,20 +167,49 @@ class _NebulaPainter extends CustomPainter {
     : super(repaint: reduced ? null : clock);
   @override
   void paint(Canvas canvas, Size size) {
+    final time = DateTime.now();
     final strength = reduced
         ? (visual.phase == TaskTransitionPhase.source ||
                   visual.phase == TaskTransitionPhase.creating
               ? 0.45
               : 0.0)
-        : taskTransitionStrength(visual, DateTime.now());
+        : taskTransitionStrength(visual, time);
+    final carry = visual.carry;
+    if (!reduced && carry != null) {
+      _paintLayer(
+        canvas,
+        size,
+        carry.target,
+        taskTransitionCarryStrength(visual, time),
+        carry.started,
+        carry.capturedAt,
+      );
+    }
+    _paintLayer(canvas, size, visual.target, strength, visual.started, time);
+  }
+
+  void _paintLayer(
+    Canvas canvas,
+    Size size,
+    TaskColumnKind? target,
+    double strength,
+    DateTime started,
+    DateTime at,
+  ) {
     if (strength <= 0) return;
-    final color = _color(visual.target);
+    final color = _color(target);
     final bounds = Offset.zero & size;
     canvas.drawRect(
       bounds,
       Paint()..color = color.withValues(alpha: 0.24 * strength),
     );
-    final motion = reduced ? 0.0 : math.sin(clock.value * math.pi * 2);
+    // Use the visual timeline so a chained source can retain the exact tint
+    // and nebula position observed at the interruption, even across columns.
+    final motion = reduced
+        ? 0.0
+        : math.sin(
+            at.difference(started).inMicroseconds / 3000000 * math.pi * 2,
+          );
     final gradient = RadialGradient(
       center: Alignment(-0.5 + motion * 0.6, -0.35),
       radius: 1.1,

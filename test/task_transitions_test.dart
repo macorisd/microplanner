@@ -43,6 +43,7 @@ void main() {
         afterCompleted: true,
         started: start,
         phaseAt: start,
+        carry: null,
       );
       expect(taskTransitionStrength(source, start), 0);
       expect(
@@ -68,6 +69,7 @@ void main() {
         afterCompleted: true,
         started: start,
         phaseAt: destinationAt,
+        carry: null,
       );
       expect(taskTransitionStrength(destination, destinationAt), 1);
       expect(
@@ -319,6 +321,9 @@ void main() {
       expect(tracker.present([]).length, 2);
       now = start.add(const Duration(milliseconds: 1001));
       await tester.pump(const Duration(milliseconds: 1001));
+      expect(tracker.present([]).length, 2);
+      now = now.add(const Duration(milliseconds: 1500));
+      await tester.pump(const Duration(milliseconds: 1500));
       expect(tracker.present([]), isEmpty);
       tracker.update('B', [task('one', TaskColumnKind.late)], []);
       expect(tracker['one'], isNull);

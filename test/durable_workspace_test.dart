@@ -386,7 +386,7 @@ void main() {
       expect(tasks.completedTasks.map((task) => task.id), contains('one'));
       now = now.add(const Duration(milliseconds: 1001));
       await tester.pump(const Duration(milliseconds: 1001));
-      expect(tasks.transitions.locked('one'), isTrue);
+      expect(tasks.transitions.locked('one'), isFalse);
       now = now.add(const Duration(seconds: 2));
       await tester.pump(const Duration(seconds: 2));
       expect(tasks.transitions.locked('one'), isFalse);
@@ -459,10 +459,10 @@ void main() {
         server.first.complete();
         await settleAsync();
       });
-      transitionTime = transitionTime.add(const Duration(milliseconds: 1010));
-      await tester.pump(const Duration(milliseconds: 1010));
-      transitionTime = transitionTime.add(const Duration(milliseconds: 1010));
-      await tester.pump(const Duration(milliseconds: 1010));
+      transitionTime = transitionTime.add(const Duration(milliseconds: 1501));
+      await tester.pump(const Duration(milliseconds: 1501));
+      transitionTime = transitionTime.add(const Duration(milliseconds: 1001));
+      await tester.pump(const Duration(milliseconds: 1001));
       expect(h.workspace.outbox!.hasFailures, isTrue);
       await tester.tap(find.text('Review'));
       await tester.pumpAndSettle();

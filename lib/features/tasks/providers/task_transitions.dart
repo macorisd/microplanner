@@ -6,7 +6,21 @@ import '../data/models/task.dart';
 
 enum TaskColumnKind { completed, late, upcoming }
 
-enum TaskTransitionPhase { source, destination, rollback, creating }
+enum TaskTransitionPhase {
+  source,
+  destination,
+  rollback,
+  creating,
+  creationFinish,
+}
+
+typedef TaskTransitionCarry = ({
+  TaskColumnKind? target,
+  DateTime started,
+  DateTime destinationAt,
+  DateTime capturedAt,
+  TaskTransitionPhase phase,
+});
 
 class TaskTransition {
   final String id;
@@ -16,6 +30,7 @@ class TaskTransition {
   final TaskColumnKind? from;
   TaskColumnKind? to;
   final DateTime started;
+  final TaskTransitionCarry? carry;
   TaskTransitionPhase phase;
   DateTime phaseAt;
   bool confirmed;
@@ -30,6 +45,7 @@ class TaskTransition {
     required this.to,
     required this.started,
     required this.phase,
+    this.carry,
     this.confirmed = false,
   }) : phaseAt = started;
 }
@@ -40,6 +56,7 @@ class TaskTransitions {
   static const settleDuration = Duration(seconds: 1);
   static const destinationDuration = Duration(milliseconds: 2500);
   static const destinationHoldDuration = Duration(milliseconds: 1500);
+  static const standaloneDuration = Duration(milliseconds: 2500);
   final DateTime Function() now;
   final void Function() changed;
   final Map<String, TaskTransition> _items = {};
@@ -53,7 +70,35 @@ class TaskTransitions {
 
   TaskTransitions({required this.now, required this.changed});
   TaskTransition? operator [](String id) => _items[id];
-  bool locked(String id) => _items.containsKey(id);
+  bool locked(String id) {
+    final item = _items[id];
+    return item != null && !_arrived(item.phase);
+  }
+
+  static bool _arrived(TaskTransitionPhase phase) =>
+      phase == TaskTransitionPhase.destination ||
+      phase == TaskTransitionPhase.creationFinish;
+
+  static DateTime _creationFadeAt(TaskTransition t) {
+    final hold = t.started.add(standaloneDuration - settleDuration);
+    return t.phaseAt.isAfter(hold) ? t.phaseAt : hold;
+  }
+
+  static Duration _sourceMinimum(TaskTransition t) =>
+      t.before == null || t.after == null
+      ? (t.failed ? standaloneDuration - settleDuration : standaloneDuration)
+      : baseDuration;
+
+  TaskTransitionCarry? _carry(TaskTransition? previous, DateTime time) =>
+      previous != null && _arrived(previous.phase)
+      ? (
+          target: previous.to,
+          started: previous.started,
+          destinationAt: previous.phaseAt,
+          capturedAt: time,
+          phase: previous.phase,
+        )
+      : null;
 
   void seed(String owner, List<Task> tasks, DateTime seenAt) {
     _timer?.cancel();
@@ -115,7 +160,12 @@ class TaskTransitions {
         (item) => item.kind == 'tasks',
       )) {
         taskOperations.add(item.id);
-        if (operation.failure != null || _items.containsKey(item.id)) continue;
+        final previous = _items[item.id];
+        if (operation.failure != null ||
+            locked(item.id) ||
+            previous?.operationId == operation.id) {
+          continue;
+        }
         final before = _previous[item.id] ?? _read(item.before);
         final after = _read(item.after);
         final from = before == null ? null : column(before, time);
@@ -134,6 +184,7 @@ class TaskTransitions {
           from: from,
           to: to,
           started: time,
+          carry: _carry(previous, time),
           phase: before == null
               ? TaskTransitionPhase.creating
               : TaskTransitionPhase.source,
@@ -166,8 +217,7 @@ class TaskTransitions {
       for (final entry in _previous.entries) {
         final old = entry.value;
         final next = current[entry.key];
-        if (_items.containsKey(entry.key) ||
-            taskOperations.contains(entry.key)) {
+        if (locked(entry.key) || taskOperations.contains(entry.key)) {
           continue;
         }
         final from = column(old, _previousAt!);
@@ -181,6 +231,7 @@ class TaskTransitions {
             from: from,
             to: to,
             started: time,
+            carry: _carry(_items[entry.key], time),
             phase: TaskTransitionPhase.source,
             confirmed: true,
           );
@@ -204,10 +255,17 @@ class TaskTransitions {
           elapsed >= settleDuration) {
         _items.remove(entry.key);
         revision++;
+      } else if (t.phase == TaskTransitionPhase.creationFinish &&
+          !time.isBefore(_creationFadeAt(t).add(settleDuration))) {
+        _items.remove(entry.key);
+        revision++;
       } else if ((t.phase == TaskTransitionPhase.source ||
               t.phase == TaskTransitionPhase.creating) &&
           (t.failed || (t.confirmed && noticeFinished)) &&
-          time.difference(t.started) >= baseDuration) {
+          ((!t.failed &&
+                  t.phase == TaskTransitionPhase.creating &&
+                  t.after != null) ||
+              time.difference(t.started) >= _sourceMinimum(t))) {
         if (t.failed) {
           t.phase = TaskTransitionPhase.rollback;
           t.phaseAt = time;
@@ -216,7 +274,9 @@ class TaskTransitions {
           _items.remove(entry.key);
           revision++;
         } else {
-          t.phase = TaskTransitionPhase.destination;
+          t.phase = t.before == null
+              ? TaskTransitionPhase.creationFinish
+              : TaskTransitionPhase.destination;
           t.phaseAt = time;
           revision++;
         }
@@ -237,8 +297,15 @@ class TaskTransitions {
               ? destinationDuration
               : settleDuration,
         );
+      } else if (t.phase == TaskTransitionPhase.creationFinish) {
+        deadline = _creationFadeAt(t).add(settleDuration);
       } else if (t.failed || (t.confirmed && !_syncing)) {
-        deadline = t.started.add(baseDuration);
+        deadline =
+            !t.failed &&
+                t.phase == TaskTransitionPhase.creating &&
+                t.after != null
+            ? time
+            : t.started.add(_sourceMinimum(t));
         if (!t.failed &&
             _noticeClearedAt != null &&
             _noticeClearedAt!.isAfter(deadline)) {
