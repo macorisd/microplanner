@@ -110,6 +110,21 @@ PRs, release notes, logs or tracked files. Public fingerprints may be recorded.
    then publishes a prerelease. Partial uploads remain drafts. Existing tags and
    different assets are never overwritten. An already published version is
    checksum-verified and skipped without rebuilding.
+6. After a verified public APK exists, a separate job links its history row and
+   Android download in README on current `main`. It uses the workflow token and
+   a regular documentation commit, preserving concurrent edits and immutable
+   release tags. Repeated runs do not create duplicate commits; retrying an older
+   release never downgrades the latest download. The job also runs when an
+   existing published APK was verified and the build was skipped.
+
+Keep one history row per new version, initially marked `(unreleased)`, inside
+the README's `release-history` markers. Keep the `android-download` markers in
+place; their contents are maintained by publication. Publication validates these
+regions before building. If only README publication fails, rerun the failed job
+or dispatch the same tag: the published APK remains intact and need not rebuild.
+The documentation commit uses `GITHUB_TOKEN`, so it does not trigger another
+Actions push run. Branch protection is respected; a rejected write fails clearly
+without changing protection or replacing the APK.
 
 This runs for versioned merges, not every feature commit. PR checks use no
 release secrets. A tag identifies source; a Release provides notes and downloads;
