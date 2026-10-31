@@ -14,6 +14,12 @@ saved copy; editing resumes when you reconnect.
 
 ### Android
 
+<!-- android-download:start -->
+[Download Android APK (0.10.0)](https://github.com/macorisd/microplanner/releases/download/v0.10.0/microplanner-0.10.0-android.apk)
+
+[Release notes](https://github.com/macorisd/microplanner/releases/tag/v0.10.0)
+<!-- android-download:end -->
+
 1. Open [GitHub Releases](https://github.com/macorisd/microplanner/releases)
    and choose the newest version with an APK attached. Versions before 1.0 are
    published as prereleases.
@@ -52,9 +58,11 @@ The table describes changes when each version was introduced. Features may have
 been refined by later versions. The unreleased row is available from source;
 Android downloads appear in Releases after publication.
 
+<!-- release-history:start -->
 | Version | Changes |
 | --- | --- |
-| 0.10.0 (unreleased) | <ul><li>Edit Windows tasks by clicking their cards.</li><li>Expand descriptions in matching dialogs with the task title and Back navigation.</li><li>Save with Enter after date/time selection; limit board names to 50 characters.</li><li>Refresh the project guide and release history.</li></ul> |
+| 0.10.1 (unreleased) | <ul><li>Update README download and version links automatically after verified Android publication.</li></ul> |
+| [0.10.0](https://github.com/macorisd/microplanner/releases/tag/v0.10.0) | <ul><li>Edit Windows tasks by clicking their cards.</li><li>Expand descriptions in matching dialogs with the task title and Back navigation.</li><li>Save with Enter after date/time selection; limit board names to 50 characters.</li><li>Refresh the project guide and release history.</li></ul> |
 | [0.9.0](https://github.com/macorisd/microplanner/tree/v0.9.0) | <ul><li>Save actions in the background and recover pending work after reopening.</li><li>Animate task moves and deletion, with confirmed synchronization and rollback on failure.</li></ul> |
 | [0.8.0](https://github.com/macorisd/microplanner/tree/v0.8.0) | <ul><li>Let Android apply its own launcher icon shape.</li><li>Use Completed consistently; reveal the Windows clear action on hover.</li><li>Save descriptions with Ctrl+Enter on Windows and open editing without selecting text.</li></ul> |
 | [0.7.0](https://github.com/macorisd/microplanner/tree/v0.7.0) | <ul><li>Synchronize behind an icon-only startup screen.</li><li>Remember the last column of each Android board and zoom into its logo color.</li><li>Use the animated logo in cloud progress notices.</li></ul> |
@@ -74,6 +82,7 @@ Android downloads appear in Releases after publication.
 | [0.2.0](https://github.com/macorisd/microplanner/tree/v0.2.0) | <ul><li>Host the cloud API on Vercel.</li><li>Publish signed Android APKs as GitHub prereleases.</li><li>Use the app artwork for the Android icon.</li></ul> |
 | [0.1.0](https://github.com/macorisd/microplanner/tree/v0.1.0) | <ul><li>Sign in with Google on Windows and Android.</li><li>Store private per-account data in MongoDB and import existing local data with confirmation.</li><li>Read the last saved copy while offline.</li></ul> |
 | 0.0.1 (initial) | <ul><li>Create local boards, subjects and tasks with deadlines and priorities.</li></ul> |
+<!-- release-history:end -->
 
 <details>
 <summary><strong>Run your own microplanner: developer setup</strong></summary>

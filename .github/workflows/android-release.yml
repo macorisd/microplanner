@@ -38,6 +38,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python3 scripts/android_release.py resolve
+      - name: Validate README release entry before building
+        if: steps.release.outputs.skip == 'false'
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: python3 scripts/release_readme.py check --tag "$RELEASE_TAG"
   build:
     needs: resolve
     if: needs.resolve.outputs.skip == 'false'
@@ -146,3 +151,25 @@ jobs:
           RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
           RELEASE_SHA: ${{ needs.resolve.outputs.sha }}
         run: python3 scripts/android_release.py publish --tag "$RELEASE_TAG"
+  readme:
+    needs: [resolve, publish]
+    if: >-
+      ${{ always() && !cancelled() && needs.resolve.result == 'success' &&
+          needs.resolve.outputs.tag != '' &&
+          (needs.publish.result == 'success' ||
+           (needs.resolve.outputs.skip == 'true' && needs.publish.result == 'skipped')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Link the verified published APK in README
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+          RELEASE_SHA: ${{ needs.resolve.outputs.sha }}
+        run: python3 scripts/release_readme.py publish --tag "$RELEASE_TAG"
