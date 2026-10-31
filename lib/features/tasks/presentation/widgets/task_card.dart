@@ -208,36 +208,23 @@ class _TaskCardState extends State<TaskCard> {
                                 width: touch ? 12 : AppTheme.spacingMedium,
                               ),
                               Expanded(
-                                child: visual == null
-                                    ? Text(
-                                        task.name,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium
-                                            ?.copyWith(
-                                              decoration: task.isCompleted
-                                                  ? TextDecoration.lineThrough
-                                                  : null,
-                                              color: task.isCompleted
-                                                  ? AppColors.textTertiary
-                                                  : AppColors.textPrimary,
-                                            ),
-                                      )
-                                    : AnimatedTaskTitle(
-                                        text: task.name,
-                                        completed: task.isCompleted,
-                                        visual: visual,
-                                        style:
-                                            (Theme.of(
-                                                      context,
-                                                    ).textTheme.titleMedium ??
-                                                    const TextStyle())
-                                                .copyWith(
-                                                  color: task.isCompleted
-                                                      ? AppColors.textTertiary
-                                                      : AppColors.textPrimary,
-                                                ),
-                                      ),
+                                child: AnimatedTaskTitle(
+                                  text: task.name,
+                                  completed: task.isCompleted,
+                                  visual: visual,
+                                  style:
+                                      (Theme.of(
+                                                context,
+                                              ).textTheme.titleMedium ??
+                                              const TextStyle())
+                                          .copyWith(
+                                            decorationColor:
+                                                AppColors.textTertiary,
+                                            color: task.isCompleted
+                                                ? AppColors.textTertiary
+                                                : AppColors.textPrimary,
+                                          ),
+                                ),
                               ),
                               const SizedBox(width: 8),
                               SizedBox(

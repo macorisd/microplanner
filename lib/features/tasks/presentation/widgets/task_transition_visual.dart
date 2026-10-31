@@ -176,13 +176,37 @@ class AnimatedTaskTitle extends StatefulWidget {
 
 class _AnimatedTaskTitleState extends State<AnimatedTaskTitle>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _clock = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 600),
-  )..repeat();
+  AnimationController? _clock;
+  bool _reduced = false;
+
+  void _syncClock() {
+    if (widget.visual == null || _reduced) {
+      _clock?.stop();
+      return;
+    }
+    final clock = _clock ??= AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    if (!clock.isAnimating) clock.repeat();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduced = MediaQuery.disableAnimationsOf(context);
+    _syncClock();
+  }
+
+  @override
+  void didUpdateWidget(covariant AnimatedTaskTitle oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncClock();
+  }
+
   @override
   void dispose() {
-    _clock.dispose();
+    _clock?.dispose();
     super.dispose();
   }
 
@@ -213,7 +237,7 @@ class _StrikePainter extends CustomPainter {
   final TextScaler scaler;
   final TaskVisual? visual;
   final bool completed, reduced;
-  final Animation<double> clock;
+  final Animation<double>? clock;
   _StrikePainter({
     required this.text,
     required this.style,
@@ -239,7 +263,7 @@ class _StrikePainter extends CustomPainter {
     final total = lines.fold<double>(0, (sum, line) => sum + line.width);
     var remaining = total * value;
     final paint = Paint()
-      ..color = style.color ?? AppColors.textPrimary
+      ..color = style.decorationColor ?? style.color ?? AppColors.textPrimary
       ..strokeWidth = 1.3;
     for (final line in lines) {
       final width = remaining.clamp(0.0, line.width);

@@ -61,7 +61,7 @@ Android downloads appear in Releases after publication.
 <!-- release-history:start -->
 | Version | Changes |
 | --- | --- |
-| 0.10.2 (unreleased) | <ul><li>Keep the destination color transition visible for three seconds after a task moves columns.</li></ul> |
+| 0.10.2 (unreleased) | <ul><li>Keep the destination color transition visible for 2.5 seconds after a task moves columns.</li><li>Keep the completed title's strike appearance consistent when the animation finishes.</li></ul> |
 | [0.10.1](https://github.com/macorisd/microplanner/releases/tag/v0.10.1) | <ul><li>Update README download and version links automatically after verified Android publication.</li></ul> |
 | [0.10.0](https://github.com/macorisd/microplanner/releases/tag/v0.10.0) | <ul><li>Edit Windows tasks by clicking their cards.</li><li>Expand descriptions in matching dialogs with the task title and Back navigation.</li><li>Save with Enter after date/time selection; limit board names to 50 characters.</li><li>Refresh the project guide and release history.</li></ul> |
 | [0.9.0](https://github.com/macorisd/microplanner/tree/v0.9.0) | <ul><li>Save actions in the background and recover pending work after reopening.</li><li>Animate task moves and deletion, with confirmed synchronization and rollback on failure.</li></ul> |

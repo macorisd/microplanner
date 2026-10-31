@@ -38,7 +38,7 @@ class TaskTransition {
 class TaskTransitions {
   static const baseDuration = Duration(seconds: 1);
   static const settleDuration = Duration(seconds: 1);
-  static const destinationDuration = Duration(seconds: 3);
+  static const destinationDuration = Duration(milliseconds: 2500);
   final DateTime Function() now;
   final void Function() changed;
   final Map<String, TaskTransition> _items = {};
