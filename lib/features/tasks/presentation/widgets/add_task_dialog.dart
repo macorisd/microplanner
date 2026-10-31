@@ -1,6 +1,7 @@
+import 'expanded_description.dart';
+import 'task_form_keyboard.dart';
 import '../../../../core/theme/app_motion.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -41,6 +42,7 @@ class AddTaskDialog extends StatefulWidget {
 class _AddTaskDialogState extends State<AddTaskDialog>
     with PendingActionState<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _panelKey = GlobalKey();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _descriptionFocusNode = FocusNode();
@@ -140,25 +142,13 @@ class _AddTaskDialogState extends State<AddTaskDialog>
           horizontal: compact ? 16 : 40,
           vertical: short ? 12 : 24,
         ),
-        child: Focus(
-          onKeyEvent: (node, event) {
-            if (event is KeyDownEvent &&
-                event.logicalKey == LogicalKeyboardKey.enter) {
-              if (Theme.of(context).platform == TargetPlatform.windows &&
-                  _descriptionFocusNode.hasFocus &&
-                  HardwareKeyboard.instance.isControlPressed) {
-                _submit();
-                return KeyEventResult.handled;
-              }
-              if (!_descriptionFocusNode.hasFocus) {
-                _submit();
-                return KeyEventResult.handled;
-              }
-            }
-            return KeyEventResult.ignored;
-          },
+        child: TaskFormKeyboard(
+          descriptionFocus: _descriptionFocusNode,
+          canSubmit: _canSubmit,
+          onSubmit: _submit,
           child: SingleChildScrollView(
             child: Container(
+              key: _panelKey,
               width: 480,
               padding: EdgeInsets.all(compact ? 16 : AppTheme.spacingLarge),
               child: Form(
@@ -224,7 +214,19 @@ class _AddTaskDialogState extends State<AddTaskDialog>
                       validator: WorkspaceLimits.descriptionError,
                       enabled: !_isLoading,
                       focusNode: _descriptionFocusNode,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
+                        suffixIcon: DescriptionExpandButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () => pickOnce<void>(
+                                  () => expandDescription(
+                                    context,
+                                    _descriptionController,
+                                    taskName: _nameController.text,
+                                    panelKey: _panelKey,
+                                  ),
+                                ),
+                        ),
                         labelText: 'Description (optional)',
                         hintText: 'Add details about this task...',
                       ),

@@ -20,8 +20,9 @@ class _NewBoardDialogState extends State<NewBoardDialog>
     with PendingActionState<NewBoardDialog> {
   final _controller = TextEditingController();
   bool get _saving => actionBlocked;
-  String? _nameError(String? value) =>
-      (value?.trim().isEmpty ?? true) ? null : WorkspaceLimits.nameError(value);
+  String? _nameError(String? value) => (value?.trim().isEmpty ?? true)
+      ? null
+      : WorkspaceLimits.boardNameError(value);
   @override
   void initState() {
     super.initState();
@@ -61,7 +62,7 @@ class _NewBoardDialogState extends State<NewBoardDialog>
         mainAxisSize: MainAxisSize.min,
         children: [
           LimitedTextField(
-            limit: WorkspaceLimits.name,
+            limit: WorkspaceLimits.boardName,
             validator: _nameError,
             enabled: !_saving,
             controller: _controller,

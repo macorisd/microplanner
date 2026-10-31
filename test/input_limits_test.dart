@@ -21,6 +21,39 @@ final sample = Task(
 );
 
 void main() {
+  test('board title boundaries preserve unchanged legacy names', () async {
+    expect(WorkspaceLimits.boardNameError(repeat('x', 50)), isNull);
+    expect(WorkspaceLimits.boardNameError(repeat('x', 51)), isNotNull);
+    final h = Harness();
+    await h.initialize();
+    await h.login('A');
+    expect(
+      await h.workspace.mutate(
+        (s) => s.copyWith(
+          boards: [s.boards.single.copyWith(name: repeat('x', 51))],
+        ),
+      ),
+      isFalse,
+    );
+    expect(h.server.writes, 0);
+    expect(
+      await h.workspace.mutate(
+        (s) => s.copyWith(
+          boards: [s.boards.single.copyWith(name: repeat('x', 50))],
+        ),
+      ),
+      isTrue,
+    );
+    final legacy = snapshot(repeat('x', 100));
+    expect(WorkspaceLimits.validate(legacy, previous: legacy), isNull);
+    expect(WorkspaceLimits.validate(legacy), isNotNull);
+    expect(
+      WorkspaceLimits.validate(snapshot(repeat('y', 100)), previous: legacy),
+      isNotNull,
+    );
+    h.dispose();
+  });
+
   test(
     'Unicode length enforcement respects the API limit without splitting a grapheme',
     () {
@@ -108,7 +141,7 @@ void main() {
       final h = Harness();
       await h.initialize();
       await h.login('A');
-      final data = snapshot(repeat('😀', 150)).copyWith(
+      final data = snapshot(repeat('😀', 25)).copyWith(
         tasks: [
           sample.copyWith(
             name: repeat('a', 300),

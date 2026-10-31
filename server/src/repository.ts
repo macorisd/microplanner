@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { MongoClient, type ClientSession, type Collection } from 'mongodb';
-import { ApiError, assertWorkspaceSize, dataSchema, type Profile, type Workspace, type WorkspaceData } from './domain.js';
+import { ApiError, assertBoardNames, assertWorkspaceSize, dataSchema, type Profile, type Workspace, type WorkspaceData } from './domain.js';
 
 type User = Profile & { _id: string; googleSub: string; revision: number; operations: string[] };
 type Session = { _id: string; ownerId: string; expiresAt: Date };
@@ -189,6 +189,8 @@ export class Repository {
           .insertOne({ _id: sourceId, ownerId }, { session });
       }
       dataSchema.parse(next);
+      const previousBoards = await this.collection('boards').find({ ownerId }, { session }).toArray();
+      assertBoardNames(next, { boards: previousBoards });
       assertWorkspaceSize({ ...next, revision: revision + 1 });
       // The receipt and data are committed together, so a delayed retry remains
       // idempotent even after the legacy 50-operation history rolls over.
