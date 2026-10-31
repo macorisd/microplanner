@@ -37,6 +37,8 @@ Future<void> expandDescription(
   required String taskName,
   required GlobalKey panelKey,
 }) async {
+  // Measure the full form content, not its keyboard-constrained scroll viewport.
+  // Dialog applies the live available height while Android dismisses the IME.
   final panel = panelKey.currentContext?.findRenderObject() as RenderBox?;
   final panelSize = panel?.size ?? const Size(480, 600);
   FocusManager.instance.primaryFocus?.unfocus();

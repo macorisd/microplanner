@@ -156,6 +156,70 @@ void main() {
           f.dispose();
         },
       );
+
+      for (final focusedField in [0, 1]) {
+        testWidgets(
+          '$platform ${editing ? "edit" : "new"} expansion recovers full frame after keyboard in field $focusedField',
+          (tester) async {
+            _viewport(tester);
+            tester.view.physicalSize = const Size(360, 800);
+            addTearDown(tester.view.resetViewInsets);
+            final f = _Fixture();
+            await tester.runAsync(f.initialize);
+            var calls = 0;
+            await _open(
+              tester,
+              f,
+              platform,
+              form(f, () async {
+                calls++;
+                return false;
+              }),
+            );
+            await tester.enterText(
+              find.byType(TextFormField).first,
+              'Keyboard task',
+            );
+            await tester.enterText(
+              find.byType(TextFormField).last,
+              'Retained description',
+            );
+            await tester.pumpAndSettle();
+            final fullFrame = tester.getRect(
+              find.byType(SingleChildScrollView).first,
+            );
+            await tester.showKeyboard(
+              find.byType(TextFormField).at(focusedField),
+            );
+            tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+            await tester.pumpAndSettle();
+            expect(tester.testTextInput.isVisible, isTrue);
+            expect(
+              tester.getSize(find.byType(SingleChildScrollView).first).height,
+              lessThan(fullFrame.height),
+            );
+            await tester.tap(find.byTooltip('Expand description'));
+            await tester.pumpAndSettle();
+            // Android reports the closing keyboard's metrics after navigation.
+            tester.view.resetViewInsets();
+            await tester.pumpAndSettle();
+            final expanded = find.byKey(
+              const ValueKey('expanded-description-panel'),
+            );
+            expect(tester.getRect(expanded), fullFrame);
+            expect(tester.testTextInput.isVisible, isFalse);
+            expect(tester.takeException(), isNull);
+            await tester.tap(find.byType(BackButton));
+            await tester.pumpAndSettle();
+            expect(find.text('Keyboard task'), findsOneWidget);
+            expect(find.text('Retained description'), findsOneWidget);
+            expect(tester.testTextInput.isVisible, isFalse);
+            expect(calls, 0);
+            await tester.pumpWidget(const SizedBox());
+            f.dispose();
+          },
+        );
+      }
     }
   }
 

@@ -180,8 +180,8 @@ class _EditTaskDialogState extends State<EditTaskDialog>
           canSubmit: _canSubmit,
           onSubmit: _submit,
           child: SingleChildScrollView(
-            key: _panelKey,
             child: Container(
+              key: _panelKey,
               width: 480,
               padding: EdgeInsets.all(compact ? 16 : AppTheme.spacingLarge),
               child: Form(
