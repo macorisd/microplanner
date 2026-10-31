@@ -10,6 +10,7 @@ typedef TaskVisual = ({
   bool afterCompleted,
   DateTime started,
   DateTime phaseAt,
+  TaskTransitionCarry? carry,
 });
 
 Color _color(TaskColumnKind? target) => switch (target) {
@@ -22,6 +23,40 @@ Color _color(TaskColumnKind? target) => switch (target) {
 double _fraction(Duration elapsed, Duration total) =>
     (elapsed.inMicroseconds / total.inMicroseconds).clamp(0.0, 1.0);
 
+double _destinationStrength(DateTime phaseAt, DateTime at) =>
+    1 -
+    Curves.easeOutCubic.transform(
+      _fraction(
+        at.difference(phaseAt) - TaskTransitions.destinationHoldDuration,
+        TaskTransitions.destinationDuration -
+            TaskTransitions.destinationHoldDuration,
+      ),
+    );
+
+double _creationStrength(DateTime started, DateTime confirmedAt, DateTime at) {
+  final hold = started.add(
+    TaskTransitions.standaloneDuration - TaskTransitions.settleDuration,
+  );
+  final fadeAt = confirmedAt.isAfter(hold) ? confirmedAt : hold;
+  return Curves.easeOutCubic.transform(
+        _fraction(at.difference(started), TaskTransitions.baseDuration),
+      ) *
+      (1 -
+          Curves.easeOutCubic.transform(
+            _fraction(at.difference(fadeAt), TaskTransitions.settleDuration),
+          ));
+}
+
+@visibleForTesting
+double taskTransitionCarryStrength(TaskVisual state, DateTime now) {
+  final carry = state.carry;
+  if (state.phase != TaskTransitionPhase.source || carry == null) return 0;
+  final captured = carry.phase == TaskTransitionPhase.creationFinish
+      ? _creationStrength(carry.started, carry.destinationAt, carry.capturedAt)
+      : _destinationStrength(carry.destinationAt, carry.capturedAt);
+  return captured * (1 - taskTransitionStrength(state, now));
+}
+
 @visibleForTesting
 double taskTransitionStrength(TaskVisual state, DateTime now) {
   final base = _fraction(
@@ -31,6 +66,12 @@ double taskTransitionStrength(TaskVisual state, DateTime now) {
   if (state.phase == TaskTransitionPhase.source ||
       state.phase == TaskTransitionPhase.creating) {
     return Curves.easeOutCubic.transform(base);
+  }
+  if (state.phase == TaskTransitionPhase.destination) {
+    return _destinationStrength(state.phaseAt, now);
+  }
+  if (state.phase == TaskTransitionPhase.creationFinish) {
+    return _creationStrength(state.started, state.phaseAt, now);
   }
   final elapsed = _fraction(
     now.difference(state.phaseAt),
@@ -51,6 +92,7 @@ double _strike(TaskVisual state, DateTime now) {
   final from = state.beforeCompleted ? 1.0 : 0.0;
   final to = state.afterCompleted ? 1.0 : 0.0;
   if (state.phase == TaskTransitionPhase.destination ||
+      state.phase == TaskTransitionPhase.creationFinish ||
       state.phase == TaskTransitionPhase.creating) {
     return to;
   }
@@ -125,20 +167,49 @@ class _NebulaPainter extends CustomPainter {
     : super(repaint: reduced ? null : clock);
   @override
   void paint(Canvas canvas, Size size) {
+    final time = DateTime.now();
     final strength = reduced
         ? (visual.phase == TaskTransitionPhase.source ||
                   visual.phase == TaskTransitionPhase.creating
               ? 0.45
               : 0.0)
-        : taskTransitionStrength(visual, DateTime.now());
+        : taskTransitionStrength(visual, time);
+    final carry = visual.carry;
+    if (!reduced && carry != null) {
+      _paintLayer(
+        canvas,
+        size,
+        carry.target,
+        taskTransitionCarryStrength(visual, time),
+        carry.started,
+        carry.capturedAt,
+      );
+    }
+    _paintLayer(canvas, size, visual.target, strength, visual.started, time);
+  }
+
+  void _paintLayer(
+    Canvas canvas,
+    Size size,
+    TaskColumnKind? target,
+    double strength,
+    DateTime started,
+    DateTime at,
+  ) {
     if (strength <= 0) return;
-    final color = _color(visual.target);
+    final color = _color(target);
     final bounds = Offset.zero & size;
     canvas.drawRect(
       bounds,
       Paint()..color = color.withValues(alpha: 0.24 * strength),
     );
-    final motion = reduced ? 0.0 : math.sin(clock.value * math.pi * 2);
+    // Use the visual timeline so a chained source can retain the exact tint
+    // and nebula position observed at the interruption, even across columns.
+    final motion = reduced
+        ? 0.0
+        : math.sin(
+            at.difference(started).inMicroseconds / 3000000 * math.pi * 2,
+          );
     final gradient = RadialGradient(
       center: Alignment(-0.5 + motion * 0.6, -0.35),
       radius: 1.1,
@@ -174,13 +245,37 @@ class AnimatedTaskTitle extends StatefulWidget {
 
 class _AnimatedTaskTitleState extends State<AnimatedTaskTitle>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _clock = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 600),
-  )..repeat();
+  AnimationController? _clock;
+  bool _reduced = false;
+
+  void _syncClock() {
+    if (widget.visual == null || _reduced) {
+      _clock?.stop();
+      return;
+    }
+    final clock = _clock ??= AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    if (!clock.isAnimating) clock.repeat();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduced = MediaQuery.disableAnimationsOf(context);
+    _syncClock();
+  }
+
+  @override
+  void didUpdateWidget(covariant AnimatedTaskTitle oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncClock();
+  }
+
   @override
   void dispose() {
-    _clock.dispose();
+    _clock?.dispose();
     super.dispose();
   }
 
@@ -211,7 +306,7 @@ class _StrikePainter extends CustomPainter {
   final TextScaler scaler;
   final TaskVisual? visual;
   final bool completed, reduced;
-  final Animation<double> clock;
+  final Animation<double>? clock;
   _StrikePainter({
     required this.text,
     required this.style,
@@ -236,8 +331,16 @@ class _StrikePainter extends CustomPainter {
     final lines = painter.computeLineMetrics();
     final total = lines.fold<double>(0, (sum, line) => sum + line.width);
     var remaining = total * value;
+    final completingAtSource =
+        visual != null &&
+        (visual!.phase == TaskTransitionPhase.source ||
+            visual!.phase == TaskTransitionPhase.rollback) &&
+        !visual!.beforeCompleted &&
+        visual!.afterCompleted;
     final paint = Paint()
-      ..color = style.color ?? AppColors.textPrimary
+      ..color = completingAtSource
+          ? Colors.black
+          : style.decorationColor ?? style.color ?? AppColors.textPrimary
       ..strokeWidth = 1.3;
     for (final line in lines) {
       final width = remaining.clamp(0.0, line.width);

@@ -12,6 +12,7 @@ import '../../../boards/providers/boards_provider.dart';
 import '../../../boards/data/models/subject.dart';
 import '../../data/models/task.dart';
 import '../../providers/tasks_provider.dart';
+import '../../providers/task_transitions.dart';
 import 'task_transition_visual.dart';
 
 /// Tasks edit through the card; completion and deletion stay independent.
@@ -88,10 +89,13 @@ class _TaskCardState extends State<TaskCard> {
         afterCompleted: transition.after?.isCompleted ?? false,
         started: transition.started,
         phaseAt: transition.phaseAt,
+        carry: transition.carry,
       );
     });
     final pending =
-        visual != null ||
+        (visual != null &&
+            visual.phase != TaskTransitionPhase.destination &&
+            visual.phase != TaskTransitionPhase.creationFinish) ||
         context.select<WorkspaceController?, bool>(
           (workspace) =>
               workspace?.outbox?.pendingTaskIds.contains(widget.task.id) ??
@@ -208,36 +212,23 @@ class _TaskCardState extends State<TaskCard> {
                                 width: touch ? 12 : AppTheme.spacingMedium,
                               ),
                               Expanded(
-                                child: visual == null
-                                    ? Text(
-                                        task.name,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium
-                                            ?.copyWith(
-                                              decoration: task.isCompleted
-                                                  ? TextDecoration.lineThrough
-                                                  : null,
-                                              color: task.isCompleted
-                                                  ? AppColors.textTertiary
-                                                  : AppColors.textPrimary,
-                                            ),
-                                      )
-                                    : AnimatedTaskTitle(
-                                        text: task.name,
-                                        completed: task.isCompleted,
-                                        visual: visual,
-                                        style:
-                                            (Theme.of(
-                                                      context,
-                                                    ).textTheme.titleMedium ??
-                                                    const TextStyle())
-                                                .copyWith(
-                                                  color: task.isCompleted
-                                                      ? AppColors.textTertiary
-                                                      : AppColors.textPrimary,
-                                                ),
-                                      ),
+                                child: AnimatedTaskTitle(
+                                  text: task.name,
+                                  completed: task.isCompleted,
+                                  visual: visual,
+                                  style:
+                                      (Theme.of(
+                                                context,
+                                              ).textTheme.titleMedium ??
+                                              const TextStyle())
+                                          .copyWith(
+                                            decorationColor:
+                                                AppColors.textTertiary,
+                                            color: task.isCompleted
+                                                ? AppColors.textTertiary
+                                                : AppColors.textPrimary,
+                                          ),
+                                ),
                               ),
                               const SizedBox(width: 8),
                               SizedBox(
