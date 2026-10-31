@@ -15,9 +15,9 @@ saved copy; editing resumes when you reconnect.
 ### Android
 
 <!-- android-download:start -->
-[Download Android APK (0.10.1)](https://github.com/macorisd/microplanner/releases/download/v0.10.1/microplanner-0.10.1-android.apk)
+[Download Android APK (0.10.2)](https://github.com/macorisd/microplanner/releases/download/v0.10.2/microplanner-0.10.2-android.apk)
 
-[Release notes](https://github.com/macorisd/microplanner/releases/tag/v0.10.1)
+[Release notes](https://github.com/macorisd/microplanner/releases/tag/v0.10.2)
 <!-- android-download:end -->
 
 1. Open [GitHub Releases](https://github.com/macorisd/microplanner/releases)
@@ -61,7 +61,7 @@ Android downloads appear in Releases after publication.
 <!-- release-history:start -->
 | Version | Changes |
 | --- | --- |
-| 0.10.2 (unreleased) | <ul><li>Hold the destination color for 1.5 seconds, then fade it out over one second.</li><li>Use a black completion strike at the source and keep its destination appearance consistent through the end of the animation.</li><li>Allow task actions immediately on arrival, with smooth chained moves and deletion.</li><li>Count the minimum 2.5-second creation/deletion animation from the original action, awaiting cloud confirmation when needed.</li><li>Refresh the banner tagline to describe a minimalist space.</li></ul> |
+| [0.10.2](https://github.com/macorisd/microplanner/releases/tag/v0.10.2) | <ul><li>Hold the destination color for 1.5 seconds, then fade it out over one second.</li><li>Use a black completion strike at the source and keep its destination appearance consistent through the end of the animation.</li><li>Allow task actions immediately on arrival, with smooth chained moves and deletion.</li><li>Count the minimum 2.5-second creation/deletion animation from the original action, awaiting cloud confirmation when needed.</li><li>Refresh the banner tagline to describe a minimalist space.</li></ul> |
 | [0.10.1](https://github.com/macorisd/microplanner/releases/tag/v0.10.1) | <ul><li>Update README download and version links automatically after verified Android publication.</li></ul> |
 | [0.10.0](https://github.com/macorisd/microplanner/releases/tag/v0.10.0) | <ul><li>Edit Windows tasks by clicking their cards.</li><li>Expand descriptions in matching dialogs with the task title and Back navigation.</li><li>Save with Enter after date/time selection; limit board names to 50 characters.</li><li>Refresh the project guide and release history.</li></ul> |
 | [0.9.0](https://github.com/macorisd/microplanner/tree/v0.9.0) | <ul><li>Save actions in the background and recover pending work after reopening.</li><li>Animate task moves and deletion, with confirmed synchronization and rollback on failure.</li></ul> |
