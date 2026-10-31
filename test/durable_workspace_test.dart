@@ -386,6 +386,9 @@ void main() {
       expect(tasks.completedTasks.map((task) => task.id), contains('one'));
       now = now.add(const Duration(milliseconds: 1001));
       await tester.pump(const Duration(milliseconds: 1001));
+      expect(tasks.transitions.locked('one'), isTrue);
+      now = now.add(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
       expect(tasks.transitions.locked('one'), isFalse);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());

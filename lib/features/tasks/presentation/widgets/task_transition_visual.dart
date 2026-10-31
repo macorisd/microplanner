@@ -34,7 +34,9 @@ double taskTransitionStrength(TaskVisual state, DateTime now) {
   }
   final elapsed = _fraction(
     now.difference(state.phaseAt),
-    TaskTransitions.settleDuration,
+    state.phase == TaskTransitionPhase.destination
+        ? TaskTransitions.destinationDuration
+        : TaskTransitions.settleDuration,
   );
   final initial = state.phase == TaskTransitionPhase.rollback
       ? Curves.easeOutCubic.transform(

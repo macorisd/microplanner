@@ -33,7 +33,7 @@ void main() {
     );
   }
 
-  test('the source and destination gradients each take one second', () {
+  test('source gradient takes one second and destination takes three', () {
     final source = (
       phase: TaskTransitionPhase.source,
       target: TaskColumnKind.completed,
@@ -80,6 +80,13 @@ void main() {
         destination,
         destinationAt.add(const Duration(seconds: 1)),
       ),
+      inExclusiveRange(0, 1),
+    );
+    expect(
+      taskTransitionStrength(
+        destination,
+        destinationAt.add(const Duration(seconds: 3)),
+      ),
       0,
     );
   });
@@ -112,8 +119,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 121));
       expect(tracker['one']!.phase, TaskTransitionPhase.destination);
       expect(tracker['two']!.phase, TaskTransitionPhase.destination);
-      now = now.add(const Duration(milliseconds: 999));
-      await tester.pump(const Duration(milliseconds: 999));
+      now = now.add(const Duration(milliseconds: 2999));
+      await tester.pump(const Duration(milliseconds: 2999));
       expect(tracker['one']!.phase, TaskTransitionPhase.destination);
       now = now.add(const Duration(milliseconds: 2));
       await tester.pump(const Duration(milliseconds: 2));
@@ -160,8 +167,11 @@ void main() {
             tracker.displayedColumn(tracker.present([updated]).single, now),
             to,
           );
-          now = start.add(const Duration(milliseconds: 2002));
-          await tester.pump(const Duration(milliseconds: 1001));
+          now = now.add(const Duration(milliseconds: 2999));
+          await tester.pump(const Duration(milliseconds: 2999));
+          expect(tracker['a']!.phase, TaskTransitionPhase.destination);
+          now = now.add(const Duration(milliseconds: 2));
+          await tester.pump(const Duration(milliseconds: 2));
           expect(tracker['a'], isNull);
           tracker.dispose();
         },
@@ -200,6 +210,9 @@ void main() {
       now = now.add(const Duration(milliseconds: 1001));
       await tester.pump(const Duration(milliseconds: 1001));
       expect(tracker['one'], isNull);
+      expect(tracker['two']!.phase, TaskTransitionPhase.destination);
+      now = now.add(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
       expect(tracker['two'], isNull);
       tracker.dispose();
     },
@@ -244,8 +257,11 @@ void main() {
       now = start.add(const Duration(milliseconds: 1001));
       await tester.pump(const Duration(milliseconds: 1001));
       expect(tracker['due']!.phase, TaskTransitionPhase.destination);
-      now = start.add(const Duration(milliseconds: 2002));
-      await tester.pump(const Duration(milliseconds: 1001));
+      now = now.add(const Duration(milliseconds: 2999));
+      await tester.pump(const Duration(milliseconds: 2999));
+      expect(tracker['due']!.phase, TaskTransitionPhase.destination);
+      now = now.add(const Duration(milliseconds: 2));
+      await tester.pump(const Duration(milliseconds: 2));
       expect(tracker['due'], isNull);
       tracker.dispose();
     },

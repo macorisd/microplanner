@@ -38,6 +38,7 @@ class TaskTransition {
 class TaskTransitions {
   static const baseDuration = Duration(seconds: 1);
   static const settleDuration = Duration(seconds: 1);
+  static const destinationDuration = Duration(seconds: 3);
   final DateTime Function() now;
   final void Function() changed;
   final Map<String, TaskTransition> _items = {};
@@ -219,7 +220,7 @@ class TaskTransitions {
           revision++;
         }
       } else if (t.phase == TaskTransitionPhase.destination &&
-          elapsed >= settleDuration) {
+          elapsed >= destinationDuration) {
         _items.remove(entry.key);
         revision++;
       }
@@ -230,7 +231,11 @@ class TaskTransitions {
       DateTime? deadline;
       if (t.phase == TaskTransitionPhase.rollback ||
           t.phase == TaskTransitionPhase.destination) {
-        deadline = t.phaseAt.add(settleDuration);
+        deadline = t.phaseAt.add(
+          t.phase == TaskTransitionPhase.destination
+              ? destinationDuration
+              : settleDuration,
+        );
       } else if (t.failed || (t.confirmed && !_syncing)) {
         deadline = t.started.add(baseDuration);
         if (!t.failed &&
