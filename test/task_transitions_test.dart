@@ -75,12 +75,40 @@ void main() {
           destination,
           destinationAt.add(const Duration(milliseconds: 500)),
         ),
-        inExclusiveRange(0, 1),
+        1,
       );
       expect(
         taskTransitionStrength(
           destination,
           destinationAt.add(const Duration(seconds: 1)),
+        ),
+        1,
+      );
+      expect(
+        taskTransitionStrength(
+          destination,
+          destinationAt.add(const Duration(milliseconds: 1500)),
+        ),
+        1,
+      );
+      expect(
+        taskTransitionStrength(
+          destination,
+          destinationAt.add(const Duration(milliseconds: 1501)),
+        ),
+        inExclusiveRange(0, 1),
+      );
+      expect(
+        taskTransitionStrength(
+          destination,
+          destinationAt.add(const Duration(seconds: 2)),
+        ),
+        inExclusiveRange(0, 1),
+      );
+      expect(
+        taskTransitionStrength(
+          destination,
+          destinationAt.add(const Duration(milliseconds: 2499)),
         ),
         inExclusiveRange(0, 1),
       );

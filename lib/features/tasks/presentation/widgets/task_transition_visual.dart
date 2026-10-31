@@ -32,11 +32,17 @@ double taskTransitionStrength(TaskVisual state, DateTime now) {
       state.phase == TaskTransitionPhase.creating) {
     return Curves.easeOutCubic.transform(base);
   }
+  if (state.phase == TaskTransitionPhase.destination) {
+    final fade = _fraction(
+      now.difference(state.phaseAt) - TaskTransitions.destinationHoldDuration,
+      TaskTransitions.destinationDuration -
+          TaskTransitions.destinationHoldDuration,
+    );
+    return 1 - Curves.easeOutCubic.transform(fade);
+  }
   final elapsed = _fraction(
     now.difference(state.phaseAt),
-    state.phase == TaskTransitionPhase.destination
-        ? TaskTransitions.destinationDuration
-        : TaskTransitions.settleDuration,
+    TaskTransitions.settleDuration,
   );
   final initial = state.phase == TaskTransitionPhase.rollback
       ? Curves.easeOutCubic.transform(
@@ -262,8 +268,16 @@ class _StrikePainter extends CustomPainter {
     final lines = painter.computeLineMetrics();
     final total = lines.fold<double>(0, (sum, line) => sum + line.width);
     var remaining = total * value;
+    final completingAtSource =
+        visual != null &&
+        (visual!.phase == TaskTransitionPhase.source ||
+            visual!.phase == TaskTransitionPhase.rollback) &&
+        !visual!.beforeCompleted &&
+        visual!.afterCompleted;
     final paint = Paint()
-      ..color = style.decorationColor ?? style.color ?? AppColors.textPrimary
+      ..color = completingAtSource
+          ? Colors.black
+          : style.decorationColor ?? style.color ?? AppColors.textPrimary
       ..strokeWidth = 1.3;
     for (final line in lines) {
       final width = remaining.clamp(0.0, line.width);

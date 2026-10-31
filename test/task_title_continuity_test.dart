@@ -83,7 +83,7 @@ void main() {
           await tester.pump();
           expect(
             find.byType(AnimatedTaskTitle),
-            paints..line(color: AppColors.textTertiary),
+            paints..line(color: Colors.black),
           );
           showingSource = false;
           now = now.add(const Duration(milliseconds: 1001));
