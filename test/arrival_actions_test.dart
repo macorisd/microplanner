@@ -124,7 +124,8 @@ void main() {
           expect(h.workspace.outbox!.pendingTaskIds, contains('one'));
           final pending = tasks.transitions['one']!;
           if (action == 'edit') {
-            expect(pending, same(arrival));
+            expect(pending.phase, TaskTransitionPhase.editing);
+            expect(pending.to, TaskColumnKind.completed);
           } else {
             expect(pending.phase, TaskTransitionPhase.source);
             expect(pending.before!.isCompleted, isTrue);
@@ -168,7 +169,7 @@ void main() {
             expect(tasks.tasks, isEmpty);
           } else {
             expect(tasks.tasks.single.name, 'Edited');
-            expect(tasks.transitions['one'], same(arrival));
+            expect(tasks.transitions['one'], isNull);
           }
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox());

@@ -163,7 +163,7 @@ void main() {
   });
 
   testWidgets(
-    'same-column edits retain arrival and remote deletion replaces it',
+    'same-column edits replace arrival and remote deletion uses confirmed data',
     (tester) async {
       var now = start;
       final tracker = TaskTransitions(now: () => now, changed: () {});
@@ -173,16 +173,16 @@ void main() {
       tracker.update('A', [done], []);
       now = now.add(const Duration(milliseconds: 1001));
       await tester.pump(const Duration(milliseconds: 1001));
-      final arrival = tracker['task'];
       final edited = done.copyWith(name: 'Edited during arrival');
       tracker.update('A', [done], [operation('edit', done, edited)]);
+      expect(tracker['task']!.phase, TaskTransitionPhase.editing);
+      expect(tracker['task']!.to, TaskColumnKind.completed);
       tracker.update('A', [edited], []);
-      expect(tracker['task'], same(arrival));
+      expect(tracker['task'], isNull);
       tracker.update('A', [], []);
       expect(tracker['task']!.phase, TaskTransitionPhase.source);
       expect(tracker['task']!.to, isNull);
       expect(tracker['task']!.before!.name, edited.name);
-      expect(tracker['task']!.carry!.target, TaskColumnKind.completed);
       tracker.update('B', [old], []);
       expect(tracker['task'], isNull);
       tracker.dispose();

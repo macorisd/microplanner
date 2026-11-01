@@ -64,7 +64,8 @@ double taskTransitionStrength(TaskVisual state, DateTime now) {
     TaskTransitions.baseDuration,
   );
   if (state.phase == TaskTransitionPhase.source ||
-      state.phase == TaskTransitionPhase.creating) {
+      state.phase == TaskTransitionPhase.creating ||
+      state.phase == TaskTransitionPhase.editing) {
     return Curves.easeOutCubic.transform(base);
   }
   if (state.phase == TaskTransitionPhase.destination) {
@@ -170,7 +171,8 @@ class _NebulaPainter extends CustomPainter {
     final time = DateTime.now();
     final strength = reduced
         ? (visual.phase == TaskTransitionPhase.source ||
-                  visual.phase == TaskTransitionPhase.creating
+                  visual.phase == TaskTransitionPhase.creating ||
+                  visual.phase == TaskTransitionPhase.editing
               ? 0.45
               : 0.0)
         : taskTransitionStrength(visual, time);
