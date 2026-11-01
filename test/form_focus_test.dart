@@ -62,11 +62,11 @@ void main() {
               0,
               reason: 'Picker Enter must not submit its parent.',
             );
-            // Depending on the picker focus, Enter may already have accepted it.
-            if (find.text('OK').evaluate().isNotEmpty) {
-              await tester.tap(find.text('OK').last);
-              await tester.pumpAndSettle();
-            }
+            expect(
+              find.text('OK'),
+              findsNothing,
+              reason: 'Enter must confirm the picker.',
+            );
             await tester.sendKeyEvent(LogicalKeyboardKey.enter);
             await tester.pumpAndSettle();
             expect(
@@ -128,10 +128,6 @@ void main() {
           expect(description, findsOneWidget);
           await tester.enterText(description, 'Expanded text\nSecond line');
           await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-          await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-          await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-          await tester.pump();
           expect(calls, 0);
           expect(expanded, findsOneWidget);
           await tester.tap(find.byType(BackButton));
@@ -152,10 +148,66 @@ void main() {
           await tester.sendKeyEvent(LogicalKeyboardKey.escape);
           await tester.pumpAndSettle();
           expect(find.byTooltip('Expand description'), findsOneWidget);
+          if (platform == TargetPlatform.windows) {
+            await tester.tap(find.byTooltip('Expand description'));
+            await tester.pumpAndSettle();
+            await tester.tap(
+              find.descendant(
+                of: expanded,
+                matching: find.byType(TextFormField),
+              ),
+            );
+            await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+            await tester.pumpAndSettle();
+            expect(calls, 1);
+            expect(expanded, findsNothing);
+          }
           await tester.pumpWidget(const SizedBox());
           f.dispose();
         },
       );
+
+      if (platform == TargetPlatform.windows && editing) {
+        testWidgets(
+          'Ctrl+Enter sees changes made only in expanded description',
+          (tester) async {
+            _viewport(tester);
+            final f = _Fixture();
+            await tester.runAsync(f.initialize);
+            var calls = 0;
+            await _open(
+              tester,
+              f,
+              platform,
+              form(f, () async {
+                calls++;
+                return false;
+              }),
+            );
+            await tester.tap(find.byTooltip('Expand description'));
+            await tester.pumpAndSettle();
+            final expanded = find.byKey(
+              const ValueKey('expanded-description-panel'),
+            );
+            await tester.enterText(
+              find.descendant(
+                of: expanded,
+                matching: find.byType(TextFormField),
+              ),
+              'New description',
+            );
+            await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+            await tester.pumpAndSettle();
+            expect(calls, 1);
+            await tester.pumpWidget(const SizedBox());
+            f.dispose();
+          },
+        );
+      }
 
       for (final focusedField in [0, 1]) {
         testWidgets(

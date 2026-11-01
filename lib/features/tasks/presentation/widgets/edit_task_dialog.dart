@@ -1,3 +1,4 @@
+import 'picker_enter_confirmation.dart';
 import 'expanded_description.dart';
 import 'task_form_keyboard.dart';
 import '../../../../core/theme/app_motion.dart';
@@ -240,30 +241,37 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                     const SizedBox(height: AppTheme.spacingMedium),
 
                     // Description
-                    LimitedTextField(
-                      controller: _descriptionController,
-                      limit: WorkspaceLimits.description,
-                      validator: WorkspaceLimits.descriptionError,
-                      enabled: !_isLoading,
-                      focusNode: _descriptionFocusNode,
-                      decoration: InputDecoration(
-                        suffixIcon: DescriptionExpandButton(
-                          onPressed: _isLoading
-                              ? null
-                              : () => pickOnce<void>(
-                                  () => expandDescription(
-                                    context,
-                                    _descriptionController,
-                                    taskName: _nameController.text,
-                                    panelKey: _panelKey,
-                                  ),
-                                ),
+                    ScrollbarTheme(
+                      data: const ScrollbarThemeData(crossAxisMargin: -4),
+                      child: LimitedTextField(
+                        controller: _descriptionController,
+                        limit: WorkspaceLimits.description,
+                        validator: WorkspaceLimits.descriptionError,
+                        enabled: !_isLoading,
+                        focusNode: _descriptionFocusNode,
+                        decoration: InputDecoration(
+                          suffixIcon: DescriptionExpandButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () async {
+                                    final submit = await pickOnce<bool>(
+                                      () => expandDescription(
+                                        context,
+                                        _descriptionController,
+                                        taskName: _nameController.text,
+                                        panelKey: _panelKey,
+                                        canSubmit: () => _canSubmit,
+                                      ),
+                                    );
+                                    if (submit == true && mounted) _submit();
+                                  },
+                          ),
+                          labelText: 'Description (optional)',
+                          hintText: 'Add details about this task...',
                         ),
-                        labelText: 'Description (optional)',
-                        hintText: 'Add details about this task...',
+                        maxLines: 3,
+                        minLines: 2,
                       ),
-                      maxLines: 3,
-                      minLines: 2,
                     ),
                     const SizedBox(height: AppTheme.spacingMedium),
 
@@ -360,18 +368,25 @@ class _EditTaskDialogState extends State<EditTaskDialog>
             lastDate: range.last,
             locale: const Locale('en', 'GB'), // Week starts on Monday
             builder: (context, child) {
-              return Theme(
-                data: Theme.of(context).copyWith(
-                  colorScheme: const ColorScheme.light(
-                    primary: AppColors.primary,
-                    onPrimary: Colors.white,
-                    surface: AppColors.surface,
-                    onSurface: AppColors.textPrimary,
+              return PickerEnterConfirmation(
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    timePickerTheme: TimePickerThemeData(
+                      cancelButtonStyle: TextButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                      ),
+                    ),
+                    colorScheme: const ColorScheme.light(
+                      primary: AppColors.primary,
+                      onPrimary: Colors.white,
+                      surface: AppColors.surface,
+                      onSurface: AppColors.textPrimary,
+                    ),
                   ),
+                  child: MediaQuery.sizeOf(context).height < 520
+                      ? SingleChildScrollView(child: child!)
+                      : child!,
                 ),
-                child: MediaQuery.sizeOf(context).height < 520
-                    ? SingleChildScrollView(child: child!)
-                    : child!,
               );
             },
           ),
@@ -431,18 +446,25 @@ class _EditTaskDialogState extends State<EditTaskDialog>
             context: context,
             initialTime: _deadlineTime,
             builder: (context, child) {
-              return Theme(
-                data: Theme.of(context).copyWith(
-                  colorScheme: const ColorScheme.light(
-                    primary: AppColors.primary,
-                    onPrimary: Colors.white,
-                    surface: AppColors.surface,
-                    onSurface: AppColors.textPrimary,
+              return PickerEnterConfirmation(
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    timePickerTheme: TimePickerThemeData(
+                      cancelButtonStyle: TextButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                      ),
+                    ),
+                    colorScheme: const ColorScheme.light(
+                      primary: AppColors.primary,
+                      onPrimary: Colors.white,
+                      surface: AppColors.surface,
+                      onSurface: AppColors.textPrimary,
+                    ),
                   ),
+                  child: MediaQuery.sizeOf(context).height < 520
+                      ? SingleChildScrollView(child: child!)
+                      : child!,
                 ),
-                child: MediaQuery.sizeOf(context).height < 520
-                    ? SingleChildScrollView(child: child!)
-                    : child!,
               );
             },
           ),

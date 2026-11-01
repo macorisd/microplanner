@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'picker_enter_confirmation.dart';
 import '../../../../core/widgets/limited_text_field.dart';
 
 Future<DateTime?> showTaskDatePicker({
@@ -22,7 +23,9 @@ Future<DateTime?> showTaskDatePicker({
         input: initialEntryMode == DatePickerEntryMode.inputOnly,
       ),
     );
-    return builder?.call(context, child) ?? child;
+    return PickerEnterConfirmation(
+      child: builder?.call(context, child) ?? child,
+    );
   },
 );
 

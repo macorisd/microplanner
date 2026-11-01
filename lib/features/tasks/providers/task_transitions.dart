@@ -11,6 +11,7 @@ enum TaskTransitionPhase {
   destination,
   rollback,
   creating,
+  editing,
   creationFinish,
 }
 
@@ -170,12 +171,11 @@ class TaskTransitions {
         final after = _read(item.after);
         final from = before == null ? null : column(before, time);
         final to = after == null ? null : column(after, time);
-        if (before != null &&
+        final sameColumnEdit =
+            before != null &&
             after != null &&
             from == to &&
-            before.boardId == after.boardId) {
-          continue;
-        }
+            before.boardId == after.boardId;
         _items[item.id] = TaskTransition(
           id: item.id,
           operationId: operation.id,
@@ -187,6 +187,8 @@ class TaskTransitions {
           carry: _carry(previous, time),
           phase: before == null
               ? TaskTransitionPhase.creating
+              : sameColumnEdit
+              ? TaskTransitionPhase.editing
               : TaskTransitionPhase.source,
         );
         revision++;
@@ -251,7 +253,15 @@ class TaskTransitions {
     for (final entry in _items.entries.toList()) {
       final t = entry.value;
       final elapsed = time.difference(t.phaseAt);
-      if (t.phase == TaskTransitionPhase.rollback &&
+      final standalone =
+          t.operationId != null &&
+          (t.before == null ||
+              t.after == null ||
+              t.phase == TaskTransitionPhase.editing);
+      if (standalone && (t.confirmed || t.failed)) {
+        _items.remove(entry.key);
+        revision++;
+      } else if (t.phase == TaskTransitionPhase.rollback &&
           elapsed >= settleDuration) {
         _items.remove(entry.key);
         revision++;

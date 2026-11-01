@@ -318,10 +318,10 @@ void main() {
       expect(tracker['one']!.to, isNull);
       expect(tracker['two']!.to, isNull);
       tracker.update('A', [], []);
-      expect(tracker.present([]).length, 2);
+      expect(tracker.present([]), isEmpty);
       now = start.add(const Duration(milliseconds: 1001));
       await tester.pump(const Duration(milliseconds: 1001));
-      expect(tracker.present([]).length, 2);
+      expect(tracker.present([]), isEmpty);
       now = now.add(const Duration(milliseconds: 1500));
       await tester.pump(const Duration(milliseconds: 1500));
       expect(tracker.present([]), isEmpty);

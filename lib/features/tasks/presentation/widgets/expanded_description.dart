@@ -31,18 +31,19 @@ class DescriptionExpandButton extends StatelessWidget {
 }
 
 /// A second view of the same draft, within the original form's dialog frame.
-Future<void> expandDescription(
+Future<bool> expandDescription(
   BuildContext context,
   TextEditingController controller, {
   required String taskName,
   required GlobalKey panelKey,
+  required bool Function() canSubmit,
 }) async {
   // Measure the full form content, not its keyboard-constrained scroll viewport.
   // Dialog applies the live available height while Android dismisses the IME.
   final panel = panelKey.currentContext?.findRenderObject() as RenderBox?;
   final panelSize = panel?.size ?? const Size(480, 600);
   FocusManager.instance.primaryFocus?.unfocus();
-  await showDialog<void>(
+  final submit = await showDialog<bool>(
     context: context,
     // The parent form already provides the modal scrim.
     barrierColor: Colors.transparent,
@@ -50,19 +51,23 @@ Future<void> expandDescription(
       controller: controller,
       taskName: taskName.trim().isEmpty ? 'New Task' : taskName.trim(),
       panelSize: panelSize,
+      canSubmit: canSubmit,
     ),
   );
   if (context.mounted) FocusManager.instance.primaryFocus?.unfocus();
+  return submit == true;
 }
 
 class _ExpandedDescription extends StatelessWidget {
   final TextEditingController controller;
   final String taskName;
   final Size panelSize;
+  final bool Function() canSubmit;
   const _ExpandedDescription({
     required this.controller,
     required this.taskName,
     required this.panelSize,
+    required this.canSubmit,
   });
 
   @override
@@ -72,6 +77,21 @@ class _ExpandedDescription extends StatelessWidget {
     final short = MediaQuery.sizeOf(context).height < 420;
     return CallbackShortcuts(
       bindings: {
+        const SingleActivator(LogicalKeyboardKey.enter, control: true): () {
+          if (canSubmit() &&
+              Theme.of(context).platform == TargetPlatform.windows) {
+            Navigator.of(context).pop(true);
+          }
+        },
+        const SingleActivator(
+          LogicalKeyboardKey.numpadEnter,
+          control: true,
+        ): () {
+          if (canSubmit() &&
+              Theme.of(context).platform == TargetPlatform.windows) {
+            Navigator.of(context).pop(true);
+          }
+        },
         const SingleActivator(LogicalKeyboardKey.escape): () =>
             Navigator.of(context).pop(),
       },
@@ -114,17 +134,20 @@ class _ExpandedDescription extends StatelessWidget {
                   ),
                   const SizedBox(height: AppTheme.spacingLarge),
                   Expanded(
-                    child: LimitedTextField(
-                      controller: controller,
-                      limit: WorkspaceLimits.description,
-                      validator: WorkspaceLimits.descriptionError,
-                      maxLines: null,
-                      expands: true,
-                      keyboardType: TextInputType.multiline,
-                      decoration: const InputDecoration(
-                        labelText: 'Description (optional)',
-                        hintText: 'Add details about this task...',
-                        alignLabelWithHint: true,
+                    child: ScrollbarTheme(
+                      data: const ScrollbarThemeData(crossAxisMargin: -4),
+                      child: LimitedTextField(
+                        controller: controller,
+                        limit: WorkspaceLimits.description,
+                        validator: WorkspaceLimits.descriptionError,
+                        maxLines: null,
+                        expands: true,
+                        keyboardType: TextInputType.multiline,
+                        decoration: const InputDecoration(
+                          labelText: 'Description (optional)',
+                          hintText: 'Add details about this task...',
+                          alignLabelWithHint: true,
+                        ),
                       ),
                     ),
                   ),
