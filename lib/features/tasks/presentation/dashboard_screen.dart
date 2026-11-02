@@ -13,6 +13,7 @@ import 'widgets/add_task_dialog.dart';
 import 'widgets/android_board_carousel.dart';
 import 'widgets/edit_task_dialog.dart';
 import 'widgets/sidebar.dart';
+import 'widgets/account_pages.dart';
 import 'widgets/task_column.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -24,11 +25,23 @@ class DashboardScreen extends StatelessWidget {
     final compact = android || MediaQuery.sizeOf(context).width < 850;
     final short = MediaQuery.sizeOf(context).height < 360;
     final workspace = context.watch<WorkspaceController>();
+    final page = context.select<BoardsProvider, DashboardPage>(
+      (boards) => boards.page,
+    );
+    final boardColor = context.select<BoardsProvider, int?>(
+      (boards) => boards.currentBoard?.color,
+    );
     final boardName =
         context.select<BoardsProvider, String?>(
           (boards) => boards.currentBoard?.name,
         ) ??
         'My Tasks';
+    final pageName = switch (page) {
+      DashboardPage.board => boardName,
+      DashboardPage.weeklyPlan => 'Weekly Plan',
+      DashboardPage.profile => 'Profile',
+      DashboardPage.settings => 'Settings',
+    };
     final refresh = IconButton(
       tooltip: 'Refresh cloud data',
       onPressed: workspace.isLoading || workspace.isSaving
@@ -42,13 +55,13 @@ class DashboardScreen extends StatelessWidget {
               toolbarHeight: short ? 48 : null,
               title: MotionSwap(
                 child: Text(
-                  boardName,
-                  key: ValueKey(boardName),
+                  pageName,
+                  key: ValueKey(pageName),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              actions: [refresh],
+              actions: [if (page == DashboardPage.board) refresh],
             )
           : null,
       drawer: compact
@@ -69,7 +82,7 @@ class DashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (!compact)
+                  if (!compact && page == DashboardPage.board)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppTheme.spacingLarge,
@@ -93,14 +106,39 @@ class DashboardScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                  const Expanded(child: _TaskArea()),
+                  Expanded(
+                    child: switch (page) {
+                      DashboardPage.board => ColoredBox(
+                        color: Color.alphaBlend(
+                          Color(
+                            boardColor ?? 0xff7986cb,
+                          ).withValues(alpha: 0.07),
+                          AppColors.background,
+                        ),
+                        child: const _TaskArea(),
+                      ),
+                      DashboardPage.weeklyPlan => const Center(
+                        child: Text('Coming Soon'),
+                      ),
+                      DashboardPage.profile => ProfilePage(
+                        onSettings: () => context
+                            .read<BoardsProvider>()
+                            .navigate(DashboardPage.settings),
+                      ),
+                      DashboardPage.settings => SettingsPage(
+                        onBack: () => context.read<BoardsProvider>().navigate(
+                          DashboardPage.profile,
+                        ),
+                      ),
+                    },
+                  ),
                 ],
               ),
             ),
           ),
         ],
       ),
-      floatingActionButton: android
+      floatingActionButton: android || page != DashboardPage.board
           ? null
           : PressFeedback(
               child: short
@@ -186,7 +224,10 @@ class DashboardScreen extends StatelessWidget {
     final provider = context.read<TasksProvider>();
     showMotionDialog(
       context: context,
-      builder: (_) => AddTaskDialog(onSave: provider.addTask),
+      builder: (_) => AddTaskDialog(
+        onSave: provider.addTask,
+        onSaveWithType: provider.addTask,
+      ),
     );
   }
 

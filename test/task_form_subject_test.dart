@@ -18,7 +18,7 @@ import 'support/fakes.dart';
 
 const _subject = Subject(
   id: 'subject',
-  name: 'A subject with a deliberately long name for a narrow task form',
+  name: 'A subject with a long name for a narrow task form',
   boardId: 'default-board',
   color: 0xffed7691,
 );

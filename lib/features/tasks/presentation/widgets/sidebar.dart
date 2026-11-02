@@ -9,16 +9,13 @@ import '../../../../core/utils/input_mode.dart';
 import '../../../auth/data/auth_service.dart';
 import '../../../boards/data/models/board.dart';
 import '../../../boards/providers/boards_provider.dart';
-import 'subject_dialog.dart';
 import 'new_board_dialog.dart';
 import 'action_confirmation_dialog.dart';
-import 'save_status.dart';
-import '../../../../core/data/workspace_limits.dart';
-import '../../../../core/widgets/limited_text_field.dart';
-import '../../../../core/widgets/pending_action.dart';
+import '../../../boards/data/board_catalog.dart';
+import 'board_editor_dialog.dart';
 
 /// Resizable sidebar navigation widget
-/// Contains Boards section with subjects management and Sign Out
+/// Contains navigation, boards and the current account.
 class Sidebar extends StatefulWidget {
   final bool inDrawer;
 
@@ -78,27 +75,25 @@ class _SidebarState extends State<Sidebar> {
                 const Divider(height: 1),
                 const SizedBox(height: AppTheme.spacingSmall),
 
-                // Boards section
+                _SidebarItem(
+                  icon: Icons.calendar_view_week_outlined,
+                  label: 'Weekly Plan',
+                  isActive:
+                      context.select<BoardsProvider, DashboardPage>(
+                        (boards) => boards.page,
+                      ) ==
+                      DashboardPage.weeklyPlan,
+                  onTap: () {
+                    context.read<BoardsProvider>().navigate(
+                      DashboardPage.weeklyPlan,
+                    );
+                    if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
+                      Scaffold.of(context).closeDrawer();
+                    }
+                  },
+                ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    child: Consumer<BoardsProvider>(
-                      builder: (context, boardsProvider, _) {
-                        return MotionSwap(
-                          alignment: Alignment.topLeft,
-                          child: KeyedSubtree(
-                            key: ValueKey(
-                              boardsProvider.showSubjectsView
-                                  ? 'subjects:${boardsProvider.subjectsBoardName}'
-                                  : 'boards',
-                            ),
-                            child: boardsProvider.showSubjectsView
-                                ? const _SubjectsView()
-                                : const _BoardsSection(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                  child: SingleChildScrollView(child: const _BoardsSection()),
                 ),
 
                 // User info
@@ -109,60 +104,68 @@ class _SidebarState extends State<Sidebar> {
 
                     return MouseRegion(
                       cursor: SystemMouseCursors.click,
-                      child: Container(
-                        margin: EdgeInsets.all(
-                          touch ? 12 : AppTheme.spacingMedium,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.radiusMedium,
                         ),
-                        padding: EdgeInsets.all(
-                          touch ? 12 : AppTheme.spacingMedium,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.radiusMedium,
+                        onTap: () {
+                          context.read<BoardsProvider>().navigate(
+                            DashboardPage.profile,
+                          );
+                          if (Scaffold.maybeOf(context)?.isDrawerOpen ??
+                              false) {
+                            Scaffold.of(context).closeDrawer();
+                          }
+                        },
+                        child: Container(
+                          margin: EdgeInsets.all(
+                            touch ? 12 : AppTheme.spacingMedium,
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            _ProfileAvatar(key: ValueKey(user.id), user: user),
-                            const SizedBox(width: AppTheme.spacingSmall),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    user.displayName,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleSmall,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    user.email,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.labelSmall,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
+                          padding: EdgeInsets.all(
+                            touch ? 12 : AppTheme.spacingMedium,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusMedium,
                             ),
-                          ],
+                          ),
+                          child: Row(
+                            children: [
+                              _ProfileAvatar(
+                                key: ValueKey(user.id),
+                                user: user,
+                              ),
+                              const SizedBox(width: AppTheme.spacingSmall),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      user.displayName,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleSmall,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      user.email,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.labelSmall,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
                   },
                 ),
 
-                // Sign out button
-                _SidebarItem(
-                  icon: Icons.logout_rounded,
-                  label: 'Sign out',
-                  isActive: false,
-                  onTap: () {
-                    context.read<AuthService>().signOut();
-                  },
-                ),
                 SizedBox(height: touch ? 8 : AppTheme.spacingMedium),
               ],
             ),
@@ -196,197 +199,156 @@ class _SidebarState extends State<Sidebar> {
   }
 }
 
-/// Boards section with header and list
-class _BoardsSection extends StatelessWidget {
+/// Expanded-by-default board navigation with accessible editing controls.
+class _BoardsSection extends StatefulWidget {
   const _BoardsSection();
-
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section header
-        Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppTheme.spacingLarge,
-            vertical: usesTouchControls(context) ? 0 : AppTheme.spacingSmall,
-          ),
-          child: Row(
-            children: [
-              Text(
-                'Boards',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              _BoardActionButton(
-                icon: Icons.add_rounded,
-                tooltip: 'New board',
-                color: AppColors.primary,
-                onTap: () => _showAddBoardDialog(context),
-              ),
-            ],
-          ),
-        ),
-        // Board list - Reorderable with smooth animations
-        Consumer<BoardsProvider>(
-          builder: (context, provider, _) {
-            return ReorderableListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              buildDefaultDragHandles: false,
-              proxyDecorator: (child, index, animation) {
-                return AnimatedBuilder(
-                  animation: animation,
-                  builder: (context, child) {
-                    final animValue = Curves.easeInOut.transform(
-                      animation.value,
-                    );
-                    final elevation = lerpDouble(0, 8, animValue)!;
-                    final scale = lerpDouble(1.0, 1.03, animValue)!;
-                    return Transform.scale(
-                      scale: scale,
-                      child: Material(
-                        elevation: elevation,
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.radiusMedium,
-                        ),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: child,
-                );
-              },
-              onReorder: (oldIndex, newIndex) {
-                provider.reorderBoards(oldIndex, newIndex);
-              },
-              itemCount: provider.boards.length,
-              itemBuilder: (context, index) {
-                final board = provider.boards[index];
-                final card = _BoardCard(
-                  board: board,
-                  isActive: provider.currentBoardId == board.id,
-                  canDelete: provider.boards.length > 1,
-                );
-                if (usesTouchControls(context)) {
-                  return ReorderableDelayedDragStartListener(
-                    key: ValueKey(board.id),
-                    index: index,
-                    child: card,
-                  );
-                }
-                return ReorderableDragStartListener(
-                  key: ValueKey(board.id),
-                  index: index,
-                  child: card,
-                );
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  void _showAddBoardDialog(BuildContext context) {
-    final boards = context.read<BoardsProvider>();
-    showMotionDialog(
-      context: context,
-      builder: (_) =>
-          NewBoardDialog(onSave: (name) => boards.addBoard(name: name)),
-    );
-  }
+  State<_BoardsSection> createState() => _BoardsSectionState();
 }
 
-/// Individual board card in sidebar
-class _BoardCard extends StatefulWidget {
-  final Board board;
-  final bool isActive;
-  final bool canDelete;
+class _BoardsSectionState extends State<_BoardsSection> {
+  bool _expanded = true;
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
+        child: Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                button: true,
+                expanded: _expanded,
+                child: InkWell(
+                  onTap: () => setState(() => _expanded = !_expanded),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingMedium,
+                      vertical: AppTheme.spacingMedium,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Boards',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                        Icon(
+                          _expanded
+                              ? Icons.keyboard_arrow_down
+                              : Icons.keyboard_arrow_right,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            _BoardActionButton(
+              icon: Icons.add_rounded,
+              tooltip: 'New board',
+              color: AppColors.primary,
+              onTap: () {
+                final boards = context.read<BoardsProvider>();
+                showMotionDialog(
+                  context: context,
+                  builder: (_) => NewBoardDialog(
+                    onSave: (name) => boards.addBoard(name: name),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      if (_expanded)
+        Consumer<BoardsProvider>(
+          builder: (context, provider, _) => ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            proxyDecorator: (child, index, animation) => AnimatedBuilder(
+              animation: animation,
+              builder: (context, child) {
+                final progress = Curves.easeInOut.transform(animation.value);
+                return Transform.scale(
+                  scale: lerpDouble(1, 1.03, progress)!,
+                  child: Material(
+                    elevation: lerpDouble(0, 8, progress)!,
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    child: child,
+                  ),
+                );
+              },
+              child: child,
+            ),
+            onReorder: provider.reorderBoards,
+            itemCount: provider.boards.length,
+            itemBuilder: (context, index) {
+              final board = provider.boards[index];
+              final card = _BoardCard(
+                board: board,
+                isActive:
+                    provider.currentBoardId == board.id &&
+                    provider.page == DashboardPage.board,
+                canDelete: provider.boards.length > 1,
+              );
+              return usesTouchControls(context)
+                  ? ReorderableDelayedDragStartListener(
+                      key: ValueKey(board.id),
+                      index: index,
+                      child: card,
+                    )
+                  : ReorderableDragStartListener(
+                      key: ValueKey(board.id),
+                      index: index,
+                      child: card,
+                    );
+            },
+          ),
+        ),
+    ],
+  );
+}
 
+class _BoardCard extends StatefulWidget {
   const _BoardCard({
     required this.board,
     required this.isActive,
     required this.canDelete,
   });
-
+  final Board board;
+  final bool isActive;
+  final bool canDelete;
   @override
   State<_BoardCard> createState() => _BoardCardState();
 }
 
-class _BoardCardState extends State<_BoardCard>
-    with PendingActionState<_BoardCard> {
-  bool _isHovered = false;
-  bool _isFocused = false;
-  bool _isSubjectsHovered = false;
-  bool _isEditing = false;
-  late TextEditingController _nameController;
-  Board? _editingOriginal;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.board.name);
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  void _startEditing() {
-    if (isSubmitting) return;
-    setState(() {
-      _isEditing = true;
-      _editingOriginal = widget.board;
-      _nameController.text = widget.board.name;
-    });
-  }
-
-  Future<void> _finishEditing() async {
-    if (isSubmitting ||
-        WorkspaceLimits.boardNameError(_nameController.text) != null) {
-      return;
-    }
-    final newName = _nameController.text.trim();
-    if (newName == widget.board.name.trim()) {
-      _cancelEditing();
-      return;
-    }
-    final boards = context.read<BoardsProvider>();
-    final original = _editingOriginal ?? widget.board;
-    final updated = original.copyWith(name: newName);
-    if (await submitOnce(
-          () => boards.updateBoard(updated, original: original),
-          lockAfterSuccess: false,
-        ) &&
-        mounted) {
-      setState(() => _isEditing = false);
-    }
-  }
-
-  void _cancelEditing() {
-    if (isSubmitting) return;
-    setState(() {
-      _isEditing = false;
-      _nameController.text = widget.board.name;
-    });
-  }
-
-  void _confirmDelete() {
+class _BoardCardState extends State<_BoardCard> {
+  bool _hovered = false;
+  bool _focused = false;
+  void _edit() => showMotionDialog(
+    context: context,
+    builder: (_) => BoardEditorDialog(board: widget.board),
+  );
+  void _delete() {
     final boards = context.read<BoardsProvider>();
     showMotionDialog(
       context: context,
       builder: (_) => ActionConfirmationDialog(
+        title: 'Delete Board',
         actionLabel: 'Delete',
         pendingLabel: 'Deleting…',
         destructive: true,
-        title: 'Delete Board',
         message:
             'Are you sure you want to delete "${widget.board.name}"? This will also delete all subjects and tasks in this board.',
         onConfirm: () => boards.deleteBoard(widget.board.id),
@@ -397,423 +359,111 @@ class _BoardCardState extends State<_BoardCard>
   @override
   Widget build(BuildContext context) {
     final touch = usesTouchControls(context);
-    final showActions = touch || _isHovered || _isFocused;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTheme.spacingMedium,
-        vertical: AppTheme.spacingXSmall,
-      ),
-      child: TapRegion(
-        onTapOutside: (_) {
-          if (_isEditing) _cancelEditing();
-        },
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _isHovered = true),
-          onExit: (_) => setState(() => _isHovered = false),
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-              hoverColor: Colors.transparent,
-              focusColor: Colors.transparent,
-              highlightColor: AppColors.primaryLight,
-              splashColor: AppColors.primaryLight,
-              onFocusChange: (focused) => setState(() => _isFocused = focused),
-              onTap: _isEditing
-                  ? null
-                  : () {
-                      context.read<BoardsProvider>().selectBoard(
-                        widget.board.id,
-                      );
-                      final scaffold = Scaffold.maybeOf(context);
-                      if (scaffold?.isDrawerOpen ?? false) {
-                        scaffold!.closeDrawer();
-                      }
-                    },
-              // Pointer exit must clear immediately, without an overlapping trail.
-              child: Ink(
-                padding: EdgeInsets.symmetric(
-                  horizontal: touch ? 12 : AppTheme.spacingMedium,
-                  vertical: touch ? 4 : AppTheme.spacingMedium,
-                ),
-                decoration: BoxDecoration(
-                  color: widget.isActive
-                      ? AppColors.sidebarItemActive
-                      : _isHovered
-                      ? AppColors.sidebarItemHover
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                  border: Border.all(
-                    color: widget.isActive
-                        ? AppColors.primary.withValues(alpha: 0.3)
-                        : _isFocused
-                        ? AppColors.textTertiary
-                        : Colors.transparent,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_isEditing && submissionError != null)
-                      SaveStatus(error: submissionError),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.dashboard_rounded,
-                          size: 18,
-                          color: widget.isActive
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: AppTheme.spacingSmall),
-                        Expanded(
-                          child: MotionSwap(
-                            alignment: Alignment.centerLeft,
-                            child: _isEditing
-                                ? LimitedTextField(
-                                    key: const ValueKey('editing'),
-                                    limit: WorkspaceLimits.boardName,
-                                    validator: WorkspaceLimits.boardNameError,
-                                    enabled: !isSubmitting,
-                                    controller: _nameController,
-                                    autofocus: true,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium,
-                                    decoration: const InputDecoration(
-                                      isDense: true,
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 6,
-                                      ),
-                                    ),
-                                    onSubmitted: (_) => _finishEditing(),
-                                  )
-                                : Text(
-                                    widget.board.name,
-                                    key: const ValueKey('name'),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: widget.isActive
-                                              ? AppColors.primary
-                                              : AppColors.textPrimary,
-                                          fontWeight: widget.isActive
-                                              ? FontWeight.w600
-                                              : FontWeight.w500,
-                                        ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                          ),
-                        ),
-                        // Action buttons - always present but invisible when not hovered
-                        if (!_isEditing)
-                          AnimatedOpacity(
-                            duration: AppMotion.duration(
-                              context,
-                              AppMotion.fast,
-                            ),
-                            opacity: showActions ? 1.0 : 0.0,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _BoardActionButton(
-                                  icon: Icons.edit_outlined,
-                                  tooltip: 'Rename board',
-                                  onTap: showActions ? _startEditing : null,
-                                ),
-                                if (widget.canDelete)
-                                  _BoardActionButton(
-                                    icon: Icons.delete_outline_rounded,
-                                    tooltip: 'Delete board',
-                                    onTap: showActions ? _confirmDelete : null,
-                                  ),
-                              ],
-                            ),
-                          ),
-                        if (_isEditing) ...[
-                          _BoardActionButton(
-                            icon: Icons.check_rounded,
-                            tooltip: 'Save board name',
-                            onTap: _finishEditing,
-                            color: AppColors.success,
-                          ),
-                          _BoardActionButton(
-                            icon: Icons.close_rounded,
-                            tooltip: 'Cancel renaming',
-                            onTap: _cancelEditing,
-                          ),
-                        ],
-                      ],
-                    ),
-                    SizedBox(height: touch ? 0 : AppTheme.spacingXSmall),
-                    // Subjects button with oval hover effect
-                    MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      onEnter: (_) => setState(() => _isSubjectsHovered = true),
-                      onExit: (_) => setState(() => _isSubjectsHovered = false),
-                      child: GestureDetector(
-                        onTap: () {
-                          context.read<BoardsProvider>().showSubjectsForBoard(
-                            widget.board.id,
-                          );
-                        },
-                        child: AnimatedContainer(
-                          duration: AppMotion.duration(context, AppMotion.fast),
-                          constraints: BoxConstraints(
-                            minHeight: usesTouchControls(context) ? 48 : 0,
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.spacingSmall,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: _isSubjectsHovered
-                                  ? AppColors.textTertiary
-                                  : Colors.transparent,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.subject_rounded,
-                                size: touch ? 16 : 14,
-                                color: touch
-                                    ? AppColors.textSecondary
-                                    : AppColors.textTertiary,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Subjects',
-                                style:
-                                    (touch
-                                            ? Theme.of(
-                                                context,
-                                              ).textTheme.labelMedium
-                                            : Theme.of(
-                                                context,
-                                              ).textTheme.labelSmall)
-                                        ?.copyWith(
-                                          color: touch
-                                              ? AppColors.textSecondary
-                                              : AppColors.textTertiary,
-                                        ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Subject management view
-class _SubjectsView extends StatelessWidget {
-  const _SubjectsView();
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<BoardsProvider>(
-      builder: (context, provider, _) {
-        final subjects = provider.currentBoardSubjects;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with back button
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppTheme.spacingLarge,
-                vertical: usesTouchControls(context)
-                    ? 0
-                    : AppTheme.spacingSmall,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _BoardActionButton(
-                    icon: Icons.arrow_back_rounded,
-                    tooltip: 'Back to boards',
-                    onTap: provider.hideSubjectsView,
-                  ),
-                  const SizedBox(width: AppTheme.spacingSmall),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Subjects',
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        if (provider.subjectsBoardName != null)
-                          Text(
-                            provider.subjectsBoardName!,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(color: AppColors.textTertiary),
-                          ),
-                      ],
-                    ),
-                  ),
-                  _BoardActionButton(
-                    icon: Icons.add_rounded,
-                    tooltip: 'New subject',
-                    color: AppColors.primary,
-                    onTap: () => _showAddSubjectDialog(context),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppTheme.spacingXSmall),
-            // Subject list
-            if (subjects.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(AppTheme.spacingLarge),
-                child: Text(
-                  'No subjects yet.\nTap + to add one.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              )
-            else
-              ...subjects.map((subject) => _SubjectItem(subject: subject)),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showAddSubjectDialog(BuildContext context) {
-    final boardsProvider = context.read<BoardsProvider>();
-    showMotionDialog(
-      context: context,
-      builder: (dialogContext) => SubjectDialog(
-        title: 'New Subject',
-        initialName: '',
-        initialColor: AppColors.subjectColors.first.toARGB32(),
-        onSave: (name, color) =>
-            boardsProvider.addSubject(name: name, color: color),
-      ),
-    );
-  }
-}
-
-/// Individual subject item
-class _SubjectItem extends StatefulWidget {
-  final dynamic subject;
-
-  const _SubjectItem({required this.subject});
-
-  @override
-  State<_SubjectItem> createState() => _SubjectItemState();
-}
-
-class _SubjectItemState extends State<_SubjectItem> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
+    final show = touch || _hovered || _focused;
+    final color = Color(widget.board.color);
+    final darkBackground = boardRowUsesDarkBackground(color);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppTheme.spacingMedium,
         vertical: AppTheme.spacingXSmall,
       ),
       child: MouseRegion(
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
-        child: AnimatedContainer(
-          duration: AppMotion.duration(context, AppMotion.fast),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppTheme.spacingMedium,
-            vertical: AppTheme.spacingSmall,
-          ),
-          decoration: BoxDecoration(
-            color: _isHovered ? AppColors.sidebarItemHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Focus(
+          canRequestFocus: false,
+          onFocusChange: (value) => setState(() => _focused = value),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              onTap: () {
+                context.read<BoardsProvider>().selectBoard(widget.board.id);
+                if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
+                  Scaffold.of(context).closeDrawer();
+                }
+              },
+              child: Ink(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppTheme.spacingMedium,
+                  vertical: touch ? 4 : 8,
+                ),
                 decoration: BoxDecoration(
-                  color: Color(widget.subject.color),
-                  shape: BoxShape.circle,
+                  color: boardRowBackground(
+                    color,
+                    selected: widget.isActive,
+                    hovered: _hovered,
+                  ),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  border: Border.all(
+                    color: _focused ? color : Colors.transparent,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      boardIcons[widget.board.icon] ?? Icons.dashboard_rounded,
+                      size: 20,
+                      color: color,
+                    ),
+                    const SizedBox(width: AppTheme.spacingSmall),
+                    Expanded(
+                      child: Text(
+                        widget.board.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: color,
+                          fontWeight: widget.isActive
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    if (touch)
+                      PopupMenuButton<String>(
+                        tooltip: 'Board actions',
+                        icon: Icon(
+                          Icons.more_horiz_rounded,
+                          color: darkBackground
+                              ? Colors.white70
+                              : AppColors.textSecondary,
+                        ),
+                        onSelected: (action) =>
+                            action == 'edit' ? _edit() : _delete(),
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Text('Edit board'),
+                          ),
+                          if (widget.canDelete)
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Delete board'),
+                            ),
+                        ],
+                      )
+                    else if (show) ...[
+                      _BoardActionButton(
+                        icon: Icons.edit_outlined,
+                        tooltip: 'Edit board',
+                        color: darkBackground ? Colors.white70 : null,
+                        onTap: _edit,
+                      ),
+                      if (widget.canDelete)
+                        _BoardActionButton(
+                          icon: Icons.delete_outline_rounded,
+                          tooltip: 'Delete board',
+                          color: darkBackground ? Colors.white70 : null,
+                          onTap: _delete,
+                        ),
+                    ],
+                  ],
                 ),
               ),
-              const SizedBox(width: AppTheme.spacingSmall),
-              Expanded(
-                child: Text(
-                  widget.subject.name,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (usesTouchControls(context) || _isHovered) ...[
-                _BoardActionButton(
-                  icon: Icons.edit_outlined,
-                  tooltip: 'Edit subject',
-                  onTap: () => _showEditDialog(context),
-                ),
-                _BoardActionButton(
-                  icon: Icons.delete_outline_rounded,
-                  tooltip: 'Delete subject',
-                  onTap: _confirmDeleteSubject,
-                ),
-              ],
-            ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  void _confirmDeleteSubject() {
-    final boards = context.read<BoardsProvider>();
-    showMotionDialog(
-      context: context,
-      builder: (_) => ActionConfirmationDialog(
-        actionLabel: 'Delete',
-        pendingLabel: 'Deleting…',
-        destructive: true,
-        title: 'Delete Subject',
-        message: 'Are you sure you want to delete "${widget.subject.name}"?',
-        onConfirm: () => boards.deleteSubject(widget.subject.id),
-      ),
-    );
-  }
-
-  void _showEditDialog(BuildContext context) {
-    final boardsProvider = context.read<BoardsProvider>();
-    final original = widget.subject;
-    showMotionDialog(
-      context: context,
-      builder: (dialogContext) => SubjectDialog(
-        title: 'Edit Subject',
-        initialName: original.name,
-        initialColor: original.color,
-        onSave: (name, color) {
-          final updated = original.copyWith(name: name, color: color);
-          return boardsProvider.updateSubject(updated, original: original);
-        },
       ),
     );
   }
@@ -853,43 +503,51 @@ class _SidebarItemState extends State<_SidebarItem> {
         cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spacingMedium,
-              vertical: AppTheme.spacingMedium,
-            ),
-            decoration: BoxDecoration(
-              color: widget.isActive
-                  ? AppColors.sidebarItemActive
-                  : _isHovered
-                  ? AppColors.sidebarItemHover
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  widget.icon,
-                  size: 22,
-                  color: isHighlighted
-                      ? AppColors.primary
-                      : AppColors.textSecondary,
-                ),
-                const SizedBox(width: AppTheme.spacingMedium),
-                Text(
-                  widget.label,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            onTap: widget.onTap,
+            child: Ink(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingMedium,
+                vertical: AppTheme.spacingMedium,
+              ),
+              decoration: BoxDecoration(
+                color: widget.isActive
+                    ? AppColors.sidebarItemActive
+                    : _isHovered
+                    ? AppColors.sidebarItemHover
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.icon,
+                    size: 22,
                     color: isHighlighted
                         ? AppColors.primary
                         : AppColors.textSecondary,
-                    fontWeight: widget.isActive
-                        ? FontWeight.w600
-                        : FontWeight.w500,
                   ),
-                ),
-              ],
+                  const SizedBox(width: AppTheme.spacingMedium),
+                  Expanded(
+                    child: Text(
+                      widget.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: isHighlighted
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                        fontWeight: widget.isActive
+                            ? FontWeight.w600
+                            : FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

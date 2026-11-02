@@ -382,7 +382,7 @@ void main() {
               await tester.pumpAndSettle();
               await tester.tap(find.text('Math').last);
             } else if (control == 'type') {
-              await tester.tap(find.byType(DropdownButton<TaskType>));
+              await tester.tap(find.byType(DropdownButton<String>));
               await tester.pumpAndSettle();
               await tester.tap(find.text(TaskType.presentation.label).last);
             } else {

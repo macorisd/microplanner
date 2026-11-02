@@ -151,9 +151,14 @@ void main() {
       expect(find.byTooltip('Refresh cloud data'), findsOneWidget);
       await tester.tap(find.byTooltip('Open navigation menu'));
       await tester.pumpAndSettle();
+      expect(find.text('Sign out'), findsNothing);
+      await tester.tap(find.text('A@example.com'));
+      await tester.pumpAndSettle();
       expect(find.text('Sign out'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      Navigator.of(tester.element(find.text('Sign out'))).pop();
+      await tester.tap(find.byTooltip('Open navigation menu'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A private').last);
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('New Task'));
       await tester.pumpAndSettle();
