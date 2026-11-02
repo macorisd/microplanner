@@ -5,7 +5,7 @@ API and private per-user data in MongoDB Atlas. Both platforms now default to
 `https://microplanner-api.vercel.app`, independently of the laptop/USB connection.
 
 Download signed Android APKs from [GitHub Releases](https://github.com/macorisd/microplanner/releases).
-See [cloud hosting and Android releases](docs/cloud-and-releases.md) for installation,
+See [cloud hosting and Android releases](cloud-and-releases.md) for installation,
 signing, the development-app transition, deployment, backups and release recovery.
 
 ## Run locally
@@ -166,4 +166,7 @@ and revocable session tokens; authentication endpoints are rate limited.
 Before 1.0.0, new functionality is minor and bug fixes are patch; no major bumps
 are made solely for scope. The move to 1.0.0 is an explicit maturity decision.
 After that, ordinary major/minor/patch rules apply. Approved changes follow the
-single plan in `plans/` and are delivered by pull request.
+single plan in `docs/plans/` and are delivered by pull request. Read the shared
+[project decisions](decisions/README.md) before planning, implementing or verifying
+changes; they record the standing UI, interaction, device-testing and delivery
+conventions used across chats.

@@ -1,5 +1,18 @@
 # Repository conventions
 
+## Shared project decisions
+
+Use the active `md-method` skill for every requested change. Read
+[docs/decisions/README.md](docs/decisions/README.md) at the start of every
+task, then the topic documents relevant to its scope before planning, changing
+or verifying anything. UI work requires the visual, interaction and verification
+topics, including real Windows computer use and physical Android ADB checks.
+Update these versioned decisions in the same task when the user changes or asks
+to save a standing convention. The local context log is not the shared rulebook.
+Plans live in `docs/plans/`; preserve their history and approval metadata.
+
+## General rules
+
 - Always spell the product name `microplanner` in lowercase in UI text,
   documentation, pull requests, and conversation. Use ordinary language naming
   conventions for identifiers that do not contain the product name.
