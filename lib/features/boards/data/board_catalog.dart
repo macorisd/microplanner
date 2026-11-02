@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 
 import 'type_list_replacement.dart';
 
@@ -46,20 +47,41 @@ const boardIcons = <String, IconData>{
   'more': Icons.more_horiz_rounded,
 };
 
-const boardColors = <int>[
-  0xff5366b3,
-  0xff7654a5,
-  0xffa34d85,
-  0xffb14f5b,
-  0xffb75e33,
-  0xff947018,
-  0xff548036,
-  0xff258375,
-  0xff287e9a,
-  0xff426f9e,
-  0xff766450,
-  0xff5d6877,
-];
+final boardColors = List<int>.unmodifiable(
+  AppColors.subjectColors.map((color) => color.toARGB32()),
+);
+
+/// Keep the actual pastel foreground color while giving pale colors contrast.
+Color boardRowBackground(
+  Color color, {
+  required bool selected,
+  required bool hovered,
+}) {
+  final lightBackground = AppColors.sidebarBackground.computeLuminance();
+  final contrast = (lightBackground + 0.05) / (color.computeLuminance() + 0.05);
+  if (contrast < 3) {
+    return HSLColor.fromColor(color)
+        .withSaturation(0.28)
+        .withLightness(
+          selected
+              ? 0.20
+              : hovered
+              ? 0.22
+              : 0.16,
+        )
+        .toColor();
+  }
+  return selected
+      ? AppColors.sidebarItemActive
+      : hovered
+      ? AppColors.sidebarItemHover
+      : Colors.transparent;
+}
+
+bool boardRowUsesDarkBackground(Color color) =>
+    (AppColors.sidebarBackground.computeLuminance() + 0.05) /
+        (color.computeLuminance() + 0.05) <
+    3;
 
 class InitialTypeList {
   const InitialTypeList(this.name, this.types);

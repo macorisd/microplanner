@@ -6,6 +6,8 @@ class WorkspaceLimits {
   WorkspaceLimits._();
   static const name = 300;
   static const boardName = 50;
+  static const categoryName = 50;
+  static const categoriesPerBoard = 25;
   static const description = 20000;
   static const boards = 300;
   static const subjects = 3000;
@@ -56,13 +58,18 @@ class WorkspaceLimits {
     if (data.tasks.length > tasks) return 'You can keep up to $tasks tasks.';
     final boardIds = <String>{};
     final subjectBoards = <String, String>{};
+    final typeBoards = <String, String>{};
     final taskIds = <String>{};
     for (final board in data.boards) {
       if (!_id.hasMatch(board.id) ||
           !boardIds.add(board.id) ||
           board.sortOrder < 0 ||
           board.sortOrder > 9007199254740991 ||
-          !validDate(board.createdAt)) {
+          !validDate(board.createdAt) ||
+          (data.schemaVersion == 2 &&
+              (board.color < 0 ||
+                  board.color > 0xffffffff ||
+                  !_validIcon(board.icon)))) {
         return 'Invalid board data. Refresh and try again.';
       }
       // Unchanged legacy names never block unrelated saves or get truncated.
@@ -87,6 +94,65 @@ class WorkspaceLimits {
       subjectBoards[subject.id] = subject.boardId;
       final error = nameError(subject.name);
       if (error != null) return 'Subject name: $error';
+      if (data.schemaVersion == 2 &&
+          subject.name.trim().length > categoryName &&
+          !(previous?.subjects.any(
+                (old) => old.id == subject.id && old.name == subject.name,
+              ) ??
+              false)) {
+        return 'Subject name: Use at most $categoryName characters.';
+      }
+    }
+    if (data.schemaVersion == 2) {
+      final counts = <String, int>{};
+      final previousCounts = <String, int>{};
+      for (final subject in data.subjects) {
+        counts[subject.boardId] = (counts[subject.boardId] ?? 0) + 1;
+      }
+      for (final subject in previous?.subjects ?? const []) {
+        previousCounts[subject.boardId] =
+            (previousCounts[subject.boardId] ?? 0) + 1;
+      }
+      for (final entry in counts.entries) {
+        final old = previousCounts[entry.key] ?? 0;
+        if (entry.value > categoriesPerBoard && entry.value > old) {
+          return 'You can keep up to $categoriesPerBoard subjects per board.';
+        }
+      }
+      final typeCounts = <String, int>{};
+      for (final type in data.boardTypes) {
+        if (!_id.hasMatch(type.id) ||
+            typeBoards.containsKey(type.id) ||
+            !boardIds.contains(type.boardId) ||
+            !_validIcon(type.icon) ||
+            type.sortOrder < 0 ||
+            nameError(type.name) != null ||
+            type.name.trim().length > categoryName) {
+          return 'Invalid task type data.';
+        }
+        typeBoards[type.id] = type.boardId;
+        typeCounts[type.boardId] = (typeCounts[type.boardId] ?? 0) + 1;
+      }
+      if (typeCounts.values.any((count) => count > categoriesPerBoard)) {
+        return 'You can keep up to $categoriesPerBoard task types per board.';
+      }
+      final listIds = <String>{};
+      if (data.typeLists.length > 300) return 'Too many default lists.';
+      for (final list in data.typeLists) {
+        if (!_id.hasMatch(list.id) ||
+            !listIds.add(list.id) ||
+            nameError(list.name) != null ||
+            list.name.trim().length > categoryName ||
+            list.types.length > categoriesPerBoard ||
+            list.types.any(
+              (type) =>
+                  nameError(type.name) != null ||
+                  type.name.trim().length > categoryName ||
+                  !_validIcon(type.icon),
+            )) {
+          return 'Invalid default task type list.';
+        }
+      }
     }
     for (final task in data.tasks) {
       if (!_id.hasMatch(task.id) ||
@@ -94,6 +160,9 @@ class WorkspaceLimits {
           !boardIds.contains(task.boardId) ||
           (task.subjectId != null &&
               subjectBoards[task.subjectId] != task.boardId) ||
+          (data.schemaVersion == 2 &&
+              task.typeId != null &&
+              typeBoards[task.typeId] != task.boardId) ||
           task.typeIndex < 0 ||
           task.typeIndex > 6 ||
           task.priorityIndex < 0 ||
@@ -113,4 +182,7 @@ class WorkspaceLimits {
     }
     return null;
   }
+
+  static bool _validIcon(String value) =>
+      value.length <= 50 && RegExp(r'^[a-z][a-z0-9_]*$').hasMatch(value);
 }

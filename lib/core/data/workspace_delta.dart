@@ -4,7 +4,13 @@ import 'workspace_snapshot.dart';
 /// A replayable, entity-scoped change. Untouched fields from newer cloud data
 /// survive; an overlapping edit or a changed deletion target is a conflict.
 class WorkspaceDelta {
-  static const kinds = ['boards', 'subjects', 'tasks'];
+  static const kinds = [
+    'boards',
+    'subjects',
+    'tasks',
+    'boardTypes',
+    'typeLists',
+  ];
   final List<WorkspaceDeltaItem> items;
   const WorkspaceDelta(this.items);
 
@@ -33,7 +39,7 @@ class WorkspaceDelta {
 
   factory WorkspaceDelta.fromJson(Map<String, dynamic> json) {
     final raw = json['items'];
-    if (raw is! List || raw.length > 13300) {
+    if (raw is! List || raw.length > 21100) {
       throw const FormatException('Invalid operation items');
     }
     final items = <WorkspaceDeltaItem>[];
@@ -80,7 +86,28 @@ class WorkspaceDelta {
       final next = item.after;
       if (old == null && next != null) {
         if (currentRow == null) {
-          index[item.id] = Map.of(next);
+          final added = Map<String, dynamic>.of(next);
+          if (current.schemaVersion == 2 &&
+              item.kind == 'tasks' &&
+              !added.containsKey('typeId')) {
+            final board = added['boardId'] as String;
+            final legacyIndex = added['typeIndex'] as int;
+            added['typeId'] = legacyIndex == 0
+                ? null
+                : WorkspaceSnapshot.legacyTypeId(board, legacyIndex);
+          }
+          if (current.schemaVersion == 2 &&
+              item.kind == 'boards' &&
+              !added.containsKey('icon')) {
+            added['icon'] = 'board';
+            added['color'] = 0xff7986cb;
+            for (final type in WorkspaceSnapshot.defaultBoardTypes(item.id)) {
+              if (indexes['boardTypes']!.containsKey(type.id)) return null;
+              indexes['boardTypes']![type.id] = type.toJson();
+              order['boardTypes']!.add(type.id);
+            }
+          }
+          index[item.id] = added;
           order[item.kind]!.add(item.id);
         } else if (!_equal(currentRow, next)) {
           return null;
@@ -93,9 +120,34 @@ class WorkspaceDelta {
       } else if (old != null && next != null) {
         if (currentRow == null) return null;
         final updated = Map<String, dynamic>.of(currentRow);
+        if (current.schemaVersion == 2 &&
+            item.kind == 'tasks' &&
+            !old.containsKey('typeId') &&
+            !next.containsKey('typeId') &&
+            (old['typeIndex'] != next['typeIndex'] ||
+                old['boardId'] != next['boardId'])) {
+          String? mapped(Map<String, dynamic> row) {
+            final legacyIndex = row['typeIndex'] as int;
+            return legacyIndex == 0
+                ? null
+                : WorkspaceSnapshot.legacyTypeId(
+                    row['boardId'] as String,
+                    legacyIndex,
+                  );
+          }
+
+          final previousType = mapped(old);
+          final nextType = mapped(next);
+          if (updated['typeId'] != previousType &&
+              updated['typeId'] != nextType) {
+            return null;
+          }
+          updated['typeId'] = nextType;
+        }
         for (final key in {...old.keys, ...next.keys}) {
-          if (old[key] == next[key]) continue;
-          if (updated[key] != old[key] && updated[key] != next[key]) {
+          if (_valueEqual(old[key], next[key])) continue;
+          if (!_valueEqual(updated[key], old[key]) &&
+              !_valueEqual(updated[key], next[key])) {
             return null;
           }
           if (next.containsKey(key)) {
@@ -126,12 +178,28 @@ class WorkspaceDelta {
     }
   }
 
-  static List<Map<String, dynamic>> _rows(Object? value) => (value as List)
-      .map((row) => Map<String, dynamic>.from(row as Map))
-      .toList();
+  static List<Map<String, dynamic>> _rows(Object? value) =>
+      (value as List? ?? const [])
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList();
   static bool _equal(Map<String, dynamic> a, Map<String, dynamic> b) =>
-      a.length == b.length &&
-      a.keys.every((key) => b.containsKey(key) && a[key] == b[key]);
+      _valueEqual(a, b);
+  static bool _valueEqual(Object? a, Object? b) {
+    if (a is List && b is List) {
+      return a.length == b.length &&
+          List.generate(
+            a.length,
+            (i) => i,
+          ).every((i) => _valueEqual(a[i], b[i]));
+    }
+    if (a is Map && b is Map) {
+      return a.length == b.length &&
+          a.keys.every(
+            (key) => b.containsKey(key) && _valueEqual(a[key], b[key]),
+          );
+    }
+    return a == b;
+  }
 }
 
 class WorkspaceDeltaItem {

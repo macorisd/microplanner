@@ -39,6 +39,9 @@ class Task extends HiveObject {
   @HiveField(10)
   String? description;
 
+  // Kept in workspace JSON; legacy Hive records retain their numeric type.
+  String? typeId;
+
   Task({
     required this.id,
     required this.name,
@@ -51,6 +54,7 @@ class Task extends HiveObject {
     this.boardId,
     this.subjectId,
     this.description,
+    this.typeId,
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -121,6 +125,7 @@ class Task extends HiveObject {
     String? boardId,
     Object? subjectId = const _Undefined(),
     Object? description = const _Undefined(),
+    Object? typeId = const _Undefined(),
   }) {
     return Task(
       id: id ?? this.id,
@@ -138,6 +143,7 @@ class Task extends HiveObject {
       description: description is _Undefined
           ? this.description
           : description as String?,
+      typeId: typeId is _Undefined ? this.typeId : typeId as String?,
     );
   }
 
