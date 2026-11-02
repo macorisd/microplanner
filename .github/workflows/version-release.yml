@@ -92,7 +92,7 @@ jobs:
               if data.get('kind') not in ('patch', 'minor', 'major'):
                   raise ValueError('Invalid release kind')
               if data['kind'] != 'patch' and not re.fullmatch(
-                      r'plans/plan-\d{8}T\d{9}Z-version'+re.escape(data['version'])+r'\.md', data.get('plan') or ''):
+                      r'(?:docs/)?plans/plan-\d{8}T\d{9}Z-version'+re.escape(data['version'])+r'\.md', data.get('plan') or ''):
                   raise ValueError('Plan release must identify its PLAN')
               version(data['version'])
               base = data['baseVersion']
