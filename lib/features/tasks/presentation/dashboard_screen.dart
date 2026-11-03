@@ -394,24 +394,37 @@ class _BoardHeading extends StatelessWidget {
     final foreground = Color(color ?? 0xff7986cb);
     final textStyle = (style ?? Theme.of(context).textTheme.titleLarge)
         ?.copyWith(color: foreground, fontWeight: FontWeight.w700);
-    return Row(
-      key: const ValueKey('board-heading'),
-      children: [
-        Icon(
-          boardIcons[icon] ?? Icons.dashboard_rounded,
-          color: foreground,
-          size: (textStyle?.fontSize ?? 22).clamp(24, 36).toDouble(),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: boardRowBackground(foreground),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         ),
-        const SizedBox(width: AppTheme.spacingSmall),
-        Expanded(
-          child: Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textStyle,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            key: const ValueKey('board-heading'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                boardIcons[icon] ?? Icons.dashboard_rounded,
+                color: foreground,
+                size: (textStyle?.fontSize ?? 22).clamp(24, 36).toDouble(),
+              ),
+              const SizedBox(width: AppTheme.spacingSmall),
+              Flexible(
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textStyle,
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

@@ -261,6 +261,14 @@ void main() {
         );
         expect(icon.icon, Icons.science_rounded);
         expect(icon.color, title.style!.color);
+        final titleSurface = tester.widget<DecoratedBox>(
+          find.ancestor(of: heading, matching: find.byType(DecoratedBox)).first,
+        );
+        expect(
+          (titleSurface.decoration as BoxDecoration).color,
+          boardRowBackground(const Color(0xff64b5f6)),
+        );
+
         final coloredAncestors = tester.widgetList<ColoredBox>(
           find.ancestor(
             of: find.byType(TaskColumn).first,

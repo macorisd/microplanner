@@ -83,6 +83,7 @@ and white/black label contrast choice.
 
 Further user refinement, 2026-11-03: every sidebar board name is bold, including
 unselected boards. The open board title shows its saved icon and exact color on
-both platforms; keep the task area on the original neutral background without a
-board-color wash. On Android, group board Edit/Delete glyphs more closely and
+both platforms, on a matching rounded very pale surface like its sidebar row;
+keep the task area on the original neutral background without a board-color wash.
+On Android, group board Edit/Delete glyphs more closely and
 place Delete slightly nearer the right edge, with separate usable touch targets.
