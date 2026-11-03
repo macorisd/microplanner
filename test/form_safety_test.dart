@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:microplanner/core/data/workspace_controller.dart';
+import 'package:microplanner/core/widgets/limited_text_field.dart';
 import 'package:microplanner/core/theme/app_motion.dart';
 import 'package:microplanner/features/boards/providers/boards_provider.dart';
 import 'package:microplanner/features/tasks/data/models/task.dart';
@@ -18,6 +19,62 @@ import 'support/fakes.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_date_picker.dart';
 
 void main() {
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    testWidgets(
+      '$platform text fields request sentence capitalization without changing entered text',
+      (tester) async {
+        final controllers = List.generate(
+          3,
+          (_) => TextEditingController(text: 'keep my casing'),
+        );
+        addTearDown(() {
+          for (final controller in controllers) {
+            controller.dispose();
+          }
+        });
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(platform: platform),
+            home: Scaffold(
+              body: Column(
+                children: [
+                  for (var index = 0; index < 3; index++)
+                    LimitedTextField(
+                      controller: controllers[index],
+                      limit: 100,
+                      validator: (_) => null,
+                      keyboardType: [
+                        null,
+                        TextInputType.multiline,
+                        TextInputType.datetime,
+                      ][index],
+                      decoration: InputDecoration(labelText: 'Field $index'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+        final fields = tester
+            .widgetList<TextField>(find.byType(TextField))
+            .toList();
+        for (var index = 0; index < fields.length; index++) {
+          expect(
+            fields[index].textCapitalization,
+            platform == TargetPlatform.android && index < 2
+                ? TextCapitalization.sentences
+                : TextCapitalization.none,
+          );
+        }
+        expect(
+          controllers.map((controller) => controller.text),
+          everyElement('keep my casing'),
+        );
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
   testWidgets('new board limits pasted titles to 50 characters', (
     tester,
   ) async {

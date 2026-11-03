@@ -160,6 +160,17 @@ void main() {
           builder: (_) => BoardEditorDialog(board: boards.boards.first),
         );
         await tester.pumpAndSettle();
+        expect(find.text('Board icon'), findsOneWidget);
+        final iconButton = tester.widget<IconButton>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is IconButton && widget.tooltip == 'Choose board icon',
+          ),
+        );
+        expect(
+          iconButton.style!.foregroundColor!.resolve({}),
+          Color(boards.boards.first.color),
+        );
         final save = find.widgetWithText(ElevatedButton, 'Save changes');
         expect(tester.widget<ElevatedButton>(save).onPressed, isNull);
         final field = find.byType(TextField);
@@ -177,7 +188,7 @@ void main() {
         await tester.enterText(field, boards.boards.first.name);
         await tester.pump();
         expect(tester.widget<ElevatedButton>(save).onPressed, isNull);
-        await tester.tap(find.text('Choose icon'));
+        await tester.tap(find.byTooltip('Choose board icon'));
         await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('school'));
         await tester.pumpAndSettle();

@@ -40,6 +40,7 @@ class Board extends HiveObject {
       name: name,
       createdAt: DateTime.now(),
       sortOrder: sortOrder,
+      color: 0xff90a4ae,
     );
   }
 

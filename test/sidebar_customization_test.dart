@@ -183,7 +183,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Edit board').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Choose icon'));
+    await tester.tap(find.byTooltip('Choose board icon'));
     await tester.pumpAndSettle();
     expect(find.text('Choose an icon'), findsOneWidget);
     await tester.tap(find.byTooltip('school'));

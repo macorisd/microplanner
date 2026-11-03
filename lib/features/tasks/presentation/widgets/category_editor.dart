@@ -80,6 +80,46 @@ Future<String?> chooseBoardIcon(BuildContext context, String selected) async {
   return result;
 }
 
+class IconChoice extends StatelessWidget {
+  const IconChoice({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+    this.labelStyle,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+  final TextStyle? labelStyle;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: labelStyle),
+      const SizedBox(height: AppTheme.spacingSmall),
+      IconButton.outlined(
+        tooltip: 'Choose ${label.toLowerCase()}',
+        onPressed: onPressed,
+        style: IconButton.styleFrom(
+          foregroundColor: color,
+          backgroundColor: boardRowBackground(color),
+          side: BorderSide(color: color.withValues(alpha: .45)),
+          minimumSize: const Size.square(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          ),
+        ),
+        icon: Icon(icon, size: 24),
+      ),
+    ],
+  );
+}
+
 class ColorChoices extends StatelessWidget {
   const ColorChoices({super.key, required this.color, required this.onChanged});
   final int color;
@@ -232,13 +272,14 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         ),
         const SizedBox(height: 20),
         if (widget.useIcon)
-          OutlinedButton.icon(
+          IconChoice(
+            label: 'Icon',
+            color: AppColors.primary,
             onPressed: () async {
               final chosen = await chooseBoardIcon(context, _icon);
               if (chosen != null && mounted) setState(() => _icon = chosen);
             },
-            icon: Icon(boardIcons[_icon] ?? Icons.label_rounded),
-            label: const Text('Choose icon'),
+            icon: boardIcons[_icon] ?? Icons.label_rounded,
           )
         else ...[
           const Text('Color'),
@@ -373,14 +414,30 @@ class EditableCategoryList extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   ),
-                  minLeadingWidth: 20,
-                  horizontalTitleGap: 8,
-                  leading: Icon(
-                    useIcon
-                        ? (boardIcons[item.icon] ?? Icons.label_rounded)
-                        : Icons.circle,
-                    size: 20,
-                    color: useIcon ? AppColors.primary : Color(item.color),
+                  visualDensity: VisualDensity.standard,
+                  titleAlignment: ListTileTitleAlignment.center,
+                  minLeadingWidth:
+                      Theme.of(context).platform == TargetPlatform.windows
+                      ? 24
+                      : 20,
+                  horizontalTitleGap:
+                      Theme.of(context).platform == TargetPlatform.windows
+                      ? AppTheme.spacingMedium
+                      : AppTheme.spacingSmall,
+                  leading: SizedBox.square(
+                    dimension:
+                        Theme.of(context).platform == TargetPlatform.windows
+                        ? 24
+                        : 20,
+                    child: Center(
+                      child: Icon(
+                        useIcon
+                            ? (boardIcons[item.icon] ?? Icons.label_rounded)
+                            : Icons.circle,
+                        size: 20,
+                        color: useIcon ? AppColors.primary : Color(item.color),
+                      ),
+                    ),
                   ),
                   title: Tooltip(
                     message: item.name,

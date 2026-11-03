@@ -108,3 +108,13 @@ to the available width (including Windows; a fixed seven-column layout was
 reviewed and rejected by the user). Use the same selector in board/subject forms.
 The Windows board title uses the compact Android text/icon/surface proportions.
 Reordering presets never changes saved colors or assignments.
+
+
+Icon controls, 2026-11-03: board forms show a "Board icon" heading above an
+icon-only selector tinted with the current board color. Type editors show an
+"Icon" heading like the subject editor's "Color" heading, with the selected icon
+as its compact button. Use matching rounded surfaces and accessible tooltips.
+Windows subject/type rows center markers vertically with names and keep a clear
+16-pixel gap after a stable leading area; preserve compact Android spacing.
+Newly created boards default to the final blue-gray preset (#90A4AE), preserving
+all existing board colors and legacy deserialization defaults.

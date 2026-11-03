@@ -24,6 +24,9 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Editing must not select/focus the title or open the Android keyboard by default.
   Opening date/time/selectors or expanded description clears stale text focus.
   Closing them must not restore focus or reopen the keyboard unexpectedly.
+- Android text fields request sentence capitalization (including names and
+  descriptions) without rewriting entered text; date/numeric keyboards keep their
+  appropriate input modes. Apply this through the shared text-field component.
 - Back from expanded description returns to Edit Task with its draft intact.
   Android Back first dismisses the keyboard when appropriate; a later Back follows
   the current dialog/navigation level. Test Back, Escape and dismissal paths.

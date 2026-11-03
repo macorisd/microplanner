@@ -2,9 +2,80 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:microplanner/features/boards/data/board_catalog.dart';
 import 'package:microplanner/core/theme/app_colors.dart';
+import 'package:microplanner/features/boards/data/models/board.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/category_editor.dart';
 
 void main() {
+  test(
+    'new boards default to the final gray without recoloring legacy boards',
+    () {
+      expect(
+        Board.create(id: 'new', name: 'New board').color,
+        boardColors.last,
+      );
+      expect(
+        Board(id: 'old', name: 'Legacy board', createdAt: DateTime(2026)).color,
+        0xff7986cb,
+      );
+    },
+  );
+
+  for (final useIcon in [false, true]) {
+    testWidgets(
+      'Windows category rows center their markers with breathing room, icon=$useIcon',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(
+              platform: TargetPlatform.windows,
+              visualDensity: VisualDensity.compact,
+            ),
+            home: Scaffold(
+              body: SizedBox(
+                width: 430,
+                child: EditableCategoryList(
+                  title: useIcon ? 'Task types' : 'Subjects',
+                  label: useIcon ? 'task type' : 'subject',
+                  useIcon: useIcon,
+                  items: const [
+                    CategoryDraft(id: 'one', name: 'A sample name'),
+                    CategoryDraft(
+                      id: 'two',
+                      name:
+                          'A longer name that wraps across multiple lines in a compact list',
+                    ),
+                  ],
+                  onChanged: (_) {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        for (final title in [
+          'A sample name',
+          'A longer name that wraps across multiple lines in a compact list',
+        ]) {
+          final row = find.ancestor(
+            of: find.text(title),
+            matching: find.byType(ListTile),
+          );
+          final marker = find.descendant(
+            of: row,
+            matching: find.byWidgetPredicate(
+              (widget) => widget is Icon && widget.size == 20,
+            ),
+          );
+          final iconRect = tester.getRect(marker);
+          final textRect = tester.getRect(find.text(title));
+          expect(iconRect.center.dy, closeTo(textRect.center.dy, .5));
+          expect(textRect.left - iconRect.right, greaterThanOrEqualTo(16));
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   test('initial lists contain valid selectable icons and distinct names', () {
     expect(initialTypeLists.length, 5);
     expect(initialTypeLists.map((list) => list.name).toSet().length, 5);

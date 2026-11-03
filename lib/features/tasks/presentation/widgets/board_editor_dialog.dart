@@ -307,20 +307,19 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
             decoration: const InputDecoration(labelText: 'Board name'),
           ),
           const SizedBox(height: AppTheme.spacingMedium),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              icon: Icon(boardIcons[_icon] ?? Icons.dashboard_rounded),
-              label: const Text('Choose icon'),
-              onPressed: _saving
-                  ? null
-                  : () async {
-                      final icon = await pickOnce(
-                        () => chooseBoardIcon(context, _icon),
-                      );
-                      if (icon != null && mounted) setState(() => _icon = icon);
-                    },
-            ),
+          IconChoice(
+            label: 'Board icon',
+            labelStyle: Theme.of(context).textTheme.titleMedium,
+            color: Color(_color),
+            icon: boardIcons[_icon] ?? Icons.dashboard_rounded,
+            onPressed: _saving
+                ? null
+                : () async {
+                    final icon = await pickOnce(
+                      () => chooseBoardIcon(context, _icon),
+                    );
+                    if (icon != null && mounted) setState(() => _icon = icon);
+                  },
           ),
           const SizedBox(height: AppTheme.spacingMedium),
           Text('Board color', style: Theme.of(context).textTheme.titleMedium),
