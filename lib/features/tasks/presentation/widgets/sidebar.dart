@@ -1,11 +1,10 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/utils/input_mode.dart';
+import '../../../../core/widgets/bounded_reorderable_list.dart';
 import '../../../auth/data/auth_service.dart';
 import '../../../boards/data/models/board.dart';
 import '../../../boards/providers/boards_provider.dart';
@@ -271,26 +270,8 @@ class _BoardsSectionState extends State<_BoardsSection> {
       ),
       if (_expanded)
         Consumer<BoardsProvider>(
-          builder: (context, provider, _) => ReorderableListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            buildDefaultDragHandles: false,
-            proxyDecorator: (child, index, animation) => AnimatedBuilder(
-              animation: animation,
-              builder: (context, child) {
-                final progress = Curves.easeInOut.transform(animation.value);
-                return Transform.scale(
-                  scale: lerpDouble(1, 1.03, progress)!,
-                  child: Material(
-                    elevation: lerpDouble(0, 8, progress)!,
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                    child: child,
-                  ),
-                );
-              },
-              child: child,
-            ),
+          builder: (context, provider, _) => BoundedReorderableList(
+            proxyColor: AppColors.sidebarBackground,
             onReorder: provider.reorderBoards,
             itemCount: provider.boards.length,
             itemBuilder: (context, index) {
@@ -361,7 +342,7 @@ class _BoardCardState extends State<_BoardCard> {
     final touch = usesTouchControls(context);
     final show = touch || _hovered || _focused;
     final color = Color(widget.board.color);
-    final darkBackground = boardRowUsesDarkBackground(color);
+    final foreground = boardRowForeground(color);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppTheme.spacingMedium,
@@ -391,14 +372,14 @@ class _BoardCardState extends State<_BoardCard> {
                   vertical: touch ? 4 : 8,
                 ),
                 decoration: BoxDecoration(
-                  color: boardRowBackground(
-                    color,
-                    selected: widget.isActive,
-                    hovered: _hovered,
-                  ),
+                  color: color,
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   border: Border.all(
-                    color: _focused ? color : Colors.transparent,
+                    color: _focused || widget.isActive
+                        ? foreground.withValues(alpha: .7)
+                        : _hovered
+                        ? foreground.withValues(alpha: .25)
+                        : Colors.transparent,
                   ),
                 ),
                 child: Row(
@@ -406,7 +387,7 @@ class _BoardCardState extends State<_BoardCard> {
                     Icon(
                       boardIcons[widget.board.icon] ?? Icons.dashboard_rounded,
                       size: 20,
-                      color: color,
+                      color: foreground,
                     ),
                     const SizedBox(width: AppTheme.spacingSmall),
                     Expanded(
@@ -415,7 +396,7 @@ class _BoardCardState extends State<_BoardCard> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: color,
+                          color: foreground,
                           fontWeight: widget.isActive
                               ? FontWeight.w700
                               : FontWeight.w500,
@@ -425,12 +406,7 @@ class _BoardCardState extends State<_BoardCard> {
                     if (touch)
                       PopupMenuButton<String>(
                         tooltip: 'Board actions',
-                        icon: Icon(
-                          Icons.more_horiz_rounded,
-                          color: darkBackground
-                              ? Colors.white70
-                              : AppColors.textSecondary,
-                        ),
+                        icon: Icon(Icons.more_horiz_rounded, color: foreground),
                         onSelected: (action) =>
                             action == 'edit' ? _edit() : _delete(),
                         itemBuilder: (_) => [
@@ -449,14 +425,14 @@ class _BoardCardState extends State<_BoardCard> {
                       _BoardActionButton(
                         icon: Icons.edit_outlined,
                         tooltip: 'Edit board',
-                        color: darkBackground ? Colors.white70 : null,
+                        color: foreground,
                         onTap: _edit,
                       ),
                       if (widget.canDelete)
                         _BoardActionButton(
                           icon: Icons.delete_outline_rounded,
                           tooltip: 'Delete board',
-                          color: darkBackground ? Colors.white70 : null,
+                          color: foreground,
                           onTap: _delete,
                         ),
                     ],

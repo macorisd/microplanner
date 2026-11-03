@@ -69,3 +69,11 @@ language to account and customization views: reuse the task form's 480-pixel
 maximum width, responsive padding and rounded surface. Keep the profile photo
 round even in a stretched column. Customization rows must fit narrow screens,
 retain readable names and expose reorder/edit/remove actions without crowding.
+
+User refinement, 2026-11-03: sidebar board rows use the **exact selected color as
+their background**, with matching icons/actions and readable text. Prefer white
+when it provides sufficient contrast; otherwise use black. The user explicitly
+chose keeping the exact pastel color over darkening it to favor white text.
+Remove the former dark/near-black backing for pale colors. Selection and hover
+use a border/emphasis, preserving the chosen fill. Dragged rows keep their own
+opaque rounded surface; no detached background ink, white rectangles or tooltips.

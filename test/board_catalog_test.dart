@@ -26,25 +26,33 @@ void main() {
     );
   });
 
-  test('the palest board colors stay legible without changing their color', () {
-    for (final value in boardColors) {
-      final foreground = Color(value);
-      if (!boardRowUsesDarkBackground(foreground)) continue;
-      for (final selected in [false, true]) {
-        final background = boardRowBackground(
-          foreground,
-          selected: selected,
-          hovered: false,
-        );
-        final contrast =
-            (foreground.computeLuminance() + .05) /
-            (background.computeLuminance() + .05);
+  test(
+    'board labels prefer white only with readable contrast on the exact color',
+    () {
+      for (final value in [
+        ...boardColors,
+        0xff172b4d,
+        0xff000000,
+        0xffffffff,
+      ]) {
+        final background = Color(value);
+        final foreground = boardRowForeground(background);
+        final luminances = [
+          background.computeLuminance(),
+          foreground.computeLuminance(),
+        ]..sort();
         expect(
-          contrast,
-          greaterThanOrEqualTo(3),
+          (luminances.last + .05) / (luminances.first + .05),
+          greaterThanOrEqualTo(4.5),
           reason: value.toRadixString(16),
         );
+        expect(
+          foreground,
+          1.05 / (background.computeLuminance() + .05) >= 4.5
+              ? Colors.white
+              : Colors.black,
+        );
       }
-    }
-  });
+    },
+  );
 }

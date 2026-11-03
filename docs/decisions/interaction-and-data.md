@@ -88,6 +88,10 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
 - Subjects and types are ordered, editable board-local lists, limited to 25 each.
   Names are trimmed, nonempty and at most 50 characters. Preserve longer existing
   names and over-limit legacy subject lists; unrelated edits never truncate them.
+- Dragged boards, subjects and task types stay visually inside their own visible
+  list region, including inside a scrolled form. They cannot cover form headings,
+  other category sections or footer actions. Keep first/last drop positions
+  reachable, preserve IDs and show complete rounded rows throughout the drag.
 - Applying a default list makes an independent copy. Match existing type names
   ignoring case/outer whitespace only when unambiguous; confirm the number of
   assignments that will be cleared. Removing/reordering categories must not

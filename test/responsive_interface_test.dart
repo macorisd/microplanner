@@ -94,7 +94,7 @@ void main() {
   }
 
   testWidgets(
-    'rapid sidebar hover clears the previous rendered background immediately',
+    'rapid sidebar hover clears the previous outline and preserves exact fills',
     (tester) async {
       final f = _Fixture();
       await tester.runAsync(f.initialize);
@@ -110,8 +110,8 @@ void main() {
       await tester.pumpAndSettle();
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await mouse.addPointer(location: Offset.zero);
-      Color? background(String name) {
-        Color? value;
+      BoxDecoration? rowDecoration(String name) {
+        BoxDecoration? value;
         tester.element(find.text(name)).visitAncestorElements((element) {
           final widget = element.widget;
           final decoration = widget is Ink
@@ -120,7 +120,7 @@ void main() {
               ? widget.decoration
               : null;
           if (decoration is BoxDecoration && decoration.borderRadius != null) {
-            value = decoration.color;
+            value = decoration;
             return false;
           }
           return true;
@@ -133,17 +133,35 @@ void main() {
       for (final name in ['Third', 'Second', 'Third', 'Second']) {
         await mouse.moveTo(tester.getCenter(find.text(name)));
         await tester.pump(const Duration(milliseconds: 1));
-        expect(background(name), AppColors.sidebarItemHover);
         expect(
-          background(name == 'Second' ? 'Third' : 'Second'),
+          (rowDecoration(name)!.border! as Border).top.color,
+          Colors.black.withValues(alpha: .25),
+        );
+        expect(
+          (rowDecoration(name == 'Second' ? 'Third' : 'Second')!.border!
+                  as Border)
+              .top
+              .color,
           Colors.transparent,
         );
-        expect(background('First'), AppColors.sidebarItemActive);
+        expect(
+          (rowDecoration('First')!.border! as Border).top.color,
+          Colors.black.withValues(alpha: .7),
+        );
+        for (final title in ['First', 'Second', 'Third']) {
+          expect(rowDecoration(title)!.color, const Color(0xff7986cb));
+        }
       }
       await mouse.moveTo(const Offset(600, 20));
       await tester.pump(const Duration(milliseconds: 1));
-      expect(background('Second'), Colors.transparent);
-      expect(background('Third'), Colors.transparent);
+      expect(
+        (rowDecoration('Second')!.border! as Border).top.color,
+        Colors.transparent,
+      );
+      expect(
+        (rowDecoration('Third')!.border! as Border).top.color,
+        Colors.transparent,
+      );
       expect(tester.takeException(), isNull);
       await mouse.removePointer();
       await tester.pumpWidget(const SizedBox());

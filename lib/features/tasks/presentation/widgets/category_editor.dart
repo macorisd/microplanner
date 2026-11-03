@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/widgets/limited_text_field.dart';
+import '../../../../core/widgets/bounded_reorderable_list.dart';
 import 'editor_panel.dart';
 
 class CategoryDraft {
@@ -332,10 +333,7 @@ class EditableCategoryList extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
-      ReorderableListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        buildDefaultDragHandles: false,
+      BoundedReorderableList(
         itemCount: items.length,
         onReorder: (oldIndex, newIndex) {
           final values = [...items];
@@ -365,81 +363,85 @@ class EditableCategoryList extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 4),
             child: Tooltip(
               message: 'Edit $label',
-              child: ListTile(
-                onTap: editItem,
-                contentPadding: const EdgeInsets.only(left: 12, right: 4),
-                tileColor: AppColors.surfaceVariant,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                ),
-                minLeadingWidth: 20,
-                horizontalTitleGap: 8,
-                leading: Icon(
-                  useIcon
-                      ? (boardIcons[item.icon] ?? Icons.label_rounded)
-                      : Icons.circle,
-                  size: 20,
-                  color: useIcon ? AppColors.primary : Color(item.color),
-                ),
-                title: Tooltip(
-                  message: item.name,
-                  child: Text(
-                    item.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium,
+              child: Material(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                clipBehavior: Clip.antiAlias,
+                child: ListTile(
+                  onTap: editItem,
+                  contentPadding: const EdgeInsets.only(left: 12, right: 4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   ),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ReorderableDragStartListener(
-                      index: index,
-                      child: const SizedBox(
-                        width: 28,
-                        height: 48,
-                        child: Icon(
-                          Icons.drag_indicator_rounded,
-                          size: 18,
-                          color: AppColors.textTertiary,
+                  minLeadingWidth: 20,
+                  horizontalTitleGap: 8,
+                  leading: Icon(
+                    useIcon
+                        ? (boardIcons[item.icon] ?? Icons.label_rounded)
+                        : Icons.circle,
+                    size: 20,
+                    color: useIcon ? AppColors.primary : Color(item.color),
+                  ),
+                  title: Tooltip(
+                    message: item.name,
+                    child: Text(
+                      item.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ReorderableDragStartListener(
+                        index: index,
+                        child: const SizedBox(
+                          width: 28,
+                          height: 48,
+                          child: Icon(
+                            Icons.drag_indicator_rounded,
+                            size: 18,
+                            color: AppColors.textTertiary,
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      tooltip: 'Remove $label',
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => onChanged(
-                        items.where((value) => value.id != item.id).toList(),
-                      ),
-                    ),
-                    PopupMenuButton<int>(
-                      tooltip: 'Reorder $label',
-                      icon: const Icon(
-                        Icons.more_vert,
-                        color: AppColors.textSecondary,
-                      ),
-                      onSelected: (direction) {
-                        final values = [...items];
-                        values.insert(
-                          index + direction,
-                          values.removeAt(index),
-                        );
-                        onChanged(values);
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: -1,
-                          enabled: index > 0,
-                          child: const Text('Move up'),
+                      IconButton(
+                        tooltip: 'Remove $label',
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () => onChanged(
+                          items.where((value) => value.id != item.id).toList(),
                         ),
-                        PopupMenuItem(
-                          value: 1,
-                          enabled: index + 1 < items.length,
-                          child: const Text('Move down'),
+                      ),
+                      PopupMenuButton<int>(
+                        tooltip: 'Reorder $label',
+                        icon: const Icon(
+                          Icons.more_vert,
+                          color: AppColors.textSecondary,
                         ),
-                      ],
-                    ),
-                  ],
+                        onSelected: (direction) {
+                          final values = [...items];
+                          values.insert(
+                            index + direction,
+                            values.removeAt(index),
+                          );
+                          onChanged(values);
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: -1,
+                            enabled: index > 0,
+                            child: const Text('Move up'),
+                          ),
+                          PopupMenuItem(
+                            value: 1,
+                            enabled: index + 1 < items.length,
+                            child: const Text('Move down'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

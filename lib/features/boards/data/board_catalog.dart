@@ -51,37 +51,11 @@ final boardColors = List<int>.unmodifiable(
   AppColors.subjectColors.map((color) => color.toARGB32()),
 );
 
-/// Keep the actual pastel foreground color while giving pale colors contrast.
-Color boardRowBackground(
-  Color color, {
-  required bool selected,
-  required bool hovered,
-}) {
-  final lightBackground = AppColors.sidebarBackground.computeLuminance();
-  final contrast = (lightBackground + 0.05) / (color.computeLuminance() + 0.05);
-  if (contrast < 3) {
-    return HSLColor.fromColor(color)
-        .withSaturation(0.28)
-        .withLightness(
-          selected
-              ? 0.20
-              : hovered
-              ? 0.22
-              : 0.16,
-        )
-        .toColor();
-  }
-  return selected
-      ? AppColors.sidebarItemActive
-      : hovered
-      ? AppColors.sidebarItemHover
-      : Colors.transparent;
-}
-
-bool boardRowUsesDarkBackground(Color color) =>
-    (AppColors.sidebarBackground.computeLuminance() + 0.05) /
-        (color.computeLuminance() + 0.05) <
-    3;
+/// Prefer white where readable, retaining the exact selected background color.
+Color boardRowForeground(Color background) =>
+    1.05 / (background.computeLuminance() + .05) >= 4.5
+    ? Colors.white
+    : Colors.black;
 
 class InitialTypeList {
   const InitialTypeList(this.name, this.types);
