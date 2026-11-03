@@ -168,6 +168,10 @@ void main() {
             tester.widget<Text>(find.text(title)).style!.color,
             const Color(0xff7986cb),
           );
+          expect(
+            tester.widget<Text>(find.text(title)).style!.fontWeight,
+            FontWeight.w700,
+          );
         }
       }
       for (final entry in rowRects.entries) {
@@ -219,6 +223,73 @@ void main() {
       f.dispose();
     },
   );
+
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    testWidgets(
+      '$platform board heading follows saved identity on a neutral canvas',
+      (tester) async {
+        tester.view.physicalSize = Size(
+          platform == TargetPlatform.android ? 393 : 1200,
+          800,
+        );
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final f = _Fixture();
+        await tester.runAsync(f.initialize);
+        await tester.pumpWidget(f.app(platform, const DashboardScreen()));
+        await tester.pumpAndSettle();
+        final heading = find.byKey(const ValueKey('board-heading'));
+        expect(heading, findsOneWidget);
+        expect(
+          find.descendant(of: heading, matching: find.text('First')),
+          findsOneWidget,
+        );
+        // A customization can change the color/icon without changing its name.
+        await tester.runAsync(
+          () => f.boards.updateBoard(
+            f.boards.currentBoard!.copyWith(icon: 'science', color: 0xff64b5f6),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final title = tester.widget<Text>(
+          find.descendant(of: heading, matching: find.byType(Text)),
+        );
+        expect(title.style!.color, const Color(0xff64b5f6));
+        final icon = tester.widget<Icon>(
+          find.descendant(of: heading, matching: find.byType(Icon)),
+        );
+        expect(icon.icon, Icons.science_rounded);
+        expect(icon.color, title.style!.color);
+        final coloredAncestors = tester.widgetList<ColoredBox>(
+          find.ancestor(
+            of: find.byType(TaskColumn).first,
+            matching: find.byType(ColoredBox),
+          ),
+        );
+        expect(
+          coloredAncestors.map((box) => box.color),
+          isNot(
+            contains(
+              Color.alphaBlend(
+                const Color(0xff64b5f6).withValues(alpha: .07),
+                AppColors.background,
+              ),
+            ),
+          ),
+        );
+        f.boards.selectBoard('second');
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(of: heading, matching: find.text('Second')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+        f.dispose();
+      },
+    );
+  }
 
   for (final size in [
     const Size(768, 450),

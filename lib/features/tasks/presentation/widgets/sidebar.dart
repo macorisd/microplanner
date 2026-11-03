@@ -367,9 +367,11 @@ class _BoardCardState extends State<_BoardCard> {
                 }
               },
               child: Ink(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppTheme.spacingMedium,
-                  vertical: touch ? 4 : 8,
+                padding: EdgeInsets.fromLTRB(
+                  AppTheme.spacingMedium,
+                  touch ? 4 : 8,
+                  touch ? AppTheme.spacingSmall : AppTheme.spacingMedium,
+                  touch ? 4 : 8,
                 ),
                 decoration: BoxDecoration(
                   color: boardRowBackground(color),
@@ -397,9 +399,7 @@ class _BoardCardState extends State<_BoardCard> {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: foreground,
-                          fontWeight: widget.isActive
-                              ? FontWeight.w700
-                              : FontWeight.w500,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -412,6 +412,10 @@ class _BoardCardState extends State<_BoardCard> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _BoardActionButton(
+                            compact: touch,
+                            alignment: touch
+                                ? Alignment.centerRight
+                                : Alignment.center,
                             icon: Icons.edit_outlined,
                             tooltip: 'Edit board',
                             color: foreground,
@@ -423,6 +427,7 @@ class _BoardCardState extends State<_BoardCard> {
                             maintainAnimation: true,
                             maintainSize: true,
                             child: _BoardActionButton(
+                              compact: touch,
                               icon: Icons.delete_outline_rounded,
                               tooltip: 'Delete board',
                               color: foreground,
@@ -538,23 +543,35 @@ class _BoardActionButton extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? color;
   final String? tooltip;
+  final bool compact;
+  final Alignment alignment;
 
   const _BoardActionButton({
     required this.icon,
     this.onTap,
     this.color,
     this.tooltip,
+    this.compact = false,
+    this.alignment = Alignment.center,
   });
 
   @override
   Widget build(BuildContext context) {
     return PressFeedback(
-      child: SizedBox.square(
-        dimension: usesTouchControls(context) ? 48 : 24,
+      child: SizedBox(
+        width: compact
+            ? 44
+            : usesTouchControls(context)
+            ? 48
+            : 24,
+        height: usesTouchControls(context) ? 48 : 24,
         child: IconButton(
           tooltip: tooltip,
           onPressed: onTap,
-          padding: EdgeInsets.zero,
+          padding: compact
+              ? const EdgeInsets.symmetric(horizontal: 4)
+              : EdgeInsets.zero,
+          alignment: alignment,
           hoverColor: AppColors.surfaceVariant,
           icon: Icon(icon, size: 16, color: color ?? AppColors.textSecondary),
         ),

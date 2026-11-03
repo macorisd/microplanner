@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/utils/input_mode.dart';
 import '../../boards/providers/boards_provider.dart';
+import '../../boards/data/board_catalog.dart';
 import '../data/models/task.dart';
 import '../providers/tasks_provider.dart';
 import 'widgets/add_task_dialog.dart';
@@ -77,6 +78,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final boardColor = context.select<BoardsProvider, int?>(
       (boards) => boards.currentBoard?.color,
     );
+    final boardIcon = context.select<BoardsProvider, String?>(
+      (boards) => boards.currentBoard?.icon,
+    );
     final boardName =
         context.select<BoardsProvider, String?>(
           (boards) => boards.currentBoard?.name,
@@ -102,12 +106,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ? AppBar(
                 toolbarHeight: short ? 48 : null,
                 title: MotionSwap(
-                  child: Text(
-                    pageName,
-                    key: ValueKey(pageName),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  alignment: Alignment.centerLeft,
+                  child: page == DashboardPage.board
+                      ? _BoardHeading(
+                          key: ValueKey((pageName, boardIcon, boardColor)),
+                          name: boardName,
+                          icon: boardIcon,
+                          color: boardColor,
+                        )
+                      : Text(
+                          pageName,
+                          key: ValueKey(pageName),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                 ),
                 actions: [if (page == DashboardPage.board) refresh],
               )
@@ -141,11 +153,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Expanded(
                               child: MotionSwap(
                                 alignment: Alignment.centerLeft,
-                                child: Text(
-                                  boardName,
-                                  key: ValueKey(boardName),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                child: _BoardHeading(
+                                  key: ValueKey((
+                                    boardName,
+                                    boardIcon,
+                                    boardColor,
+                                  )),
+                                  name: boardName,
+                                  icon: boardIcon,
+                                  color: boardColor,
                                   style: Theme.of(
                                     context,
                                   ).textTheme.displaySmall,
@@ -161,15 +177,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         key: ValueKey(page),
                         fade: page != DashboardPage.board,
                         child: switch (page) {
-                          DashboardPage.board => ColoredBox(
-                            color: Color.alphaBlend(
-                              Color(
-                                boardColor ?? 0xff7986cb,
-                              ).withValues(alpha: 0.07),
-                              AppColors.background,
-                            ),
-                            child: const _TaskArea(),
-                          ),
+                          DashboardPage.board => const _TaskArea(),
                           DashboardPage.weeklyPlan => EditorPanel(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -363,6 +371,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+class _BoardHeading extends StatelessWidget {
+  const _BoardHeading({
+    super.key,
+    required this.name,
+    this.icon,
+    this.color,
+    this.style,
+  });
+
+  final String name;
+  final String? icon;
+  final int? color;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = Color(color ?? 0xff7986cb);
+    final textStyle = (style ?? Theme.of(context).textTheme.titleLarge)
+        ?.copyWith(color: foreground, fontWeight: FontWeight.w700);
+    return Row(
+      key: const ValueKey('board-heading'),
+      children: [
+        Icon(
+          boardIcons[icon] ?? Icons.dashboard_rounded,
+          color: foreground,
+          size: (textStyle?.fontSize ?? 22).clamp(24, 36).toDouble(),
+        ),
+        const SizedBox(width: AppTheme.spacingSmall),
+        Expanded(
+          child: Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textStyle,
+          ),
+        ),
+      ],
     );
   }
 }

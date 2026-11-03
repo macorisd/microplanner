@@ -83,8 +83,8 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
 - Back and Escape unwind Settings one level at a time, then Profile, then the
   previous board. Sidebar navigation must not leave stale back-history entries.
 - Boards and task types share the icon catalog; boards and subjects share the
-  existing subject palette. A selected board color adds only a very pale board
-  background; it does not replace the application or column colors.
+  existing subject palette. Board colors identify sidebar rows and the open
+  board heading; keep the task area neutral and preserve column colors.
 - Subjects and types are ordered, editable board-local lists, limited to 25 each.
   Names are trimmed, nonempty and at most 50 characters. Preserve longer existing
   names and over-limit legacy subject lists; unrelated edits never truncate them.
