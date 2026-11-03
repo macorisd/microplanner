@@ -60,6 +60,7 @@ void main() {
         await tester.pumpAndSettle();
       }
       await tester.enterText(find.byType(TextField), 'Queued default list');
+      await tester.pump();
       final gate = Completer<http.Response>();
       harness.server.nextWrite = gate;
       await tester.tap(find.text('Save'));
@@ -326,6 +327,7 @@ void main() {
       );
       await tester.ensureVisible(remove);
       await tester.tap(remove);
+      await tester.pump();
       await tester.ensureVisible(find.text('Save changes'));
       await tester.tap(find.text('Save changes'));
       await tester.pumpAndSettle();

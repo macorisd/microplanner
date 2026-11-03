@@ -376,6 +376,8 @@ class _BoardCardState extends State<_BoardCard> {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
+              hoverColor: Colors.transparent,
+              splashFactory: NoSplash.splashFactory,
               borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
               onTap: () {
                 context.read<BoardsProvider>().selectBoard(widget.board.id);
@@ -506,6 +508,8 @@ class _SidebarItemState extends State<_SidebarItem> {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
+            hoverColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
             onTap: widget.onTap,
             child: Ink(

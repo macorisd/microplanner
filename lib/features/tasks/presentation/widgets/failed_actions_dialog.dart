@@ -242,10 +242,15 @@ class FailedActionsDialog extends StatelessWidget {
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Discard'),
           ),

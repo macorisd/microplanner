@@ -15,9 +15,55 @@ import 'widgets/edit_task_dialog.dart';
 import 'widgets/sidebar.dart';
 import 'widgets/account_pages.dart';
 import 'widgets/task_column.dart';
+import 'widgets/editor_panel.dart';
+import 'package:flutter/services.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  BoardsProvider? _navigation;
+  LocalHistoryEntry? _history;
+  bool _disposing = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final boards = context.read<BoardsProvider>();
+    if (identical(_navigation, boards)) return;
+    _navigation?.removeListener(_syncHistory);
+    _navigation = boards..addListener(_syncHistory);
+    _syncHistory();
+  }
+
+  void _syncHistory() {
+    if (_navigation!.page == DashboardPage.board) {
+      _history?.remove();
+      _history = null;
+    } else if (_history == null) {
+      _history = LocalHistoryEntry(
+        onRemove: () {
+          _history = null;
+          if (!_disposing) _navigation?.navigate(DashboardPage.board);
+        },
+      );
+      ModalRoute.of(context)?.addLocalHistoryEntry(_history!);
+    }
+  }
+
+  void _back() => _navigation?.navigate(DashboardPage.board);
+
+  @override
+  void dispose() {
+    _disposing = true;
+    _navigation?.removeListener(_syncHistory);
+    _history?.remove();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final android = Theme.of(context).platform == TargetPlatform.android;
@@ -49,114 +95,140 @@ class DashboardScreen extends StatelessWidget {
           : workspace.refresh,
       icon: const Icon(Icons.refresh),
     );
-    return Scaffold(
-      appBar: compact
-          ? AppBar(
-              toolbarHeight: short ? 48 : null,
-              title: MotionSwap(
-                child: Text(
-                  pageName,
-                  key: ValueKey(pageName),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+    return CallbackShortcuts(
+      bindings: {const SingleActivator(LogicalKeyboardKey.escape): _back},
+      child: Scaffold(
+        appBar: compact
+            ? AppBar(
+                toolbarHeight: short ? 48 : null,
+                title: MotionSwap(
+                  child: Text(
+                    pageName,
+                    key: ValueKey(pageName),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-              actions: [if (page == DashboardPage.board) refresh],
-            )
-          : null,
-      drawer: compact
-          ? const Drawer(child: SafeArea(child: Sidebar(inDrawer: true)))
-          : null,
-      // Some Android skins report zero for the Back inset. Keep a small fallback
-      // so an inward drag just beyond that OS-owned strip can reach the drawer.
-      // This does not exclude or override the system Back gesture.
-      drawerEdgeDragWidth: android
-          ? 36 + (backInset < 20 ? 20 : backInset)
-          : null,
-      body: Row(
-        children: [
-          if (!compact) const Sidebar(),
-          Expanded(
-            child: Container(
-              color: AppColors.background,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (!compact && page == DashboardPage.board)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTheme.spacingLarge,
-                        vertical: AppTheme.spacingMedium,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: MotionSwap(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                boardName,
-                                key: ValueKey(boardName),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.displaySmall,
+                actions: [if (page == DashboardPage.board) refresh],
+              )
+            : null,
+        drawer: compact
+            ? const Drawer(child: SafeArea(child: Sidebar(inDrawer: true)))
+            : null,
+        // Some Android skins report zero for the Back inset. Keep a small fallback
+        // so an inward drag just beyond that OS-owned strip can reach the drawer.
+        // This does not exclude or override the system Back gesture.
+        drawerEdgeDragWidth: android
+            ? 36 + (backInset < 20 ? 20 : backInset)
+            : null,
+        body: Row(
+          children: [
+            if (!compact) const Sidebar(),
+            Expanded(
+              child: Container(
+                color: AppColors.background,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (!compact && page == DashboardPage.board)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingLarge,
+                          vertical: AppTheme.spacingMedium,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: MotionSwap(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  boardName,
+                                  key: ValueKey(boardName),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.displaySmall,
+                                ),
                               ),
                             ),
+                            refresh,
+                          ],
+                        ),
+                      ),
+                    Expanded(
+                      child: MotionEntrance(
+                        key: ValueKey(page),
+                        fade: page != DashboardPage.board,
+                        child: switch (page) {
+                          DashboardPage.board => ColoredBox(
+                            color: Color.alphaBlend(
+                              Color(
+                                boardColor ?? 0xff7986cb,
+                              ).withValues(alpha: 0.07),
+                              AppColors.background,
+                            ),
+                            child: const _TaskArea(),
                           ),
-                          refresh,
-                        ],
+                          DashboardPage.weeklyPlan => EditorPanel(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                EditorHeading(
+                                  title: 'Weekly Plan',
+                                  icon: Icons.calendar_view_week_outlined,
+                                  onBack: _back,
+                                ),
+                                const SizedBox(height: AppTheme.spacingLarge),
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: AppTheme.spacingLarge,
+                                  ),
+                                  child: Text('Coming Soon'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          DashboardPage.profile => ProfilePage(
+                            onBack: _back,
+                            onSettings: () => context
+                                .read<BoardsProvider>()
+                                .navigate(DashboardPage.settings),
+                          ),
+                          DashboardPage.settings => SettingsPage(
+                            onBack: () => context
+                                .read<BoardsProvider>()
+                                .navigate(DashboardPage.profile),
+                          ),
+                        },
                       ),
                     ),
-                  Expanded(
-                    child: switch (page) {
-                      DashboardPage.board => ColoredBox(
-                        color: Color.alphaBlend(
-                          Color(
-                            boardColor ?? 0xff7986cb,
-                          ).withValues(alpha: 0.07),
-                          AppColors.background,
-                        ),
-                        child: const _TaskArea(),
-                      ),
-                      DashboardPage.weeklyPlan => const Center(
-                        child: Text('Coming Soon'),
-                      ),
-                      DashboardPage.profile => ProfilePage(
-                        onSettings: () => context
-                            .read<BoardsProvider>()
-                            .navigate(DashboardPage.settings),
-                      ),
-                      DashboardPage.settings => SettingsPage(
-                        onBack: () => context.read<BoardsProvider>().navigate(
-                          DashboardPage.profile,
-                        ),
-                      ),
-                    },
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+        floatingActionButton: android || page != DashboardPage.board
+            ? null
+            : PressFeedback(
+                child: short
+                    ? FloatingActionButton.small(
+                        tooltip: 'New Task',
+                        onPressed: workspace.canWrite
+                            ? () => _add(context)
+                            : null,
+                        child: const Icon(Icons.add_rounded),
+                      )
+                    : FloatingActionButton.extended(
+                        onPressed: workspace.canWrite
+                            ? () => _add(context)
+                            : null,
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('New Task'),
+                      ),
+              ),
       ),
-      floatingActionButton: android || page != DashboardPage.board
-          ? null
-          : PressFeedback(
-              child: short
-                  ? FloatingActionButton.small(
-                      tooltip: 'New Task',
-                      onPressed: workspace.canWrite
-                          ? () => _add(context)
-                          : null,
-                      child: const Icon(Icons.add_rounded),
-                    )
-                  : FloatingActionButton.extended(
-                      onPressed: workspace.canWrite
-                          ? () => _add(context)
-                          : null,
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('New Task'),
-                    ),
-            ),
     );
   }
 
@@ -313,7 +385,7 @@ class _TaskAreaState extends State<_TaskArea> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final columns = DashboardScreen._taskColumns(context);
+      final columns = _DashboardScreenState._taskColumns(context);
       if (Theme.of(context).platform == TargetPlatform.android) {
         final identity = context.select<BoardsProvider, (String?, String?)>(
           (boards) => (boards.workspace.ownerId, boards.currentBoardId),
@@ -330,7 +402,7 @@ class _TaskAreaState extends State<_TaskArea> {
               boards.selectColumn(column);
             }
           },
-          onAdd: () => DashboardScreen._add(context),
+          onAdd: () => _DashboardScreenState._add(context),
         );
       }
       if (MediaQuery.sizeOf(context).width < 850 &&

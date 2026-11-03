@@ -72,3 +72,26 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Independent transitions can overlap. Confirmed failures restore original state
   with inverse motion; late responses, old timers, account switches or new actions
   must not overwrite newer state. Check chains during the destination fade.
+
+## Board customization and account pages
+
+Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.md).
+
+- Weekly Plan is a Coming Soon destination before collapsible Boards. Profile
+  contains only Google photo/name/email, Settings and Sign out. Settings contains
+  only Customization > Boards > Default lists of task types; no extra placeholders.
+- Back and Escape unwind Settings one level at a time, then Profile, then the
+  previous board. Sidebar navigation must not leave stale back-history entries.
+- Boards and task types share the icon catalog; boards and subjects share the
+  existing subject palette. A selected board color adds only a very pale board
+  background; it does not replace the application or column colors.
+- Subjects and types are ordered, editable board-local lists, limited to 25 each.
+  Names are trimmed, nonempty and at most 50 characters. Preserve longer existing
+  names and over-limit legacy subject lists; unrelated edits never truncate them.
+- Applying a default list makes an independent copy. Match existing type names
+  ignoring case/outer whitespace only when unambiguous; confirm the number of
+  assignments that will be cleared. Removing/reordering categories must not
+  silently lose or reassign task associations.
+- The five editable initial lists are Academic tasks, Software development, Work,
+  Personal life and Creative projects. Editing/deleting a default never changes
+  boards that previously copied it. Preserve the unassigned No type choice.

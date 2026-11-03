@@ -31,18 +31,25 @@ class WorkspaceSnapshot {
     final parsed = WorkspaceSnapshot(
       revision: json['revision'] as int? ?? 0,
       schemaVersion: json['schemaVersion'] as int? ?? 1,
-      boards: (json['boards'] as List)
-          .map(
-            (b) => Board(
-              id: b['id'] as String,
-              name: b['name'] as String,
-              createdAt: DateTime.parse(b['createdAt'] as String).toLocal(),
-              sortOrder: b['sortOrder'] as int,
-              icon: b['icon'] as String? ?? 'board',
-              color: b['color'] as int? ?? 0xff7986cb,
-            ),
-          )
-          .toList(),
+      // Entity deltas update sortOrder without rearranging their backing array.
+      // Normalize both cloud and journal/cache snapshots to the saved order.
+      boards:
+          ((json['boards'] as List)
+              .map(
+                (b) => Board(
+                  id: b['id'] as String,
+                  name: b['name'] as String,
+                  createdAt: DateTime.parse(b['createdAt'] as String).toLocal(),
+                  sortOrder: b['sortOrder'] as int,
+                  icon: b['icon'] as String? ?? 'board',
+                  color: b['color'] as int? ?? 0xff7986cb,
+                ),
+              )
+              .toList()
+            ..sort((a, b) {
+              final order = a.sortOrder.compareTo(b.sortOrder);
+              return order != 0 ? order : a.createdAt.compareTo(b.createdAt);
+            })),
       subjects: (json['subjects'] as List)
           .map(
             (s) => Subject(

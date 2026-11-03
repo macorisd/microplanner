@@ -12,6 +12,11 @@ import '../../../boards/data/models/subject.dart';
 import '../../../boards/data/type_list_replacement.dart';
 import 'category_editor.dart';
 import '../../../../core/widgets/pending_action.dart';
+import '../../../../core/data/workspace_limits.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_motion.dart';
+import '../../../../core/widgets/limited_text_field.dart';
+import 'editor_panel.dart';
 
 class BoardEditorDialog extends StatefulWidget {
   const BoardEditorDialog({super.key, required this.board});
@@ -31,8 +36,23 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
   late int _color;
   late List<CategoryDraft> _subjects;
   late List<CategoryDraft> _types;
+  late final List<CategoryDraft> _initialSubjects;
+  late final List<CategoryDraft> _initialTypes;
   bool _saving = false;
   String? _error;
+
+  bool get _hasChanges =>
+      _name.text.trim() != _originalBoard.name ||
+      _icon != _originalBoard.icon ||
+      _color != _originalBoard.color ||
+      !sameCategories(_subjects, _initialSubjects) ||
+      !sameCategories(_types, _initialTypes);
+  bool get _canSave =>
+      !_saving &&
+      _hasChanges &&
+      _name.text.trim().isNotEmpty &&
+      (_name.text.trim().length <= WorkspaceLimits.boardName ||
+          _name.text.trim() == _originalBoard.name);
 
   @override
   void initState() {
@@ -48,7 +68,8 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
         widget.board;
     _owner = workspace.ownerId;
     _token = workspace.auth.token;
-    _name = TextEditingController(text: _originalBoard.name);
+    _name = TextEditingController(text: _originalBoard.name)
+      ..addListener(() => setState(() => _error = null));
     _icon = _originalBoard.icon;
     _color = _originalBoard.color;
     final subjects =
@@ -67,6 +88,8 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
       for (final item in types)
         CategoryDraft(id: item.id, name: item.name, icon: item.icon),
     ];
+    _initialSubjects = List.of(_subjects);
+    _initialTypes = List.of(_types);
   }
 
   @override
@@ -78,26 +101,31 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
   Future<void> _applyList() async {
     final workspace = context.read<WorkspaceController>();
     final lists = (workspace.outbox?.projected ?? workspace.snapshot).typeLists;
-    final selected = await showDialog<TaskTypeList>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Apply a default list'),
-        children: [
-          if (lists.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: Text('No default lists yet.'),
-            ),
-          for (final list in lists)
+    final selected = await pickOnce(
+      () => showMotionDialog<TaskTypeList>(
+        context: context,
+        builder: (context) => SimpleDialog(
+          title: const Text('Apply a default list'),
+          children: [
+            if (lists.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Text('No default lists yet.'),
+              ),
+            for (final list in lists)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, list),
+                child: Text(list.name),
+              ),
             SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, list),
-              child: Text(list.name),
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red.shade700),
+              ),
             ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
+          ],
+        ),
       ),
     );
     if (selected == null || !mounted) return;
@@ -118,7 +146,7 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
   }
 
   Future<void> _save() async {
-    if (_saving) return;
+    if (!_canSave) return;
     final name = _name.text.trim();
     if (name.isEmpty || (name.length > 50 && name != _originalBoard.name)) {
       setState(
@@ -155,23 +183,28 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
         )
         .length;
     if (removedSubjects.isNotEmpty || removedTypes.isNotEmpty) {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Save list changes?'),
-          content: Text(
-            'Removing these entries will clear the subject from $subjectCount ${subjectCount == 1 ? 'task' : 'tasks'} and the task type from $typeCount ${typeCount == 1 ? 'task' : 'tasks'}.',
+      final confirm = await pickOnce(
+        () => showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Save list changes?'),
+            content: Text(
+              'Removing these entries will clear the subject from $subjectCount ${subjectCount == 1 ? 'task' : 'tasks'} and the task type from $typeCount ${typeCount == 1 ? 'task' : 'tasks'}.',
+            ),
+            actions: [
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red.shade700,
+                ),
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Save changes'),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Save changes'),
-            ),
-          ],
         ),
       );
       if (confirm != true || !mounted) return;
@@ -253,112 +286,100 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
   @override
   Widget build(BuildContext context) => PendingForm(
     pending: _saving,
-    child: Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    child: EditorPanel(
+      dialog: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          EditorHeading(
+            title: 'Edit Board',
+            icon: Icons.dashboard_outlined,
+            onClose: _saving ? null : closeForm,
+          ),
+          const SizedBox(height: AppTheme.spacingLarge),
+          LimitedTextField(
+            controller: _name,
+            limit: WorkspaceLimits.boardName,
+            enabled: !_saving,
+            validator: (_) => null,
+            onSubmitted: (_) => _save(),
+            decoration: const InputDecoration(labelText: 'Board name'),
+          ),
+          const SizedBox(height: AppTheme.spacingMedium),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              icon: Icon(boardIcons[_icon] ?? Icons.dashboard_rounded),
+              label: const Text('Choose icon'),
+              onPressed: _saving
+                  ? null
+                  : () async {
+                      final icon = await pickOnce(
+                        () => chooseBoardIcon(context, _icon),
+                      );
+                      if (icon != null && mounted) setState(() => _icon = icon);
+                    },
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingMedium),
+          Text('Board color', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppTheme.spacingSmall),
+          ColorChoices(
+            color: _color,
+            onChanged: (value) => setState(() => _color = value),
+          ),
+          const SizedBox(height: AppTheme.spacingMedium),
+          EditableCategoryList(
+            title: 'Subjects',
+            label: 'subject',
+            useIcon: false,
+            items: _subjects,
+            onChanged: (value) => setState(() => _subjects = value),
+          ),
+          const Divider(height: AppTheme.spacingLarge),
+          EditableCategoryList(
+            title: 'Task types',
+            label: 'task type',
+            useIcon: true,
+            items: _types,
+            onChanged: (value) => setState(() => _types = value),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _saving ? null : _applyList,
+              icon: const Icon(Icons.library_add_outlined, size: 20),
+              label: const Text('Apply default list'),
+            ),
+          ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          const SizedBox(height: AppTheme.spacingMedium),
+          OverflowBar(
+            alignment: MainAxisAlignment.end,
+            spacing: 8,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Edit Board',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Close',
-                    onPressed: _saving ? null : () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _name,
-                enabled: !_saving,
-                decoration: const InputDecoration(labelText: 'Board name'),
-              ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  icon: Icon(boardIcons[_icon] ?? Icons.dashboard_rounded),
-                  label: const Text('Choose icon'),
-                  onPressed: _saving
-                      ? null
-                      : () async {
-                          final icon = await chooseBoardIcon(context, _icon);
-                          if (icon != null && mounted) {
-                            setState(() => _icon = icon);
-                          }
-                        },
+              TextButton(
+                onPressed: _saving ? null : closeForm,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red.shade700,
                 ),
+                child: const Text('Cancel'),
               ),
-              const SizedBox(height: 12),
-              const Text('Board color'),
-              const SizedBox(height: 10),
-              ColorChoices(
-                color: _color,
-                onChanged: (value) => setState(() => _color = value),
-              ),
-              const SizedBox(height: 20),
-              EditableCategoryList(
-                title: 'Subjects',
-                label: 'subject',
-                useIcon: false,
-                items: _subjects,
-                onChanged: (value) => setState(() => _subjects = value),
-              ),
-              const Divider(height: 32),
-              EditableCategoryList(
-                title: 'Task types',
-                label: 'task type',
-                useIcon: true,
-                items: _types,
-                onChanged: (value) => setState(() => _types = value),
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _saving ? null : _applyList,
-                  icon: const Icon(Icons.library_add_outlined),
-                  label: const Text('Apply default list'),
-                ),
-              ),
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    _error!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 12),
-              OverflowBar(
-                alignment: MainAxisAlignment.end,
-                spacing: 8,
-                children: [
-                  TextButton(
-                    onPressed: _saving ? null : () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  FilledButton(
-                    onPressed: _saving ? null : _save,
-                    child: Text(_saving ? 'Saving…' : 'Save changes'),
-                  ),
-                ],
+              ElevatedButton(
+                onPressed: _canSave ? _save : null,
+                child: const Text('Save changes'),
               ),
             ],
           ),
-        ),
+        ],
       ),
     ),
   );

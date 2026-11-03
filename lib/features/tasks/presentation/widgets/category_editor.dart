@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../boards/data/board_catalog.dart';
+import '../../../../core/data/workspace_limits.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_motion.dart';
+import '../../../../core/widgets/limited_text_field.dart';
+import 'editor_panel.dart';
 
 class CategoryDraft {
   const CategoryDraft({
@@ -23,39 +29,55 @@ class CategoryDraft {
       );
 }
 
-Future<String?> chooseBoardIcon(BuildContext context, String selected) =>
-    showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        title: const Text('Choose an icon'),
-        content: SizedBox(
-          width: 400,
-          height: (MediaQuery.sizeOf(context).height * .55).clamp(160, 420),
-          child: GridView.count(
-            shrinkWrap: true,
-            crossAxisCount: 5,
-            mainAxisSpacing: 4,
-            crossAxisSpacing: 4,
-            children: [
-              for (final entry in boardIcons.entries)
-                IconButton.filledTonal(
-                  tooltip: entry.key,
-                  isSelected: entry.key == selected,
-                  icon: Icon(entry.value),
-                  onPressed: () => Navigator.pop(context, entry.key),
-                ),
-            ],
-          ),
+bool sameCategories(List<CategoryDraft> a, List<CategoryDraft> b) =>
+    a.length == b.length &&
+    List.generate(
+      a.length,
+      (i) =>
+          a[i].id == b[i].id &&
+          a[i].name == b[i].name &&
+          a[i].icon == b[i].icon &&
+          a[i].color == b[i].color,
+    ).every((value) => value);
+
+Future<String?> chooseBoardIcon(BuildContext context, String selected) async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  final result = await showMotionDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      title: const Text('Choose an icon'),
+      content: SizedBox(
+        width: 400,
+        height: (MediaQuery.sizeOf(context).height * .55).clamp(160, 420),
+        child: GridView.count(
+          shrinkWrap: true,
+          crossAxisCount: 5,
+          mainAxisSpacing: 4,
+          crossAxisSpacing: 4,
+          children: [
+            for (final entry in boardIcons.entries)
+              IconButton.filledTonal(
+                tooltip: entry.key,
+                isSelected: entry.key == selected,
+                icon: Icon(entry.value),
+                onPressed: () => Navigator.pop(context, entry.key),
+              ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
       ),
-    );
+      actions: [
+        TextButton(
+          style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ],
+    ),
+  );
+  if (context.mounted) FocusScope.of(context).unfocus();
+  return result;
+}
 
 class ColorChoices extends StatelessWidget {
   const ColorChoices({super.key, required this.color, required this.onChanged});
@@ -77,14 +99,20 @@ class ColorChoices extends StatelessWidget {
               onTap: () => onChanged(value),
               borderRadius: BorderRadius.circular(24),
               child: Container(
-                width: 36,
-                height: 36,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: Color(value),
                   shape: BoxShape.circle,
                 ),
                 child: value == color
-                    ? const Icon(Icons.check, color: Colors.white, size: 20)
+                    ? Icon(
+                        Icons.check,
+                        color: Color(value).computeLuminance() > .5
+                            ? AppColors.textPrimary
+                            : Colors.white,
+                        size: 20,
+                      )
                     : null,
               ),
             ),
@@ -99,11 +127,16 @@ Future<CategoryDraft?> editCategory(
   required String label,
   required bool useIcon,
   CategoryDraft? initial,
-}) => showDialog<CategoryDraft>(
-  context: context,
-  builder: (_) =>
-      _CategoryDialog(label: label, useIcon: useIcon, initial: initial),
-);
+}) async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  final result = await showMotionDialog<CategoryDraft>(
+    context: context,
+    builder: (_) =>
+        _CategoryDialog(label: label, useIcon: useIcon, initial: initial),
+  );
+  if (context.mounted) FocusScope.of(context).unfocus();
+  return result;
+}
 
 class _CategoryDialog extends StatefulWidget {
   const _CategoryDialog({
@@ -123,12 +156,49 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   late String _icon;
   late int _color;
   String? _error;
+  bool _closing = false;
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initial?.name ?? '');
     _icon = widget.initial?.icon ?? 'book';
     _color = widget.initial?.color ?? boardColors.first;
+    _controller.addListener(_changed);
+  }
+
+  void _changed() {
+    setState(() => _error = null);
+  }
+
+  bool get _hasChanges =>
+      widget.initial == null ||
+      _controller.text.trim() != widget.initial!.name ||
+      _icon != widget.initial!.icon ||
+      _color != widget.initial!.color;
+  bool get _canSave =>
+      !_closing &&
+      _hasChanges &&
+      _controller.text.trim().isNotEmpty &&
+      (_controller.text.trim().length <= WorkspaceLimits.categoryName ||
+          _controller.text.trim() == widget.initial?.name);
+  void _save() {
+    if (!_canSave) return;
+    setState(() => _closing = true);
+    Navigator.pop(
+      context,
+      CategoryDraft(
+        id: widget.initial?.id ?? const Uuid().v4(),
+        name: _controller.text.trim(),
+        icon: _icon,
+        color: _color,
+      ),
+    );
+  }
+
+  void _close() {
+    if (_closing) return;
+    setState(() => _closing = true);
+    Navigator.pop(context);
   }
 
   @override
@@ -138,72 +208,63 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text('${widget.initial == null ? 'New' : 'Edit'} ${widget.label}'),
-    content: SingleChildScrollView(
-      child: SizedBox(
-        width: 360,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => EditorPanel(
+    dialog: true,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        EditorHeading(
+          title: '${widget.initial == null ? 'New' : 'Edit'} ${widget.label}',
+          icon: widget.useIcon
+              ? Icons.label_outline_rounded
+              : Icons.circle_outlined,
+          onClose: _closing ? null : _close,
+        ),
+        const SizedBox(height: AppTheme.spacingLarge),
+        LimitedTextField(
+          controller: _controller,
+          limit: WorkspaceLimits.categoryName,
+          validator: (_) => _error,
+          onSubmitted: (_) => _save(),
+          decoration: InputDecoration(labelText: 'Name', errorText: _error),
+        ),
+        const SizedBox(height: 20),
+        if (widget.useIcon)
+          OutlinedButton.icon(
+            onPressed: () async {
+              final chosen = await chooseBoardIcon(context, _icon);
+              if (chosen != null && mounted) setState(() => _icon = chosen);
+            },
+            icon: Icon(boardIcons[_icon] ?? Icons.label_rounded),
+            label: const Text('Choose icon'),
+          )
+        else ...[
+          const Text('Color'),
+          const SizedBox(height: 10),
+          ColorChoices(
+            color: _color,
+            onChanged: (value) => setState(() => _color = value),
+          ),
+        ],
+        const SizedBox(height: AppTheme.spacingLarge),
+        OverflowBar(
+          alignment: MainAxisAlignment.end,
+          spacing: 8,
           children: [
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              decoration: InputDecoration(labelText: 'Name', errorText: _error),
+            TextButton(
+              onPressed: _closing ? null : _close,
+              style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(height: 20),
-            if (widget.useIcon)
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final chosen = await chooseBoardIcon(context, _icon);
-                  if (chosen != null && mounted) setState(() => _icon = chosen);
-                },
-                icon: Icon(boardIcons[_icon] ?? Icons.label_rounded),
-                label: const Text('Choose icon'),
-              )
-            else ...[
-              const Text('Color'),
-              const SizedBox(height: 10),
-              ColorChoices(
-                color: _color,
-                onChanged: (value) => setState(() => _color = value),
-              ),
-            ],
+            ElevatedButton(
+              onPressed: _canSave ? _save : null,
+              child: const Text('Save'),
+            ),
           ],
         ),
-      ),
+      ],
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
-      ),
-      FilledButton(
-        onPressed: () {
-          final name = _controller.text.trim();
-          if (name.isEmpty ||
-              (name.length > 50 && name != widget.initial?.name)) {
-            setState(
-              () => _error = name.isEmpty
-                  ? 'Enter a name.'
-                  : 'Use at most 50 characters.',
-            );
-            return;
-          }
-          Navigator.pop(
-            context,
-            CategoryDraft(
-              id: widget.initial?.id ?? const Uuid().v4(),
-              name: name,
-              icon: _icon,
-              color: _color,
-            ),
-          );
-        },
-        child: const Text('Save'),
-      ),
-    ],
   );
 }
 
@@ -284,70 +345,103 @@ class EditableCategoryList extends StatelessWidget {
         },
         itemBuilder: (context, index) {
           final item = items[index];
-          return ListTile(
+          Future<void> editItem() async {
+            final edited = await editCategory(
+              context,
+              label: label,
+              useIcon: useIcon,
+              initial: item,
+            );
+            if (edited != null && context.mounted) {
+              onChanged([
+                for (final value in items)
+                  if (value.id == item.id) edited else value,
+              ]);
+            }
+          }
+
+          return Padding(
             key: ValueKey(item.id),
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              useIcon
-                  ? (boardIcons[item.icon] ?? Icons.label_rounded)
-                  : Icons.circle,
-              color: useIcon ? null : Color(item.color),
-            ),
-            title: Text(
-              item.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  tooltip: 'Edit $label',
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () async {
-                    final edited = await editCategory(
-                      context,
-                      label: label,
-                      useIcon: useIcon,
-                      initial: item,
-                    );
-                    if (edited != null) {
-                      onChanged([
-                        for (final value in items)
-                          if (value.id == item.id) edited else value,
-                      ]);
-                    }
-                  },
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Tooltip(
+              message: 'Edit $label',
+              child: ListTile(
+                onTap: editItem,
+                contentPadding: const EdgeInsets.only(left: 12, right: 4),
+                tileColor: AppColors.surfaceVariant,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                 ),
-                IconButton(
-                  tooltip: 'Remove $label',
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => onChanged(
-                    items.where((value) => value.id != item.id).toList(),
+                minLeadingWidth: 20,
+                horizontalTitleGap: 8,
+                leading: Icon(
+                  useIcon
+                      ? (boardIcons[item.icon] ?? Icons.label_rounded)
+                      : Icons.circle,
+                  size: 20,
+                  color: useIcon ? AppColors.primary : Color(item.color),
+                ),
+                title: Tooltip(
+                  message: item.name,
+                  child: Text(
+                    item.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
-                PopupMenuButton<int>(
-                  tooltip: 'Reorder $label',
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (direction) {
-                    final values = [...items];
-                    values.insert(index + direction, values.removeAt(index));
-                    onChanged(values);
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: -1,
-                      enabled: index > 0,
-                      child: const Text('Move up'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ReorderableDragStartListener(
+                      index: index,
+                      child: const SizedBox(
+                        width: 28,
+                        height: 48,
+                        child: Icon(
+                          Icons.drag_indicator_rounded,
+                          size: 18,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
                     ),
-                    PopupMenuItem(
-                      value: 1,
-                      enabled: index + 1 < items.length,
-                      child: const Text('Move down'),
+                    IconButton(
+                      tooltip: 'Remove $label',
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: () => onChanged(
+                        items.where((value) => value.id != item.id).toList(),
+                      ),
+                    ),
+                    PopupMenuButton<int>(
+                      tooltip: 'Reorder $label',
+                      icon: const Icon(
+                        Icons.more_vert,
+                        color: AppColors.textSecondary,
+                      ),
+                      onSelected: (direction) {
+                        final values = [...items];
+                        values.insert(
+                          index + direction,
+                          values.removeAt(index),
+                        );
+                        onChanged(values);
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: -1,
+                          enabled: index > 0,
+                          child: const Text('Move up'),
+                        ),
+                        PopupMenuItem(
+                          value: 1,
+                          enabled: index + 1 < items.length,
+                          child: const Text('Move down'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           );
         },

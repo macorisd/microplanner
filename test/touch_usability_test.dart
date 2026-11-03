@@ -400,7 +400,7 @@ void main() {
         expect(find.byTooltip('Remove subject').hitTestable(), findsOneWidget);
         await tester.tap(find.byTooltip('Edit subject'));
         await tester.pumpAndSettle();
-        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.text('Edit subject'), findsWidgets);
         tester.view.viewInsets = const FakeViewPadding(bottom: 300);
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);

@@ -115,8 +115,11 @@ Future<T?> showMotionDialog<T>({
   required WidgetBuilder builder,
 }) async {
   final navigator = Navigator.of(context, rootNavigator: true);
-  if (_openDialogs[navigator] == true) return null;
-  _openDialogs[navigator] = true;
+  // A form can open a picker of its own; only repeated taps from the same
+  // source route are duplicates. A navigator-wide lock blocked nested editors.
+  final source = ModalRoute.of(context) ?? navigator;
+  if (_openDialogs[source] == true) return null;
+  _openDialogs[source] = true;
   try {
     return await showGeneralDialog<T>(
       context: context,
@@ -139,6 +142,6 @@ Future<T?> showMotionDialog<T>({
       },
     );
   } finally {
-    _openDialogs[navigator] = false;
+    _openDialogs[source] = false;
   }
 }

@@ -63,3 +63,9 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
 Task transition timings and failure behavior are in
 [Interaction and data](interaction-and-data.md); verify real layouts using
 [Verification](verification.md).
+
+The [0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.md) extends this
+language to account and customization views: reuse the task form's 480-pixel
+maximum width, responsive padding and rounded surface. Keep the profile photo
+round even in a stretched column. Customization rows must fit narrow screens,
+retain readable names and expose reorder/edit/remove actions without crowding.

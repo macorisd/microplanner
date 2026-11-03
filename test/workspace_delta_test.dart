@@ -4,6 +4,7 @@ import 'package:microplanner/core/constants/app_constants.dart';
 import 'package:microplanner/core/data/workspace_delta.dart';
 import 'package:microplanner/core/data/workspace_snapshot.dart';
 import 'package:microplanner/features/tasks/data/models/task.dart';
+import 'package:microplanner/features/boards/data/models/board.dart';
 import 'support/fakes.dart';
 
 Task _task(String id, {String name = 'Original', String? description}) =>
@@ -18,6 +19,36 @@ Task _task(String id, {String name = 'Original', String? description}) =>
     );
 
 void main() {
+  test(
+    'queued board reordering survives later edits and cache restoration',
+    () {
+      final first = Board.create(id: 'first', name: 'First', sortOrder: 0);
+      final last = Board.create(id: 'last', name: 'Last', sortOrder: 1);
+      final base = WorkspaceSnapshot(boards: [first, last]);
+      final reordered = WorkspaceDelta.between(
+        base,
+        base.copyWith(
+          boards: [last.copyWith(sortOrder: 0), first.copyWith(sortOrder: 1)],
+        ),
+      ).apply(base)!;
+      expect(reordered.boards.map((board) => board.id), ['last', 'first']);
+      final edited = WorkspaceDelta.between(
+        base,
+        base.copyWith(
+          boards: [
+            first.copyWith(name: 'Renamed'),
+            last,
+          ],
+        ),
+      ).apply(reordered)!;
+      expect(edited.boards.map((board) => board.id), ['last', 'first']);
+      final restored = WorkspaceSnapshot.fromJson(edited.toJson());
+      expect(restored.boards.map((board) => board.id), ['last', 'first']);
+      expect(restored.boards.last.name, 'Renamed');
+      expect(restored.boards.map((board) => board.sortOrder), [0, 1]);
+    },
+  );
+
   test('a large bulk deletion preserves unrelated records and their order', () {
     final rows = [for (var i = 0; i < 5000; i++) _task('task$i')];
     final base = snapshot('Board').copyWith(tasks: rows);
