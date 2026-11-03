@@ -336,7 +336,7 @@ void main() {
     );
 
     testWidgets(
-      'Android drawer fills its width and supports board/subject actions at $width',
+      'Android drawer fills its width and supports the board editor at $width',
       (tester) async {
         tester.view.physicalSize = Size(width, 800);
         tester.view.devicePixelRatio = 1;
@@ -373,35 +373,50 @@ void main() {
           find.byType(ReorderableDelayedDragStartListener),
           findsNWidgets(2),
         );
-        expect(find.byTooltip('Rename board').hitTestable(), findsNWidgets(2));
+        expect(find.byTooltip('Edit board').hitTestable(), findsNWidgets(2));
+        expect(find.byTooltip('Delete board').hitTestable(), findsNWidgets(2));
+        expect(find.byTooltip('Board actions'), findsNothing);
         expect(
           tester
               .getSize(find.byKey(ValueKey(fixture.boards.boards.first.id)))
               .height,
           lessThanOrEqualTo(116),
         );
+        final selected = fixture.boards.currentBoardId;
+        await tester.tap(find.byTooltip('Delete board').last);
+        await tester.pumpAndSettle();
+        expect(find.text('Delete Board'), findsOneWidget);
+        expect(fixture.boards.currentBoardId, selected);
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(fixture.boards.boards.length, 2);
         final original = fixture.boards.boards.first.name;
-        await tester.tap(find.byTooltip('Rename board').first);
+        await tester.tap(find.byTooltip('Edit board').first);
         await tester.pumpAndSettle();
         await tester.enterText(find.byType(TextField).first, 'Unsaved rename');
-        await tester.tap(find.byTooltip('Cancel renaming'));
+        await tester.ensureVisible(find.text('Cancel'));
+        await tester.tap(find.text('Cancel'));
         await tester.pumpAndSettle();
         expect(fixture.boards.boards.first.name, original);
-        await tester.tap(find.text('Subjects').first);
+        await tester.tap(find.byTooltip('Edit board').first);
         await tester.pumpAndSettle();
+        expect(find.text('Subjects'), findsOneWidget);
+        await tester.ensureVisible(find.byTooltip('Edit subject'));
         expect(find.byTooltip('Edit subject').hitTestable(), findsOneWidget);
-        expect(find.byTooltip('Delete subject').hitTestable(), findsOneWidget);
+        expect(find.byTooltip('Remove subject').hitTestable(), findsOneWidget);
         await tester.tap(find.byTooltip('Edit subject'));
         await tester.pumpAndSettle();
-        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.text('Edit subject'), findsWidgets);
         tester.view.viewInsets = const FakeViewPadding(bottom: 300);
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        await tester.tap(find.text('Cancel'));
+        await tester.ensureVisible(find.text('Cancel').last);
+        await tester.tap(find.text('Cancel').last);
         await tester.pumpAndSettle();
         tester.view.resetViewInsets();
         await tester.pumpAndSettle();
-        await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+        await tester.ensureVisible(find.text('Cancel'));
+        await tester.tap(find.text('Cancel'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Second board'));
         await tester.pumpAndSettle();

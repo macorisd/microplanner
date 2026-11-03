@@ -292,6 +292,20 @@ class WorkspaceController extends ChangeNotifier {
         notifyListeners();
       }
     }
+    if (refreshVersion == _refreshVersion) {
+      await _replaceRetiredColors(generation, owner);
+    }
+  }
+
+  Future<void> _replaceRetiredColors(int generation, String owner) async {
+    if (!_current(generation, owner) || !canWrite) return;
+    final current = _outbox?.projected ?? _snapshot;
+    if (!current.hasRetiredCategoryColors) return;
+    // Serialize with user edits using revision checks and the encrypted journal.
+    // Never rewrite a parsed base snapshot: delta preconditions need raw values.
+    await mutate((data) => data.withCurrentCategoryColors());
+    if (!_current(generation, owner)) return;
+    await _outbox?.idle;
   }
 
   Future<void> _cache(

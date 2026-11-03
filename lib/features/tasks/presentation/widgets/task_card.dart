@@ -10,6 +10,8 @@ import '../../../../core/theme/app_motion.dart';
 import '../../../../core/utils/input_mode.dart';
 import '../../../boards/providers/boards_provider.dart';
 import '../../../boards/data/models/subject.dart';
+import '../../../boards/data/models/board_task_type.dart';
+import '../../../boards/data/board_catalog.dart';
 import '../../data/models/task.dart';
 import '../../providers/tasks_provider.dart';
 import '../../providers/task_transitions.dart';
@@ -246,10 +248,21 @@ class _TaskCardState extends State<TaskCard> {
                             ],
                           ),
                           const SizedBox(height: AppTheme.spacingSmall),
-                          Selector<BoardsProvider, Subject?>(
-                            selector: (_, boards) =>
-                                boards.getSubjectById(task.subjectId),
-                            builder: (context, subject, _) {
+                          Selector<
+                            BoardsProvider,
+                            (Subject?, BoardTaskType?, bool)
+                          >(
+                            selector: (_, boards) => (
+                              boards.getSubjectById(task.subjectId),
+                              boards.getTypeById(task.typeId),
+                              boards.workspace.snapshot.schemaVersion == 2,
+                            ),
+                            builder: (context, values, _) {
+                              final subject = values.$1;
+                              final type = values.$2;
+                              final legacyType =
+                                  !values.$3 &&
+                                  task.type != TaskType.unassigned;
                               final subjectName = subject?.name ?? task.subject;
                               final hasSubject = subjectName.isNotEmpty;
                               return Column(
@@ -264,12 +277,14 @@ class _TaskCardState extends State<TaskCard> {
                                           crossAxisAlignment:
                                               WrapCrossAlignment.center,
                                           children: [
-                                            if (task.type !=
-                                                TaskType.unassigned)
+                                            if (type != null || legacyType)
                                               _detail(
                                                 context,
-                                                task.type.icon,
-                                                task.type.label,
+                                                type == null
+                                                    ? task.type.icon
+                                                    : (boardIcons[type.icon] ??
+                                                          Icons.label_rounded),
+                                                type?.name ?? task.type.label,
                                                 AppColors.textSecondary,
                                               ),
                                             _detail(

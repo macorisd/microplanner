@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/data/workspace_controller.dart';
 import '../../../core/data/workspace_delta.dart';
+import '../../../core/data/workspace_snapshot.dart';
 import '../../../core/data/same_list.dart';
 import '../../boards/providers/boards_provider.dart';
 import '../data/models/task.dart';
@@ -153,6 +154,7 @@ class TasksProvider extends ChangeNotifier {
       a.createdAt == b.createdAt &&
       a.isCompleted == b.isCompleted &&
       a.typeIndex == b.typeIndex &&
+      a.typeId == b.typeId &&
       a.priorityIndex == b.priorityIndex &&
       a.boardId == b.boardId &&
       a.subjectId == b.subjectId &&
@@ -176,6 +178,7 @@ class TasksProvider extends ChangeNotifier {
     required TaskPriority priority,
     String? subjectId,
     String? description,
+    String? typeId,
   }) async {
     final boardId = boards.currentBoardId;
     if (boardId == null) return false;
@@ -192,6 +195,11 @@ class TasksProvider extends ChangeNotifier {
       boardId: boardId,
       description: description,
     );
+    task.typeId =
+        typeId ??
+        (type == TaskType.unassigned
+            ? null
+            : WorkspaceSnapshot.legacyTypeId(boardId, type.index));
     return workspace.mutate((s) => s.copyWith(tasks: [...s.tasks, task]));
   }
 

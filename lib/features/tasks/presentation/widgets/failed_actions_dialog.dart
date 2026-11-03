@@ -31,6 +31,7 @@ class FailedActionsDialog extends StatelessWidget {
           'description',
           'deadline',
           'typeIndex',
+          'typeId',
           'priorityIndex',
           'subjectId',
         ].any((key) => item.before![key] != item.after![key])) {
@@ -41,7 +42,7 @@ class FailedActionsDialog extends StatelessWidget {
         'boards': [],
         'subjects': [],
         'tasks': [items.single.after],
-      }).tasks.single;
+      }, upgradeLegacy: false).tasks.single;
     } catch (_) {
       return null;
     }
@@ -94,7 +95,7 @@ class FailedActionsDialog extends StatelessWidget {
             'tasks': [
               _mergeDraft(original, _row(queue.projected, 'tasks', draft.id)),
             ],
-          }).tasks.single;
+          }, upgradeLegacy: false).tasks.single;
 
     Future<bool> save(Task updated) {
       if (workspace.ownerId != owner ||
@@ -135,6 +136,26 @@ class FailedActionsDialog extends StatelessWidget {
       builder: (_) => current == null
           ? AddTaskDialog(
               draft: reviewedDraft,
+              onSaveWithType:
+                  ({
+                    required name,
+                    required deadline,
+                    required type,
+                    required priority,
+                    subjectId,
+                    description,
+                    typeId,
+                  }) => save(
+                    reviewedDraft.copyWith(
+                      name: name,
+                      deadline: deadline,
+                      type: type,
+                      priority: priority,
+                      subjectId: subjectId,
+                      description: description,
+                      typeId: typeId,
+                    ),
+                  ),
               onSave:
                   ({
                     required name,
@@ -221,10 +242,15 @@ class FailedActionsDialog extends StatelessWidget {
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Discard'),
           ),

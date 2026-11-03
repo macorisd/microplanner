@@ -24,6 +24,9 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Editing must not select/focus the title or open the Android keyboard by default.
   Opening date/time/selectors or expanded description clears stale text focus.
   Closing them must not restore focus or reopen the keyboard unexpectedly.
+- Android text fields request sentence capitalization (including names and
+  descriptions) without rewriting entered text; date/numeric keyboards keep their
+  appropriate input modes. Apply this through the shared text-field component.
 - Back from expanded description returns to Edit Task with its draft intact.
   Android Back first dismisses the keyboard when appropriate; a later Back follows
   the current dialog/navigation level. Test Back, Escape and dismissal paths.
@@ -72,3 +75,32 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Independent transitions can overlap. Confirmed failures restore original state
   with inverse motion; late responses, old timers, account switches or new actions
   must not overwrite newer state. Check chains during the destination fade.
+
+## Board customization and account pages
+
+Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.md).
+
+- Weekly Plan is a Coming Soon destination before collapsible Boards. Profile
+  contains only Google photo/name/email, Settings and Sign out. Settings contains
+  only Customization > Boards > Default lists of task types; no extra placeholders.
+- Back and Escape unwind Settings one level at a time, then Profile, then the
+  previous board. Sidebar navigation must not leave stale back-history entries.
+- Boards and task types share the icon catalog; boards and subjects share the
+  existing subject palette. Board colors identify sidebar rows and the open
+  board heading; keep the task area neutral and preserve column colors.
+- Subjects and types are ordered, editable board-local lists, limited to 25 each.
+  Names are trimmed, nonempty and at most 50 characters. Preserve longer existing
+  names and over-limit legacy subject lists; unrelated edits never truncate them.
+- Dragged boards, subjects and task types stay visually inside their own visible
+  list region, including inside a scrolled form. They cannot cover form headings,
+  other category sections or footer actions. Keep first/last drop positions
+  reachable, preserve IDs and show complete rounded rows throughout the drag.
+- Subjects/task types are reordered by dragging their handles; omit redundant
+  three-dot Move up/Move down menus, including in default-list editors.
+- Applying a default list makes an independent copy. Match existing type names
+  ignoring case/outer whitespace only when unambiguous; confirm the number of
+  assignments that will be cleared. Removing/reordering categories must not
+  silently lose or reassign task associations.
+- The five editable initial lists are Academic tasks, Software development, Work,
+  Personal life and Creative projects. Editing/deleting a default never changes
+  boards that previously copied it. Preserve the unassigned No type choice.

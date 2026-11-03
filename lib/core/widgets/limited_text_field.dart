@@ -77,6 +77,13 @@ class LimitedTextField extends StatelessWidget {
     focusNode: focusNode,
     style: style,
     keyboardType: keyboardType,
+    textCapitalization:
+        Theme.of(context).platform == TargetPlatform.android &&
+            (keyboardType == null ||
+                keyboardType == TextInputType.text ||
+                keyboardType == TextInputType.multiline)
+        ? TextCapitalization.sentences
+        : TextCapitalization.none,
     validator: validator,
     autovalidateMode: AutovalidateMode.onUserInteraction,
     onFieldSubmitted: onSubmitted,

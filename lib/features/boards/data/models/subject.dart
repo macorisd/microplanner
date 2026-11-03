@@ -16,11 +16,14 @@ class Subject {
   @HiveField(3, defaultValue: 0xFFCCCCCC)
   final int color; // Store color as int (0xAARRGGBB)
 
+  final int sortOrder;
+
   const Subject({
     required this.id,
     required this.name,
     required this.boardId,
     this.color = 0xFFCCCCCC, // Default gray if not specified
+    this.sortOrder = 0,
   });
 
   Subject copyWith({
@@ -28,12 +31,14 @@ class Subject {
     String? name,
     String? boardId,
     int? color,
+    int? sortOrder,
   }) {
     return Subject(
       id: id ?? this.id,
       name: name ?? this.name,
       boardId: boardId ?? this.boardId,
       color: color ?? this.color,
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
 

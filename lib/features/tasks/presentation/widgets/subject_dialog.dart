@@ -1,4 +1,4 @@
-import '../../../../core/theme/app_motion.dart';
+import 'category_editor.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -96,40 +96,12 @@ class _SubjectDialogState extends State<SubjectDialog>
               ).textTheme.labelMedium?.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: AppTheme.spacingSmall),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: AppColors.subjectColors.map((color) {
-                final isSelected = color.toARGB32() == _selectedColor;
-                return MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () {
-                      FocusManager.instance.primaryFocus?.unfocus();
-                      setState(() => _selectedColor = color.toARGB32());
-                    },
-                    child: AnimatedContainer(
-                      duration: AppMotion.duration(context, AppMotion.fast),
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: isSelected
-                            ? Border.all(color: AppColors.textPrimary, width: 2)
-                            : null,
-                      ),
-                      child: isSelected
-                          ? const Icon(
-                              Icons.check,
-                              size: 14,
-                              color: Colors.white,
-                            )
-                          : null,
-                    ),
-                  ),
-                );
-              }).toList(),
+            ColorChoices(
+              color: _selectedColor,
+              onChanged: (color) {
+                FocusManager.instance.primaryFocus?.unfocus();
+                setState(() => _selectedColor = color);
+              },
             ),
           ],
         ),

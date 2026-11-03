@@ -1,8 +1,9 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { MongoClient, type ClientSession, type Collection } from 'mongodb';
-import { ApiError, assertBoardNames, assertWorkspaceSize, dataSchema, type Profile, type Workspace, type WorkspaceData } from './domain.js';
+import { ApiError, assertBoardNames, assertCustomizationChanges, assertWorkspaceSize, dataSchema, type Profile, type Workspace, type WorkspaceData } from './domain.js';
+import { upgradeWorkspace } from './customization-migration.js';
 
-type User = Profile & { _id: string; googleSub: string; revision: number; operations: string[] };
+type User = Profile & { _id: string; googleSub: string; revision: number; operations: string[]; workspaceSchemaVersion?: number };
 type Session = { _id: string; ownerId: string; expiresAt: Date };
 type Owned<T> = T & { _id: string; ownerId: string };
 type OperationReceipt = {
@@ -32,7 +33,7 @@ export class Repository {
     await this.db.collection('requestLimits').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
     await this.db.collection<OperationReceipt>('operationReceipts')
       .createIndex({ ownerId: 1, operationId: 1 }, { unique: true });
-    for (const kind of ['boards', 'subjects', 'tasks']) {
+    for (const kind of ['boards', 'subjects', 'tasks', 'boardTypes', 'typeLists']) {
       await this.db.collection(kind).createIndex({ ownerId: 1, id: 1 }, { unique: true });
       await this.db.collection(kind).createIndex({ ownerId: 1, boardId: 1 });
     }
@@ -54,8 +55,8 @@ export class Repository {
     return row !== null && row.count <= max;
   }
 
-  private collection<K extends keyof WorkspaceData>(kind: K) {
-    return this.db.collection<Owned<WorkspaceData[K][number]>>(kind);
+  private collection<K extends 'boards' | 'subjects' | 'tasks' | 'boardTypes' | 'typeLists'>(kind: K) {
+    return this.db.collection<Owned<NonNullable<WorkspaceData[K]>[number]>>(kind);
   }
 
   private profile(user: User): Profile {
@@ -133,6 +134,17 @@ export class Repository {
       }).toArray();
       Object.assign(result, { [kind]: rows });
     }
+    if (user.workspaceSchemaVersion === 2) {
+      result.schemaVersion = 2;
+      result.boardTypes = await this.collection('boardTypes').find({ ownerId }, {
+        session, projection: { _id: 0, ownerId: 0 },
+      }).toArray();
+      result.typeLists = await this.collection('typeLists').find({ ownerId }, {
+        session, projection: { _id: 0, ownerId: 0 },
+      }).toArray();
+      result.boardTypes.sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id));
+      result.subjects.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id.localeCompare(b.id));
+    }
     result.boards.sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));
     assertWorkspaceSize(result);
     return result;
@@ -167,22 +179,37 @@ export class Repository {
       if (user.revision !== revision) {
         throw new ApiError(409, 'revision_conflict', 'Another device changed your data. Reload and try again.');
       }
+      if (!sourceId && user.workspaceSchemaVersion === 2 && data.schemaVersion !== 2) {
+        throw new ApiError(409, 'client_upgrade_required', 'Update microplanner before editing this workspace.');
+      }
       let next = data;
       if (sourceId) {
-        const existing = await this.read(ownerId, session);
-        const boardIds = new Map(data.boards.map(b => [b.id, randomUUID()]));
-        const subjectIds = new Map(data.subjects.map(s => [s.id, randomUUID()]));
+        let existing = await this.read(ownerId, session);
+        const imported = user.workspaceSchemaVersion === 2 || data.schemaVersion === 2
+          ? upgradeWorkspace(data) : data;
+        if (imported.schemaVersion === 2) existing = { ...upgradeWorkspace(existing), revision: existing.revision };
+        const boardIds = new Map(imported.boards.map(b => [b.id, randomUUID()]));
+        const subjectIds = new Map(imported.subjects.map(s => [s.id, randomUUID()]));
+        const typeIds = new Map((imported.boardTypes ?? []).map(t => [t.id, randomUUID()]));
         next = {
-          boards: [...existing.boards, ...data.boards.map((b, i) => ({
+          boards: [...existing.boards, ...imported.boards.map((b, i) => ({
             ...b, id: boardIds.get(b.id)!, sortOrder: existing.boards.length + i,
           }))],
-          subjects: [...existing.subjects, ...data.subjects.map(s => ({
+          subjects: [...existing.subjects, ...imported.subjects.map(s => ({
             ...s, id: subjectIds.get(s.id)!, boardId: boardIds.get(s.boardId)!,
           }))],
-          tasks: [...existing.tasks, ...data.tasks.map(t => ({
+          tasks: [...existing.tasks, ...imported.tasks.map(t => ({
             ...t, id: randomUUID(), boardId: boardIds.get(t.boardId)!,
             subjectId: t.subjectId === null ? null : subjectIds.get(t.subjectId)!,
+            ...(imported.schemaVersion === 2 ? { typeId: t.typeId == null ? null : typeIds.get(t.typeId)! } : {}),
           }))],
+          ...(imported.schemaVersion === 2 ? {
+            schemaVersion: 2 as const,
+            boardTypes: [...(existing.boardTypes ?? []), ...(imported.boardTypes ?? []).map(t => ({
+              ...t, id: typeIds.get(t.id)!, boardId: boardIds.get(t.boardId)!,
+            }))],
+            typeLists: existing.typeLists ?? [],
+          } : {}),
         };
         // The receipt and all imported entities commit together or not at all.
         await this.db.collection<{ _id: string; ownerId: string }>('imports')
@@ -191,6 +218,10 @@ export class Repository {
       dataSchema.parse(next);
       const previousBoards = await this.collection('boards').find({ ownerId }, { session }).toArray();
       assertBoardNames(next, { boards: previousBoards });
+      if (next.schemaVersion === 2) {
+        const previous = await this.read(ownerId, session);
+        assertCustomizationChanges(next, previous, sourceId !== undefined);
+      }
       assertWorkspaceSize({ ...next, revision: revision + 1 });
       // The receipt and data are committed together, so a delayed retry remains
       // idempotent even after the legacy 50-operation history rolls over.
@@ -199,6 +230,7 @@ export class Repository {
       }, { session });
       const updated = await this.users.updateOne({ _id: ownerId, revision }, {
         $inc: { revision: 1 }, $push: { operations: { $each: [operationId], $slice: -50 } },
+        ...(next.schemaVersion === 2 ? { $set: { workspaceSchemaVersion: 2 } } : {}),
       }, { session });
       if (updated.modifiedCount !== 1) throw new ApiError(409, 'revision_conflict', 'Reload and try again.');
       for (const kind of ['boards', 'subjects', 'tasks'] as const) {
@@ -208,6 +240,15 @@ export class Repository {
           await this.db.collection<{ _id: string; ownerId: string }>(kind).insertMany(next[kind].map(row => ({
             ...row, _id: randomUUID(), ownerId,
           })), { session });
+        }
+      }
+      if (next.schemaVersion === 2) {
+        for (const kind of ['boardTypes', 'typeLists'] as const) {
+          await this.collection(kind).deleteMany({ ownerId }, { session });
+          const rows = next[kind] ?? [];
+          if (rows.length) await this.db.collection<{ _id: string; ownerId: string }>(kind).insertMany(
+            rows.map(row => ({ ...row, _id: randomUUID(), ownerId })), { session },
+          );
         }
       }
       return { ...next, revision: revision + 1 };

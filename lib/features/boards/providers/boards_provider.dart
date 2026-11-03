@@ -3,11 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/data/workspace_controller.dart';
 import '../../../core/data/workspace_delta.dart';
+import '../../../core/data/workspace_snapshot.dart';
 import '../../../core/data/same_list.dart';
 import '../data/models/board.dart';
+import '../data/models/board_task_type.dart';
 import '../data/models/subject.dart';
 import '../data/board_selection_storage.dart';
 import '../data/board_column_storage.dart';
+
+enum DashboardPage { board, weeklyPlan, profile, settings }
 
 class BoardsProvider extends ChangeNotifier {
   final WorkspaceController workspace;
@@ -17,8 +21,10 @@ class BoardsProvider extends ChangeNotifier {
   String? _subjectsBoardId;
   String? _owner;
   bool _showSubjectsView = false;
+  DashboardPage _page = DashboardPage.board;
   List<Board> _boards = const [];
   List<Subject> _subjects = const [];
+  List<BoardTaskType> _types = const [];
   Map<String, Board> _boardIndex = {};
   Map<String, Subject> _subjectIndex = {};
   Map<String, List<Subject>> _subjectsByBoard = {};
@@ -40,8 +46,21 @@ class BoardsProvider extends ChangeNotifier {
   }
   List<Board> get boards => _boards;
   List<Subject> get subjects => _subjects;
+  List<BoardTaskType> typesForBoard(String? boardId) =>
+      _types.where((type) => type.boardId == boardId).toList()
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  BoardTaskType? getTypeById(String? id) =>
+      _types.where((type) => type.id == id).firstOrNull;
   bool get isLoading => workspace.isLoading;
   bool get showSubjectsView => _showSubjectsView;
+  DashboardPage get page => _page;
+  void navigate(DashboardPage value) {
+    if (_page == value) return;
+    _page = value;
+    _showSubjectsView = false;
+    notifyListeners();
+  }
+
   bool get isRestoringSelection => !_selectionLoaded;
   bool get isRestoringColumns => !_columnsLoaded;
   int get currentColumnIndex => _columns[currentBoardId] ?? 2;
@@ -63,7 +82,9 @@ class BoardsProvider extends ChangeNotifier {
           a.id == b.id &&
           a.name == b.name &&
           a.createdAt == b.createdAt &&
-          a.sortOrder == b.sortOrder,
+          a.sortOrder == b.sortOrder &&
+          a.icon == b.icon &&
+          a.color == b.color,
     );
     final subjectsChanged = !sameList(
       _subjects,
@@ -72,7 +93,18 @@ class BoardsProvider extends ChangeNotifier {
           a.id == b.id &&
           a.name == b.name &&
           a.boardId == b.boardId &&
-          a.color == b.color,
+          a.color == b.color &&
+          a.sortOrder == b.sortOrder,
+    );
+    final typesChanged = !sameList(
+      _types,
+      data.boardTypes,
+      (a, b) =>
+          a.id == b.id &&
+          a.boardId == b.boardId &&
+          a.name == b.name &&
+          a.icon == b.icon &&
+          a.sortOrder == b.sortOrder,
     );
     final confirmed =
         workspace.hasData && workspace.isOnline && !workspace.isLoading;
@@ -81,6 +113,7 @@ class BoardsProvider extends ChangeNotifier {
     if (!ownerChanged &&
         !boardsChanged &&
         !subjectsChanged &&
+        !typesChanged &&
         !confirmationChanged) {
       return;
     }
@@ -96,6 +129,7 @@ class BoardsProvider extends ChangeNotifier {
       _currentBoardId = null;
       _subjectsBoardId = null;
       _showSubjectsView = false;
+      _page = DashboardPage.board;
       _preferredBoardId = null;
       ++_selectionGeneration;
       _selectionVersion = 0;
@@ -116,9 +150,15 @@ class BoardsProvider extends ChangeNotifier {
       for (final subject in _subjects) {
         grouped.putIfAbsent(subject.boardId, () => []).add(subject);
       }
+      for (final items in grouped.values) {
+        items.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      }
       _subjectsByBoard = grouped.map(
         (id, items) => MapEntry(id, List.unmodifiable(items)),
       );
+    }
+    if (typesChanged || ownerChanged) {
+      _types = List.unmodifiable(data.boardTypes);
     }
     _resolveSelection();
     if (_subjectsBoardId != null &&
@@ -129,6 +169,7 @@ class BoardsProvider extends ChangeNotifier {
     if (ownerChanged ||
         boardsChanged ||
         subjectsChanged ||
+        typesChanged ||
         previousSelection != _currentBoardId) {
       notifyListeners();
     }
@@ -238,7 +279,9 @@ class BoardsProvider extends ChangeNotifier {
 
   void selectBoard(String id) {
     if (!_boardIndex.containsKey(id) ||
-        (_currentBoardId == id && !_showSubjectsView)) {
+        (_currentBoardId == id &&
+            !_showSubjectsView &&
+            _page == DashboardPage.board)) {
       return;
     }
     _currentBoardId = id;
@@ -247,6 +290,7 @@ class BoardsProvider extends ChangeNotifier {
     ++_selectionVersion;
     _remember(id);
     _showSubjectsView = false;
+    _page = DashboardPage.board;
     notifyListeners();
   }
 
@@ -268,6 +312,10 @@ class BoardsProvider extends ChangeNotifier {
                 ) +
                 1,
           ),
+        ],
+        boardTypes: [
+          ...s.boardTypes,
+          if (s.schemaVersion == 2) ...WorkspaceSnapshot.defaultBoardTypes(id),
         ],
       ),
     );
@@ -311,6 +359,9 @@ class BoardsProvider extends ChangeNotifier {
           : s.copyWith(
               boards: s.boards.where((b) => b.id != id).toList(),
               subjects: s.subjects.where((sub) => sub.boardId != id).toList(),
+              boardTypes: s.boardTypes
+                  .where((type) => type.boardId != id)
+                  .toList(),
               tasks: s.tasks.where((t) => t.boardId != id).toList(),
             ),
     );

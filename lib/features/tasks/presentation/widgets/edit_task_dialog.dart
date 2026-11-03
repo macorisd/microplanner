@@ -10,6 +10,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/input_mode.dart';
 import '../../../boards/data/models/subject.dart';
+import '../../../boards/data/models/board_task_type.dart';
+import '../../../boards/data/board_catalog.dart';
 import '../../../boards/providers/boards_provider.dart';
 import '../../data/models/task.dart';
 import 'save_status.dart';
@@ -50,6 +52,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
   late TaskType _type;
   late TaskPriority _priority;
   String? _selectedSubjectId;
+  String? _selectedTypeId;
   bool get _isLoading => actionBlocked;
   bool get _canSubmit =>
       !_isLoading &&
@@ -77,6 +80,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
     _type = draft.type;
     _priority = draft.priority;
     _selectedSubjectId = draft.subjectId;
+    _selectedTypeId = draft.typeId;
     _nameController.addListener(_textChanged);
     _descriptionController.addListener(_textChanged);
   }
@@ -114,6 +118,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
       name: _nameController.text.trim(),
       deadline: deadlineWithTime,
       type: _type,
+      typeId: _selectedTypeId,
       priority: _priority,
       subjectId: _selectedSubjectId,
       description: _descriptionController.text.trim().isEmpty
@@ -152,6 +157,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
           (widget.task.description?.trim() ?? '') ||
       _selectedDeadline != widget.task.deadline ||
       _type != widget.task.type ||
+      _selectedTypeId != widget.task.typeId ||
       _priority != widget.task.priority ||
       _selectedSubjectId != widget.task.subjectId;
 
@@ -161,6 +167,12 @@ class _EditTaskDialogState extends State<EditTaskDialog>
     final compact = touch || MediaQuery.sizeOf(context).width < 600;
     final short = MediaQuery.sizeOf(context).height < 420;
     final boardsProvider = context.watch<BoardsProvider>();
+    final typeOptions = boardsProvider.typesForBoard(widget.task.boardId);
+    final customized = boardsProvider.workspace.snapshot.schemaVersion == 2;
+    if (_selectedTypeId != null &&
+        !typeOptions.any((type) => type.id == _selectedTypeId)) {
+      _selectedTypeId = null;
+    }
     final subjects = boardsProvider.subjects
         .where((s) => s.boardId == widget.task.boardId)
         .toList();
@@ -298,7 +310,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                     const SizedBox(height: AppTheme.spacingMedium),
 
                     // Type dropdown
-                    _buildTypeDropdown(),
+                    _buildTypeDropdown(typeOptions, customized),
                     const SizedBox(height: AppTheme.spacingMedium),
 
                     // Priority selector
@@ -505,7 +517,46 @@ class _EditTaskDialogState extends State<EditTaskDialog>
     );
   }
 
-  Widget _buildTypeDropdown() {
+  Widget _buildTypeDropdown(List<BoardTaskType> types, bool customized) {
+    if (customized) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+            value: _selectedTypeId ?? '',
+            isExpanded: true,
+            items: [
+              const DropdownMenuItem(value: '', child: Text('No type')),
+              for (final type in types)
+                DropdownMenuItem(
+                  value: type.id,
+                  child: Row(
+                    children: [
+                      Icon(
+                        boardIcons[type.icon] ?? Icons.label_rounded,
+                        size: 20,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: AppTheme.spacingSmall),
+                      Expanded(
+                        child: Text(type.name, overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            onChanged: (value) => setState(() {
+              _selectedTypeId = value == null || value.isEmpty ? null : value;
+            }),
+          ),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
       decoration: BoxDecoration(

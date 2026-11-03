@@ -202,9 +202,11 @@ void main() {
     final added = boards.addBoard();
     h.server.states['A'] = h.server.states['A']!.copyWith(
       boards: [
-        original[2],
-        original[0],
-        original[1],
+        // A remote reorder changes the persisted positions, not just the
+        // response array. Journal/cache reconstruction follows those positions.
+        original[2].copyWith(sortOrder: 0),
+        original[0].copyWith(sortOrder: 1),
+        original[1].copyWith(sortOrder: 2),
         Board.create(id: 'remote', name: 'Added remotely', sortOrder: 9),
       ],
     );

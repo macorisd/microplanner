@@ -33,5 +33,9 @@ A server-only fix can skip visual layout rules. Read the active plan in
   this directory is the versioned source of standing project decisions.
 
 Initial consolidation: 2026-11-02, from the user's instructions and approved plans
-through 0.10.0, plus the validated 0.10.2 refinements. Today's application changes
-have deliberately not been reviewed as part of this documentation task.
+through 0.10.0, plus the validated 0.10.2 refinements. The approved
+[0.11.0 customization decisions](../plans/plan-20261102T143728008Z-version0.11.0.md)
+are included in the relevant topics. Verification evidence belongs in the plan.
+After updating an older worktree, align its ignored local `plansPath` with
+`docs/plans`; do not recreate a root-level plans directory or modify another
+active worktree's private configuration.

@@ -8,6 +8,7 @@ import { buildApp } from '../src/application.js';
 import { readConfig } from '../src/config.js';
 import { Repository } from '../src/repository.js';
 import type { Workspace } from '../src/domain.js';
+import { upgradeWorkspace } from '../src/customization-migration.js';
 import { createRuntime } from '../src/runtime.js';
 
 let mongo: MongoMemoryReplSet;
@@ -53,6 +54,54 @@ const save = (token: string, workspace: Workspace, operationId = randomUUID()) =
   const { revision, ...data } = workspace;
   return app.inject({ method: 'PUT', url: '/workspace', headers: headers(token), payload: { revision, operationId, data } });
 };
+
+test('customization upgrade preserves task types and rejects stale clients without data loss', async () => {
+  const { token } = await login();
+  const legacy = await state(token);
+  legacy.subjects.push({ id: 'math', name: 'Mathematics', boardId: 'default-board', color: 0xffaabbcc });
+  legacy.tasks.push({ id: 'task', name: 'Test', boardId: 'default-board', subjectId: 'math',
+    description: null, deadline: '2026-10-25T22:55:00.000Z', createdAt: '2026-10-22T12:00:00.000Z',
+    isCompleted: false, typeIndex: 2, priorityIndex: 1 });
+  assert.equal((await save(token, legacy)).statusCode, 200);
+  const current = await state(token);
+  const migrated = { ...upgradeWorkspace(current), revision: current.revision };
+  assert.equal(migrated.tasks[0]!.typeId, migrated.boardTypes![1]!.id);
+  assert.equal((await save(token, migrated)).statusCode, 200);
+  const updated = await state(token);
+  assert.equal(updated.schemaVersion, 2);
+  assert.equal(updated.subjects[0]!.id, 'math');
+  assert.equal(updated.tasks[0]!.typeId, migrated.tasks[0]!.typeId);
+  assert.equal(updated.typeLists!.length, 5);
+  const outdated = { ...current, revision: updated.revision };
+  outdated.boards[0]!.name = 'Old client change';
+  const rejected = await save(token, outdated);
+  assert.equal(rejected.statusCode, 409);
+  assert.equal(rejected.json().code, 'client_upgrade_required');
+  assert.equal((await state(token)).tasks[0]!.typeId, migrated.tasks[0]!.typeId);
+  assert.notEqual((await state(token)).boards[0]!.name, 'Old client change');
+});
+
+test('legacy imports stay additive after customization is enabled', async () => {
+  const { token } = await login();
+  const initial = await state(token);
+  assert.equal((await save(token, { ...upgradeWorkspace(initial), revision: initial.revision })).statusCode, 200);
+  const customized = await state(token);
+  const oldImport = { boards: [{ id: 'old', name: 'Imported', createdAt: '2026-01-01T00:00:00Z', sortOrder: 0 }],
+    subjects: [{ id: 'old-subject', name: 'Subject', boardId: 'old', color: 0xffaabbcc }],
+    tasks: [{ id: 'old-task', name: 'Legacy task', boardId: 'old', subjectId: 'old-subject', description: null,
+      deadline: '2026-10-25T22:55:00.000Z', createdAt: '2026-10-22T12:00:00.000Z',
+      isCompleted: false, typeIndex: 1, priorityIndex: 1 }] };
+  const response = await app.inject({ method: 'POST', url: '/workspace/import', headers: headers(token),
+    payload: { revision: customized.revision, operationId: randomUUID(), sourceId: randomUUID(), data: oldImport } });
+  assert.equal(response.statusCode, 200, response.body);
+  const merged = await state(token);
+  assert.equal(merged.boards.length, 2);
+  assert.equal(merged.tasks.length, 1);
+  const task = merged.tasks[0]!;
+  assert.equal(merged.boardTypes!.find(type => type.id === task.typeId)?.name, 'Homework');
+  assert.equal(merged.boardTypes!.find(type => type.id === task.typeId)?.boardId, task.boardId);
+  assert.equal(merged.typeLists!.length, 5);
+});
 
 test('readiness pings MongoDB and anonymous access is rejected', async () => {
   assert.equal((await app.inject('/health/live')).statusCode, 200);

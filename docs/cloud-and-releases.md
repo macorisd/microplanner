@@ -23,6 +23,13 @@ an app to work around a signing mismatch.
 
 ## Vercel deployment
 
+For 0.11.0, deploy the updated API before installing the updated clients. The
+first successful save upgrades that account's workspace to support board colors,
+icons and custom task types. Earlier clients can still read the workspace, but
+must update before writing after this upgrade. Keep this API version or a newer
+one in production after any account has upgraded; an API rollback to a version
+that predates this format is not supported.
+
 Project: <https://vercel.com/macoris-projects/microplanner-api>.
 Production API: <https://microplanner-api.vercel.app>.
 Use Root Directory `server`, Fastify, Node.js `24.x`, production branch `main`,

@@ -62,28 +62,30 @@ class AppColors {
   static const Color success = Color(0xFF8DD4A0);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Subject Palette (15-20 pastel options)
+  // Shared board/subject palette (21 options)
   // ─────────────────────────────────────────────────────────────────────────
+  // Warm-to-cool spectrum; muted neutrals finish the sequence.
   static const List<Color> subjectColors = [
     Color(0xFFE57373), // Red
-    Color(0xFFF06292), // Pink
-    Color(0xFFBA68C8), // Purple
-    Color(0xFF9575CD), // Deep Purple
-    Color(0xFF7986CB), // Indigo
-    Color(0xFF64B5F6), // Blue
-    Color(0xFF4FC3F7), // Light Blue
-    Color(0xFF4DD0E1), // Cyan
-    Color(0xFF4DB6AC), // Teal
-    Color(0xFF81C784), // Green
-    Color(0xFFAED581), // Light Green
-    Color(0xFFDCE775), // Lime
-    Color(0xFFFFF176), // Yellow
-    Color(0xFFFFD54F), // Amber
-    Color(0xFFFFB74D), // Orange
     Color(0xFFFF8A65), // Deep Orange
+    Color(0xFFFFB74D), // Orange
+    Color(0xFFAD7C32), // Ochre
+    Color(0xFFFFD54F), // Amber
+    Color(0xFFDCE775), // Lime
+    Color(0xFFAED581), // Light Green
+    Color(0xFF81C784), // Green
+    Color(0xFF568578), // Pine
+    Color(0xFF4DB6AC), // Teal
+    Color(0xFF4DD0E1), // Cyan
+    Color(0xFF4FC3F7), // Light Blue
+    Color(0xFF64B5F6), // Blue
+    Color(0xFF687F9C), // Slate Blue
+    Color(0xFF7986CB), // Indigo
+    Color(0xFF9575CD), // Deep Purple
+    Color(0xFFBA68C8), // Purple
+    Color(0xFFF06292), // Pink
+    Color(0xFFA86178), // Raspberry
     Color(0xFFA1887F), // Brown
     Color(0xFF90A4AE), // Blue Grey
-    Color(0xFFB0BEC5), // Slate
-    Color(0xFFCFD8DC), // Cool Grey
   ];
 }

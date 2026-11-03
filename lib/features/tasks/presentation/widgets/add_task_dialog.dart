@@ -10,6 +10,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/input_mode.dart';
 import '../../../boards/data/models/subject.dart';
+import '../../../boards/data/models/board_task_type.dart';
+import '../../../boards/data/board_catalog.dart';
 import '../../../boards/providers/boards_provider.dart';
 import '../../data/models/task.dart';
 import 'save_status.dart';
@@ -33,8 +35,23 @@ class AddTaskDialog extends StatefulWidget {
     String? description,
   })
   onSave;
+  final Future<bool> Function({
+    required String name,
+    required DateTime deadline,
+    required TaskType type,
+    required TaskPriority priority,
+    String? subjectId,
+    String? description,
+    String? typeId,
+  })?
+  onSaveWithType;
 
-  const AddTaskDialog({super.key, required this.onSave, this.draft});
+  const AddTaskDialog({
+    super.key,
+    required this.onSave,
+    this.onSaveWithType,
+    this.draft,
+  });
 
   @override
   State<AddTaskDialog> createState() => _AddTaskDialogState();
@@ -53,6 +70,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
   TaskType _type = TaskType.unassigned;
   TaskPriority _priority = TaskPriority.low;
   String? _selectedSubjectId;
+  String? _selectedTypeId;
   bool get _isLoading => actionBlocked;
   bool get _canSubmit =>
       !_isLoading &&
@@ -75,6 +93,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
       _type = draft.type;
       _priority = draft.priority;
       _selectedSubjectId = draft.subjectId;
+      _selectedTypeId = draft.typeId;
     }
     _nameController.addListener(_textChanged);
     _descriptionController.addListener(_textChanged);
@@ -102,16 +121,36 @@ class _AddTaskDialogState extends State<AddTaskDialog>
     );
 
     final saved = await submitOnce(
-      () => widget.onSave(
-        name: _nameController.text.trim(),
-        deadline: deadlineWithTime,
-        type: _type,
-        priority: _priority,
-        subjectId: _selectedSubjectId,
-        description: _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
-      ),
+      () => widget.onSaveWithType != null
+          ? widget.onSaveWithType!(
+              name: _nameController.text.trim(),
+              deadline: deadlineWithTime,
+              type:
+                  context
+                          .read<BoardsProvider>()
+                          .workspace
+                          .snapshot
+                          .schemaVersion ==
+                      2
+                  ? TaskType.unassigned
+                  : _type,
+              priority: _priority,
+              subjectId: _selectedSubjectId,
+              description: _descriptionController.text.trim().isEmpty
+                  ? null
+                  : _descriptionController.text.trim(),
+              typeId: _selectedTypeId,
+            )
+          : widget.onSave(
+              name: _nameController.text.trim(),
+              deadline: deadlineWithTime,
+              type: _type,
+              priority: _priority,
+              subjectId: _selectedSubjectId,
+              description: _descriptionController.text.trim().isEmpty
+                  ? null
+                  : _descriptionController.text.trim(),
+            ),
     );
 
     if (!mounted) return;
@@ -126,6 +165,14 @@ class _AddTaskDialogState extends State<AddTaskDialog>
     final compact = touch || MediaQuery.sizeOf(context).width < 600;
     final short = MediaQuery.sizeOf(context).height < 420;
     final boardsProvider = context.watch<BoardsProvider>();
+    final typeOptions = boardsProvider.typesForBoard(
+      widget.draft?.boardId ?? boardsProvider.currentBoardId,
+    );
+    final customized = boardsProvider.workspace.snapshot.schemaVersion == 2;
+    if (_selectedTypeId != null &&
+        !typeOptions.any((type) => type.id == _selectedTypeId)) {
+      _selectedTypeId = null;
+    }
     final subjects = widget.draft == null
         ? boardsProvider.currentBoardSubjects
         : boardsProvider.subjects
@@ -266,7 +313,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
                     const SizedBox(height: AppTheme.spacingMedium),
 
                     // Type dropdown
-                    _buildTypeDropdown(),
+                    _buildTypeDropdown(typeOptions, customized),
                     const SizedBox(height: AppTheme.spacingMedium),
 
                     // Priority selector
@@ -473,7 +520,47 @@ class _AddTaskDialogState extends State<AddTaskDialog>
     );
   }
 
-  Widget _buildTypeDropdown() {
+  Widget _buildTypeDropdown(List<BoardTaskType> types, bool customized) {
+    if (customized) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+            value: _selectedTypeId ?? '',
+            isExpanded: true,
+            items: [
+              const DropdownMenuItem(value: '', child: Text('No type')),
+              for (final type in types)
+                DropdownMenuItem(
+                  value: type.id,
+                  child: Row(
+                    children: [
+                      Icon(
+                        boardIcons[type.icon] ?? Icons.label_rounded,
+                        size: 20,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: AppTheme.spacingSmall),
+                      Expanded(
+                        child: Text(type.name, overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            onChanged: (value) => setState(() {
+              _selectedTypeId = value == null || value.isEmpty ? null : value;
+              _type = TaskType.unassigned;
+            }),
+          ),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
       decoration: BoxDecoration(
