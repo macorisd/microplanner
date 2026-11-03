@@ -87,3 +87,14 @@ both platforms, on a matching rounded very pale surface like its sidebar row;
 keep the task area on the original neutral background without a board-color wash.
 On Android, group board Edit/Delete glyphs more closely and
 place Delete slightly nearer the right edge, with separate usable touch targets.
+
+
+Palette refinement, 2026-11-03: board/subject selectors contain exactly 21 distinct
+colors. Retire bright yellow #FFF176 and light grays #B0BEC5/#CFD8DC; add ochre
+#AD7C32, raspberry #A86178, pine #568578 and slate blue #687F9C. Existing uses of
+the retired colors are replaced with ochre, slate blue and pine respectively,
+through normal account-scoped synchronization (user explicitly chose replacement).
+Keep all other saved colors and column header colors. New tones need readable
+contrast on their matching pale surfaces. In Android's app bar, the visible gap
+from the left edge to the menu glyph matches the gap from that glyph to the
+rounded board title surface.

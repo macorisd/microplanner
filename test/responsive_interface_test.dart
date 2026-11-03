@@ -241,6 +241,16 @@ void main() {
         await tester.pumpAndSettle();
         final heading = find.byKey(const ValueKey('board-heading'));
         expect(heading, findsOneWidget);
+        if (platform == TargetPlatform.android) {
+          final burger = tester.getRect(find.byIcon(Icons.menu));
+          final surface = tester.getRect(
+            find
+                .ancestor(of: heading, matching: find.byType(DecoratedBox))
+                .first,
+          );
+          expect(surface.left - burger.right, closeTo(burger.left, .1));
+        }
+
         expect(
           find.descendant(of: heading, matching: find.text('First')),
           findsOneWidget,

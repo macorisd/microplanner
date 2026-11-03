@@ -67,6 +67,7 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          expect(find.byType(PopupMenuButton<int>), findsNothing);
           if (scrolled) {
             scroll.jumpTo(210);
             await tester.pumpAndSettle();

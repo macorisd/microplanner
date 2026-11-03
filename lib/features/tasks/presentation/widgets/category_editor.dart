@@ -413,33 +413,6 @@ class EditableCategoryList extends StatelessWidget {
                           items.where((value) => value.id != item.id).toList(),
                         ),
                       ),
-                      PopupMenuButton<int>(
-                        tooltip: 'Reorder $label',
-                        icon: const Icon(
-                          Icons.more_vert,
-                          color: AppColors.textSecondary,
-                        ),
-                        onSelected: (direction) {
-                          final values = [...items];
-                          values.insert(
-                            index + direction,
-                            values.removeAt(index),
-                          );
-                          onChanged(values);
-                        },
-                        itemBuilder: (_) => [
-                          PopupMenuItem(
-                            value: -1,
-                            enabled: index > 0,
-                            child: const Text('Move up'),
-                          ),
-                          PopupMenuItem(
-                            value: 1,
-                            enabled: index + 1 < items.length,
-                            child: const Text('Move down'),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),

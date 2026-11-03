@@ -20,10 +20,25 @@ void main() {
   });
 
   test('boards and subjects use the same existing pastel palette', () {
+    expect(boardColors.length, 21);
+    expect(boardColors.toSet().length, 21);
+    for (final color in retiredCategoryColors.keys) {
+      expect(boardColors, isNot(contains(color)));
+    }
     expect(
       boardColors,
       AppColors.subjectColors.map((color) => color.toARGB32()).toList(),
     );
+  });
+
+  test('new palette additions are readable on their pastel backgrounds', () {
+    for (final value in boardColors.skip(17)) {
+      final color = Color(value);
+      final ratio =
+          (boardRowBackground(color).computeLuminance() + .05) /
+          (color.computeLuminance() + .05);
+      expect(ratio, greaterThanOrEqualTo(3));
+    }
   });
 
   test('board backgrounds are pale tints of the existing palette', () {

@@ -95,6 +95,27 @@ class WorkspaceSnapshot {
         : parsed;
   }
 
+  bool get hasRetiredCategoryColors =>
+      boards.any((board) => retiredCategoryColors.containsKey(board.color)) ||
+      subjects.any(
+        (subject) => retiredCategoryColors.containsKey(subject.color),
+      );
+
+  WorkspaceSnapshot withCurrentCategoryColors() => copyWith(
+    boards: [
+      for (final board in boards)
+        board.copyWith(
+          color: retiredCategoryColors[board.color] ?? board.color,
+        ),
+    ],
+    subjects: [
+      for (final subject in subjects)
+        subject.copyWith(
+          color: retiredCategoryColors[subject.color] ?? subject.color,
+        ),
+    ],
+  );
+
   static String legacyTypeId(String boardId, int index) =>
       'bt-${sha256.convert(utf8.encode('$boardId:$index'))}';
 

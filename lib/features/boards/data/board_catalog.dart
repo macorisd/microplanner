@@ -51,6 +51,13 @@ final boardColors = List<int>.unmodifiable(
   AppColors.subjectColors.map((color) => color.toARGB32()),
 );
 
+/// Retired presets are replaced only through a normal workspace mutation.
+const retiredCategoryColors = <int, int>{
+  0xfffff176: 0xffad7c32,
+  0xffb0bec5: 0xff687f9c,
+  0xffcfd8dc: 0xff568578,
+};
+
 /// Pair the chosen foreground with a soft tint, like the column headers.
 Color boardRowBackground(Color color) =>
     Color.alphaBlend(color.withValues(alpha: .12), AppColors.surface);

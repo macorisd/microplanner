@@ -62,7 +62,7 @@ class AppColors {
   static const Color success = Color(0xFF8DD4A0);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Subject Palette (15-20 pastel options)
+  // Shared board/subject palette (21 options)
   // ─────────────────────────────────────────────────────────────────────────
   static const List<Color> subjectColors = [
     Color(0xFFE57373), // Red
@@ -77,13 +77,14 @@ class AppColors {
     Color(0xFF81C784), // Green
     Color(0xFFAED581), // Light Green
     Color(0xFFDCE775), // Lime
-    Color(0xFFFFF176), // Yellow
     Color(0xFFFFD54F), // Amber
     Color(0xFFFFB74D), // Orange
     Color(0xFFFF8A65), // Deep Orange
     Color(0xFFA1887F), // Brown
     Color(0xFF90A4AE), // Blue Grey
-    Color(0xFFB0BEC5), // Slate
-    Color(0xFFCFD8DC), // Cool Grey
+    Color(0xFFAD7C32), // Ochre
+    Color(0xFFA86178), // Raspberry
+    Color(0xFF568578), // Pine
+    Color(0xFF687F9C), // Slate Blue
   ];
 }

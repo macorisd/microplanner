@@ -105,6 +105,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         appBar: compact
             ? AppBar(
                 toolbarHeight: short ? 48 : null,
+                titleSpacing: android ? 0 : null,
                 title: MotionSwap(
                   alignment: Alignment.centerLeft,
                   child: page == DashboardPage.board

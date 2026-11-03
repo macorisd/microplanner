@@ -92,6 +92,8 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
   list region, including inside a scrolled form. They cannot cover form headings,
   other category sections or footer actions. Keep first/last drop positions
   reachable, preserve IDs and show complete rounded rows throughout the drag.
+- Subjects/task types are reordered by dragging their handles; omit redundant
+  three-dot Move up/Move down menus, including in default-list editors.
 - Applying a default list makes an independent copy. Match existing type names
   ignoring case/outer whitespace only when unambiguous; confirm the number of
   assignments that will be cleared. Removing/reordering categories must not
