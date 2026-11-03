@@ -122,7 +122,7 @@ all existing board colors and legacy deserialization defaults.
 
 Desktop layout refinement, 2026-11-03: Edit Board places Board color on the left
 (three rows of seven 40-pixel swatches) and Board icon on the right within the
-normal form width. Edit task type places Name left and Icon right. Stack these
+normal form width. Edit task type places Icon left and Name right. Stack these
 sections on narrow Windows layouts; keep Android's current vertical layout.
 The desktop Choose an icon grid uses eight compact cells per row (five on
 unusually narrow dialogs); Android retains five. Hidden desktop board actions

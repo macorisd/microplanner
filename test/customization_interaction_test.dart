@@ -145,7 +145,7 @@ void main() {
         final name = tester.getRect(find.byType(TextField));
         final icon = tester.getRect(find.byTooltip('Choose icon'));
         if (platform == TargetPlatform.windows) {
-          expect(icon.left, greaterThan(name.right));
+          expect(icon.right, lessThan(name.left));
           expect(icon.bottom, closeTo(name.bottom, .1));
         } else {
           expect(icon.top, greaterThan(name.bottom));
