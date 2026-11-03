@@ -373,26 +373,32 @@ void main() {
           find.byType(ReorderableDelayedDragStartListener),
           findsNWidgets(2),
         );
-        expect(find.byTooltip('Board actions').hitTestable(), findsNWidgets(2));
+        expect(find.byTooltip('Edit board').hitTestable(), findsNWidgets(2));
+        expect(find.byTooltip('Delete board').hitTestable(), findsNWidgets(2));
+        expect(find.byTooltip('Board actions'), findsNothing);
         expect(
           tester
               .getSize(find.byKey(ValueKey(fixture.boards.boards.first.id)))
               .height,
           lessThanOrEqualTo(116),
         );
-        final original = fixture.boards.boards.first.name;
-        await tester.tap(find.byTooltip('Board actions').first);
+        final selected = fixture.boards.currentBoardId;
+        await tester.tap(find.byTooltip('Delete board').last);
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Edit board'));
+        expect(find.text('Delete Board'), findsOneWidget);
+        expect(fixture.boards.currentBoardId, selected);
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(fixture.boards.boards.length, 2);
+        final original = fixture.boards.boards.first.name;
+        await tester.tap(find.byTooltip('Edit board').first);
         await tester.pumpAndSettle();
         await tester.enterText(find.byType(TextField).first, 'Unsaved rename');
         await tester.ensureVisible(find.text('Cancel'));
         await tester.tap(find.text('Cancel'));
         await tester.pumpAndSettle();
         expect(fixture.boards.boards.first.name, original);
-        await tester.tap(find.byTooltip('Board actions').first);
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Edit board'));
+        await tester.tap(find.byTooltip('Edit board').first);
         await tester.pumpAndSettle();
         expect(find.text('Subjects'), findsOneWidget);
         await tester.ensureVisible(find.byTooltip('Edit subject'));

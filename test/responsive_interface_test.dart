@@ -12,6 +12,7 @@ import 'package:microplanner/core/theme/app_colors.dart';
 import 'package:microplanner/core/theme/app_theme.dart';
 import 'package:microplanner/features/auth/data/auth_service.dart';
 import 'package:microplanner/features/boards/data/models/board.dart';
+import 'package:microplanner/features/boards/data/board_catalog.dart';
 import 'package:microplanner/features/boards/providers/boards_provider.dart';
 import 'package:microplanner/features/tasks/data/models/task.dart';
 import 'package:microplanner/features/tasks/providers/tasks_provider.dart';
@@ -94,7 +95,7 @@ void main() {
   }
 
   testWidgets(
-    'rapid sidebar hover clears the previous outline and preserves exact fills',
+    'rapid sidebar hover preserves row and label geometry with pale fills',
     (tester) async {
       final f = _Fixture();
       await tester.runAsync(f.initialize);
@@ -128,6 +129,15 @@ void main() {
         return value;
       }
 
+      final rowRects = {
+        for (final id in ['default-board', 'second', 'third'])
+          id: tester.getRect(find.byKey(ValueKey(id))),
+      };
+      final labelRects = {
+        for (final name in ['First', 'Second', 'Third'])
+          name: tester.getRect(find.text(name)),
+      };
+      expect(find.byTooltip('Edit board').hitTestable(), findsNothing);
       await mouse.moveTo(tester.getCenter(find.text('Second')));
       await tester.pumpAndSettle();
       for (final name in ['Third', 'Second', 'Third', 'Second']) {
@@ -135,7 +145,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 1));
         expect(
           (rowDecoration(name)!.border! as Border).top.color,
-          Colors.black.withValues(alpha: .25),
+          const Color(0xff7986cb).withValues(alpha: .25),
         );
         expect(
           (rowDecoration(name == 'Second' ? 'Third' : 'Second')!.border!
@@ -146,11 +156,22 @@ void main() {
         );
         expect(
           (rowDecoration('First')!.border! as Border).top.color,
-          Colors.black.withValues(alpha: .7),
+          const Color(0xff7986cb).withValues(alpha: .7),
         );
         for (final title in ['First', 'Second', 'Third']) {
-          expect(rowDecoration(title)!.color, const Color(0xff7986cb));
+          expect(
+            rowDecoration(title)!.color,
+            boardRowBackground(const Color(0xff7986cb)),
+          );
+          expect(tester.getRect(find.text(title)), labelRects[title]);
+          expect(
+            tester.widget<Text>(find.text(title)).style!.color,
+            const Color(0xff7986cb),
+          );
         }
+      }
+      for (final entry in rowRects.entries) {
+        expect(tester.getRect(find.byKey(ValueKey(entry.key))), entry.value);
       }
       await mouse.moveTo(const Offset(600, 20));
       await tester.pump(const Duration(milliseconds: 1));
@@ -162,6 +183,36 @@ void main() {
         (rowDecoration('Third')!.border! as Border).top.color,
         Colors.transparent,
       );
+      tester.view.physicalSize = const Size(800, 300);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpAndSettle();
+      final scroll = tester
+          .state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byType(SingleChildScrollView),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position;
+      expect(scroll.maxScrollExtent, greaterThan(0));
+      final before = tester.getRect(find.byKey(const ValueKey('second')));
+      await mouse.moveTo(tester.getCenter(find.text('First')));
+      await tester.pump();
+      scroll.jumpTo(scroll.maxScrollExtent);
+      await tester.pumpAndSettle();
+      final after = tester.getRect(find.byKey(const ValueKey('second')));
+      expect(after.size, before.size);
+      expect(after.top, closeTo(before.top - scroll.pixels, .01));
+      for (final entry in rowRects.entries) {
+        expect(
+          tester.getSize(find.byKey(ValueKey(entry.key))),
+          entry.value.size,
+        );
+      }
       expect(tester.takeException(), isNull);
       await mouse.removePointer();
       await tester.pumpWidget(const SizedBox());

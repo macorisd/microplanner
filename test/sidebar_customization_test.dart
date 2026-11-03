@@ -181,9 +181,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Board actions').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Edit board'));
+    await tester.tap(find.byTooltip('Edit board').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Choose icon'));
     await tester.pumpAndSettle();

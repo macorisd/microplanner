@@ -26,33 +26,16 @@ void main() {
     );
   });
 
-  test(
-    'board labels prefer white only with readable contrast on the exact color',
-    () {
-      for (final value in [
-        ...boardColors,
-        0xff172b4d,
-        0xff000000,
-        0xffffffff,
-      ]) {
-        final background = Color(value);
-        final foreground = boardRowForeground(background);
-        final luminances = [
-          background.computeLuminance(),
-          foreground.computeLuminance(),
-        ]..sort();
-        expect(
-          (luminances.last + .05) / (luminances.first + .05),
-          greaterThanOrEqualTo(4.5),
-          reason: value.toRadixString(16),
-        );
-        expect(
-          foreground,
-          1.05 / (background.computeLuminance() + .05) >= 4.5
-              ? Colors.white
-              : Colors.black,
-        );
-      }
-    },
-  );
+  test('board backgrounds are pale tints of the existing palette', () {
+    for (final value in [...boardColors, 0xff172b4d, 0xff000000, 0xffffffff]) {
+      final color = Color(value);
+      final background = boardRowBackground(color);
+      expect(background.a, 1);
+      expect(background.computeLuminance(), greaterThanOrEqualTo(.7));
+      expect(
+        background.computeLuminance(),
+        greaterThanOrEqualTo(color.computeLuminance()),
+      );
+    }
+  });
 }

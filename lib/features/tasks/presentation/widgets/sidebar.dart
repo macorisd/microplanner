@@ -342,7 +342,7 @@ class _BoardCardState extends State<_BoardCard> {
     final touch = usesTouchControls(context);
     final show = touch || _hovered || _focused;
     final color = Color(widget.board.color);
-    final foreground = boardRowForeground(color);
+    final foreground = color;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppTheme.spacingMedium,
@@ -372,7 +372,7 @@ class _BoardCardState extends State<_BoardCard> {
                   vertical: touch ? 4 : 8,
                 ),
                 decoration: BoxDecoration(
-                  color: color,
+                  color: boardRowBackground(color),
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   border: Border.all(
                     color: _focused || widget.isActive
@@ -403,39 +403,35 @@ class _BoardCardState extends State<_BoardCard> {
                         ),
                       ),
                     ),
-                    if (touch)
-                      PopupMenuButton<String>(
-                        tooltip: 'Board actions',
-                        icon: Icon(Icons.more_horiz_rounded, color: foreground),
-                        onSelected: (action) =>
-                            action == 'edit' ? _edit() : _delete(),
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: Text('Edit board'),
+                    Visibility(
+                      visible: show,
+                      maintainState: true,
+                      maintainAnimation: true,
+                      maintainSize: true,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _BoardActionButton(
+                            icon: Icons.edit_outlined,
+                            tooltip: 'Edit board',
+                            color: foreground,
+                            onTap: _edit,
                           ),
-                          if (widget.canDelete)
-                            const PopupMenuItem(
-                              value: 'delete',
-                              child: Text('Delete board'),
+                          Visibility(
+                            visible: widget.canDelete,
+                            maintainState: true,
+                            maintainAnimation: true,
+                            maintainSize: true,
+                            child: _BoardActionButton(
+                              icon: Icons.delete_outline_rounded,
+                              tooltip: 'Delete board',
+                              color: foreground,
+                              onTap: _delete,
                             ),
+                          ),
                         ],
-                      )
-                    else if (show) ...[
-                      _BoardActionButton(
-                        icon: Icons.edit_outlined,
-                        tooltip: 'Edit board',
-                        color: foreground,
-                        onTap: _edit,
                       ),
-                      if (widget.canDelete)
-                        _BoardActionButton(
-                          icon: Icons.delete_outline_rounded,
-                          tooltip: 'Delete board',
-                          color: foreground,
-                          onTap: _delete,
-                        ),
-                    ],
+                    ),
                   ],
                 ),
               ),

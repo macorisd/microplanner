@@ -51,11 +51,9 @@ final boardColors = List<int>.unmodifiable(
   AppColors.subjectColors.map((color) => color.toARGB32()),
 );
 
-/// Prefer white where readable, retaining the exact selected background color.
-Color boardRowForeground(Color background) =>
-    1.05 / (background.computeLuminance() + .05) >= 4.5
-    ? Colors.white
-    : Colors.black;
+/// Pair the chosen foreground with a soft tint, like the column headers.
+Color boardRowBackground(Color color) =>
+    Color.alphaBlend(color.withValues(alpha: .12), AppColors.surface);
 
 class InitialTypeList {
   const InitialTypeList(this.name, this.types);
