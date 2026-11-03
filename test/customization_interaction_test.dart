@@ -9,6 +9,7 @@ import 'package:microplanner/features/tasks/presentation/dashboard_screen.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/board_editor_dialog.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/editor_panel.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/sidebar.dart';
+import 'package:microplanner/features/tasks/presentation/widgets/category_editor.dart';
 
 import 'support/fakes.dart';
 
@@ -55,7 +56,107 @@ Future<BoardsProvider> mount(
 }
 
 void main() {
+  testWidgets(
+    'narrow Windows customization stacks sections and keeps controls reachable',
+    (tester) async {
+      final boards = await mount(tester, TargetPlatform.windows);
+      tester.view.physicalSize = const Size(342, 450);
+      await tester.pumpAndSettle();
+      final context = tester.element(find.byType(DashboardScreen));
+      showDialog<void>(
+        context: context,
+        builder: (_) => BoardEditorDialog(board: boards.boards.first),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.text('Board icon')).dy,
+        lessThan(tester.getTopLeft(find.text('Board color')).dy),
+      );
+      await tester.ensureVisible(find.byTooltip('Choose board icon'));
+      await tester.tap(find.byTooltip('Choose board icon'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('Cancel').last);
+      await tester.tap(find.text('Cancel').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Save changes'));
+      expect(find.text('Save changes').hitTestable(), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      editCategory(
+        context,
+        label: 'task type',
+        useIcon: true,
+        initial: const CategoryDraft(id: 'type', name: 'Homework'),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.byTooltip('Choose icon')).dy,
+        greaterThan(tester.getBottomLeft(find.byType(TextField)).dy),
+      );
+      await tester.ensureVisible(find.text('Save'));
+      expect(find.text('Save').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    testWidgets(
+      '$platform board and type editors use coherent responsive columns',
+      (tester) async {
+        final boards = await mount(tester, platform);
+        final context = tester.element(find.byType(DashboardScreen));
+        showDialog<void>(
+          context: context,
+          builder: (_) => BoardEditorDialog(board: boards.boards.first),
+        );
+        await tester.pumpAndSettle();
+        final colorTitle = tester.getRect(find.text('Board color'));
+        final iconTitle = tester.getRect(find.text('Board icon'));
+        if (platform == TargetPlatform.windows) {
+          expect(iconTitle.top, colorTitle.top);
+          expect(iconTitle.left, greaterThan(colorTitle.right));
+          final swatches = [
+            for (var i = 1; i <= 21; i++)
+              tester.getRect(find.byTooltip('Color $i')),
+          ];
+          expect(swatches.map((r) => r.top).toSet().length, 3);
+          for (var row = 0; row < 3; row++) {
+            expect(
+              swatches.skip(row * 7).take(7).map((r) => r.top).toSet().length,
+              1,
+            );
+          }
+        } else {
+          expect(iconTitle.bottom, lessThan(colorTitle.top));
+        }
+        await tester.tap(find.byTooltip('Close').last);
+        await tester.pumpAndSettle();
+        editCategory(
+          context,
+          label: 'task type',
+          useIcon: true,
+          initial: const CategoryDraft(id: 'type', name: 'Homework'),
+        );
+        await tester.pumpAndSettle();
+        final name = tester.getRect(find.byType(TextField));
+        final icon = tester.getRect(find.byTooltip('Choose icon'));
+        if (platform == TargetPlatform.windows) {
+          expect(icon.left, greaterThan(name.right));
+          expect(icon.bottom, closeTo(name.bottom, .1));
+        } else {
+          expect(icon.top, greaterThan(name.bottom));
+        }
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+
     testWidgets('$platform can move a board to the last position by dragging', (
       tester,
     ) async {

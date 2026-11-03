@@ -73,7 +73,8 @@ retain readable names and expose reorder/edit/remove actions without crowding.
 User refinement, 2026-11-03: sidebar board rows follow the column headers:
 use the exact chosen color for labels, icons and actions, with a very pale tint
 of it as the background. Selection and hover add an outline without changing
-row dimensions or label space. Reserve desktop action space even when hidden;
+row dimensions. On Windows, names use the full available width until hover or
+keyboard focus reveals actions; reserve row height, not hidden action width.
 Android shows compact Edit/Delete glyphs aligned right with usable touch targets.
 These controls are for boards; task cards still edit on tap/click without an edit
 button. Dragged rows keep their own opaque rounded surface; no detached background
@@ -104,8 +105,8 @@ Palette order refinement, 2026-11-03: arrange the same 21 board/subject presets
 as a continuous rainbow from reds through orange/yellow, green, blue, violet and
 pink, with muted brown/blue-gray neutrals last. Selectors use consistent 40-pixel
 circles and 8-pixel gaps, wrapping naturally
-to the available width (including Windows; a fixed seven-column layout was
-reviewed and rejected by the user). Use the same selector in board/subject forms.
+to the available width. The Windows Edit Board refinement below constrains its
+color section to seven columns; other color selectors retain natural wrapping.
 The Windows board title uses the compact Android text/icon/surface proportions.
 Reordering presets never changes saved colors or assignments.
 
@@ -114,7 +115,15 @@ Icon controls, 2026-11-03: board forms show a "Board icon" heading above an
 icon-only selector tinted with the current board color. Type editors show an
 "Icon" heading like the subject editor's "Color" heading, with the selected icon
 as its compact button. Use matching rounded surfaces and accessible tooltips.
-Windows subject/type rows center markers vertically with names and keep a clear
-16-pixel gap after a stable leading area; preserve compact Android spacing.
+Windows subject/type rows center 20-pixel markers vertically with names and use
+an 8-pixel gap, matching Android's compact separation.
 Newly created boards default to the final blue-gray preset (#90A4AE), preserving
 all existing board colors and legacy deserialization defaults.
+
+Desktop layout refinement, 2026-11-03: Edit Board places Board color on the left
+(three rows of seven 40-pixel swatches) and Board icon on the right within the
+normal form width. Edit task type places Name left and Icon right. Stack these
+sections on narrow Windows layouts; keep Android's current vertical layout.
+The desktop Choose an icon grid uses eight compact cells per row (five on
+unusually narrow dialogs); Android retains five. Hidden desktop board actions
+must not shorten names; revealing them truncates names without changing row height.

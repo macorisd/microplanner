@@ -50,21 +50,28 @@ Future<String?> chooseBoardIcon(BuildContext context, String selected) async {
       title: const Text('Choose an icon'),
       content: SizedBox(
         width: 400,
-        height: (MediaQuery.sizeOf(context).height * .55).clamp(160, 420),
-        child: GridView.count(
-          shrinkWrap: true,
-          crossAxisCount: 5,
-          mainAxisSpacing: 4,
-          crossAxisSpacing: 4,
-          children: [
-            for (final entry in boardIcons.entries)
-              IconButton.filledTonal(
-                tooltip: entry.key,
-                isSelected: entry.key == selected,
-                icon: Icon(entry.value),
-                onPressed: () => Navigator.pop(context, entry.key),
-              ),
-          ],
+        height: (MediaQuery.sizeOf(context).height * .55).clamp(
+          160,
+          Theme.of(context).platform == TargetPlatform.windows ? 256 : 420,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) => GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: Theme.of(context).platform == TargetPlatform.windows
+                ? (constraints.maxWidth >= 320 ? 8 : 5)
+                : 5,
+            mainAxisSpacing: 4,
+            crossAxisSpacing: 4,
+            children: [
+              for (final entry in boardIcons.entries)
+                IconButton.filledTonal(
+                  tooltip: entry.key,
+                  isSelected: entry.key == selected,
+                  icon: Icon(entry.value),
+                  onPressed: () => Navigator.pop(context, entry.key),
+                ),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -248,6 +255,24 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     super.dispose();
   }
 
+  Widget _nameField() => LimitedTextField(
+    controller: _controller,
+    limit: WorkspaceLimits.categoryName,
+    validator: (_) => _error,
+    onSubmitted: (_) => _save(),
+    decoration: InputDecoration(labelText: 'Name', errorText: _error),
+  );
+
+  Widget _iconChoice() => IconChoice(
+    label: 'Icon',
+    color: AppColors.primary,
+    onPressed: () async {
+      final chosen = await chooseBoardIcon(context, _icon);
+      if (chosen != null && mounted) setState(() => _icon = chosen);
+    },
+    icon: boardIcons[_icon] ?? Icons.label_rounded,
+  );
+
   @override
   Widget build(BuildContext context) => EditorPanel(
     dialog: true,
@@ -263,25 +288,33 @@ class _CategoryDialogState extends State<_CategoryDialog> {
           onClose: _closing ? null : _close,
         ),
         const SizedBox(height: AppTheme.spacingLarge),
-        LimitedTextField(
-          controller: _controller,
-          limit: WorkspaceLimits.categoryName,
-          validator: (_) => _error,
-          onSubmitted: (_) => _save(),
-          decoration: InputDecoration(labelText: 'Name', errorText: _error),
-        ),
-        const SizedBox(height: 20),
         if (widget.useIcon)
-          IconChoice(
-            label: 'Icon',
-            color: AppColors.primary,
-            onPressed: () async {
-              final chosen = await chooseBoardIcon(context, _icon);
-              if (chosen != null && mounted) setState(() => _icon = chosen);
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (Theme.of(context).platform == TargetPlatform.windows &&
+                  constraints.maxWidth >= 320) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(child: _nameField()),
+                    const SizedBox(width: 16),
+                    _iconChoice(),
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _nameField(),
+                  const SizedBox(height: 20),
+                  _iconChoice(),
+                ],
+              );
             },
-            icon: boardIcons[_icon] ?? Icons.label_rounded,
           )
         else ...[
+          _nameField(),
+          const SizedBox(height: 20),
           const Text('Color'),
           const SizedBox(height: 10),
           ColorChoices(
@@ -416,19 +449,10 @@ class EditableCategoryList extends StatelessWidget {
                   ),
                   visualDensity: VisualDensity.standard,
                   titleAlignment: ListTileTitleAlignment.center,
-                  minLeadingWidth:
-                      Theme.of(context).platform == TargetPlatform.windows
-                      ? 24
-                      : 20,
-                  horizontalTitleGap:
-                      Theme.of(context).platform == TargetPlatform.windows
-                      ? AppTheme.spacingMedium
-                      : AppTheme.spacingSmall,
+                  minLeadingWidth: 20,
+                  horizontalTitleGap: AppTheme.spacingSmall,
                   leading: SizedBox.square(
-                    dimension:
-                        Theme.of(context).platform == TargetPlatform.windows
-                        ? 24
-                        : 20,
+                    dimension: 20,
                     child: Center(
                       child: Icon(
                         useIcon

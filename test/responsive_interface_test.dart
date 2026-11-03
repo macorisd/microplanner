@@ -95,7 +95,7 @@ void main() {
   }
 
   testWidgets(
-    'rapid sidebar hover preserves row and label geometry with pale fills',
+    'sidebar hover reserves action width only while shown without resizing rows',
     (tester) async {
       final f = _Fixture();
       await tester.runAsync(f.initialize);
@@ -163,7 +163,15 @@ void main() {
             rowDecoration(title)!.color,
             boardRowBackground(const Color(0xff7986cb)),
           );
-          expect(tester.getRect(find.text(title)), labelRects[title]);
+          final label = tester.getRect(find.text(title));
+          final original = labelRects[title]!;
+          expect(label.left, original.left);
+          expect(label.top, original.top);
+          expect(label.height, original.height);
+          expect(
+            label.width,
+            title == name ? original.width - 48 : original.width,
+          );
           expect(
             tester.widget<Text>(find.text(title)).style!.color,
             const Color(0xff7986cb),
@@ -179,6 +187,9 @@ void main() {
       }
       await mouse.moveTo(const Offset(600, 20));
       await tester.pump(const Duration(milliseconds: 1));
+      for (final title in labelRects.keys) {
+        expect(tester.getRect(find.text(title)), labelRects[title]);
+      }
       expect(
         (rowDecoration('Second')!.border! as Border).top.color,
         Colors.transparent,

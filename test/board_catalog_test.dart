@@ -69,11 +69,50 @@ void main() {
           final iconRect = tester.getRect(marker);
           final textRect = tester.getRect(find.text(title));
           expect(iconRect.center.dy, closeTo(textRect.center.dy, .5));
-          expect(textRect.left - iconRect.right, greaterThanOrEqualTo(16));
+          expect(textRect.left - iconRect.right, closeTo(8, .1));
         }
         expect(tester.takeException(), isNull);
       },
     );
+  }
+
+  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+    testWidgets('$platform icon picker has compact platform-specific rows', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(platform: platform),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () =>
+                    chooseBoardIcon(context, boardIcons.keys.first),
+                child: const Text('Pick'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Pick'));
+      await tester.pumpAndSettle();
+      final columns = platform == TargetPlatform.windows ? 8 : 5;
+      final keys = boardIcons.keys.toList();
+      final first = tester.getRect(find.byTooltip(keys.first));
+      for (var i = 1; i < columns; i++) {
+        expect(tester.getRect(find.byTooltip(keys[i])).top, first.top);
+      }
+      final next = tester.getRect(find.byTooltip(keys[columns]));
+      expect(next.top, greaterThan(first.bottom));
+      expect(next.left, first.left);
+      expect(
+        first.width,
+        platform == TargetPlatform.windows ? lessThan(50) : greaterThan(60),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+    });
   }
 
   test('initial lists contain valid selectable icons and distinct names', () {

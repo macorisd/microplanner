@@ -384,60 +384,62 @@ class _BoardCardState extends State<_BoardCard> {
                         : Colors.transparent,
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      boardIcons[widget.board.icon] ?? Icons.dashboard_rounded,
-                      size: 20,
-                      color: foreground,
-                    ),
-                    const SizedBox(width: AppTheme.spacingSmall),
-                    Expanded(
-                      child: Text(
-                        widget.board.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: foreground,
-                          fontWeight: FontWeight.w700,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: touch ? 48 : 24),
+                  child: Row(
+                    children: [
+                      Icon(
+                        boardIcons[widget.board.icon] ??
+                            Icons.dashboard_rounded,
+                        size: 20,
+                        color: foreground,
+                      ),
+                      const SizedBox(width: AppTheme.spacingSmall),
+                      Expanded(
+                        child: Text(
+                          widget.board.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: foreground,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
                       ),
-                    ),
-                    Visibility(
-                      visible: show,
-                      maintainState: true,
-                      maintainAnimation: true,
-                      maintainSize: true,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _BoardActionButton(
-                            compact: touch,
-                            alignment: touch
-                                ? Alignment.centerRight
-                                : Alignment.center,
-                            icon: Icons.edit_outlined,
-                            tooltip: 'Edit board',
-                            color: foreground,
-                            onTap: _edit,
-                          ),
-                          Visibility(
-                            visible: widget.canDelete,
-                            maintainState: true,
-                            maintainAnimation: true,
-                            maintainSize: true,
-                            child: _BoardActionButton(
+                      Visibility(
+                        visible: show,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _BoardActionButton(
                               compact: touch,
-                              icon: Icons.delete_outline_rounded,
-                              tooltip: 'Delete board',
+                              alignment: touch
+                                  ? Alignment.centerRight
+                                  : Alignment.center,
+                              icon: Icons.edit_outlined,
+                              tooltip: 'Edit board',
                               color: foreground,
-                              onTap: _delete,
+                              onTap: _edit,
                             ),
-                          ),
-                        ],
+                            Visibility(
+                              visible: widget.canDelete,
+                              maintainState: true,
+                              maintainAnimation: true,
+                              maintainSize: true,
+                              child: _BoardActionButton(
+                                compact: touch,
+                                icon: Icons.delete_outline_rounded,
+                                tooltip: 'Delete board',
+                                color: foreground,
+                                onTap: _delete,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

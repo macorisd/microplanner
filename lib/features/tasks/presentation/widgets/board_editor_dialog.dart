@@ -307,26 +307,58 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
             decoration: const InputDecoration(labelText: 'Board name'),
           ),
           const SizedBox(height: AppTheme.spacingMedium),
-          IconChoice(
-            label: 'Board icon',
-            labelStyle: Theme.of(context).textTheme.titleMedium,
-            color: Color(_color),
-            icon: boardIcons[_icon] ?? Icons.dashboard_rounded,
-            onPressed: _saving
-                ? null
-                : () async {
-                    final icon = await pickOnce(
-                      () => chooseBoardIcon(context, _icon),
-                    );
-                    if (icon != null && mounted) setState(() => _icon = icon);
-                  },
-          ),
-          const SizedBox(height: AppTheme.spacingMedium),
-          Text('Board color', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: AppTheme.spacingSmall),
-          ColorChoices(
-            color: _color,
-            onChanged: (value) => setState(() => _color = value),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final icon = IconChoice(
+                label: 'Board icon',
+                labelStyle: Theme.of(context).textTheme.titleMedium,
+                color: Color(_color),
+                icon: boardIcons[_icon] ?? Icons.dashboard_rounded,
+                onPressed: _saving
+                    ? null
+                    : () async {
+                        final icon = await pickOnce(
+                          () => chooseBoardIcon(context, _icon),
+                        );
+                        if (icon != null && mounted) {
+                          setState(() => _icon = icon);
+                        }
+                      },
+              );
+              final colors = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Board color',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: AppTheme.spacingSmall),
+                  ColorChoices(
+                    color: _color,
+                    onChanged: (value) => setState(() => _color = value),
+                  ),
+                ],
+              );
+              if (Theme.of(context).platform == TargetPlatform.windows &&
+                  constraints.maxWidth >= 432) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 328, child: colors),
+                    const SizedBox(width: AppTheme.spacingMedium),
+                    Expanded(child: icon),
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  icon,
+                  const SizedBox(height: AppTheme.spacingMedium),
+                  colors,
+                ],
+              );
+            },
           ),
           const SizedBox(height: AppTheme.spacingMedium),
           EditableCategoryList(
