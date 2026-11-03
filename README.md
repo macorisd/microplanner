@@ -15,9 +15,9 @@ saved copy; editing resumes when you reconnect.
 ### Android
 
 <!-- android-download:start -->
-[Download Android APK (0.10.3)](https://github.com/macorisd/microplanner/releases/download/v0.10.3/microplanner-0.10.3-android.apk)
+[Download Android APK (0.11.0)](https://github.com/macorisd/microplanner/releases/download/v0.11.0/microplanner-0.11.0-android.apk)
 
-[Release notes](https://github.com/macorisd/microplanner/releases/tag/v0.10.3)
+[Release notes](https://github.com/macorisd/microplanner/releases/tag/v0.11.0)
 <!-- android-download:end -->
 
 1. Open [GitHub Releases](https://github.com/macorisd/microplanner/releases)
@@ -61,7 +61,7 @@ Android downloads appear in Releases after publication.
 <!-- release-history:start -->
 | Version | Changes |
 | --- | --- |
-| 0.11.0 (unreleased) | <ul><li>Navigate with a refreshed sidebar and a Weekly Plan preview.</li><li>Customize board icons, 21 shared colors in rainbow order, subjects and task types, with matching board titles on a neutral canvas.</li><li>Manage reusable task type lists in Settings.</li><li>View your account and sign out from Profile.</li><li>Keep account and customization views consistent with task forms, including Back navigation, focus and save safeguards.</li><li>Keep dragged rows inside their lists and sidebar rows steady on hover, with colored labels, pale backgrounds and direct Android board actions.</li></ul> |
+| [0.11.0](https://github.com/macorisd/microplanner/releases/tag/v0.11.0) | <ul><li>Navigate with a refreshed sidebar and a Weekly Plan preview.</li><li>Customize board icons, 21 shared colors in rainbow order, subjects and task types, with matching board titles on a neutral canvas.</li><li>Manage reusable task type lists in Settings.</li><li>View your account and sign out from Profile.</li><li>Keep account and customization views consistent with task forms, including Back navigation, focus and save safeguards.</li><li>Keep dragged rows inside their lists and sidebar rows steady on hover, with colored labels, pale backgrounds and direct Android board actions.</li></ul> |
 | [0.10.3](https://github.com/macorisd/microplanner/releases/tag/v0.10.3) | <ul><li>Save from the expanded description with Ctrl+Enter.</li><li>Keep description scrollbars clear of text.</li><li>Confirm date and time with Enter, and show Cancel in red in the time picker.</li><li>Show task creation, deletion and same-column edits while they synchronize.</li></ul> |
 | [0.10.2](https://github.com/macorisd/microplanner/releases/tag/v0.10.2) | <ul><li>Hold the destination color for 1.5 seconds, then fade it out over one second.</li><li>Use a black completion strike at the source and keep its destination appearance consistent through the end of the animation.</li><li>Allow task actions immediately on arrival, with smooth chained moves and deletion.</li><li>Count the minimum 2.5-second creation/deletion animation from the original action, awaiting cloud confirmation when needed.</li><li>Refresh the banner tagline to describe a minimalist space.</li></ul> |
 | [0.10.1](https://github.com/macorisd/microplanner/releases/tag/v0.10.1) | <ul><li>Update README download and version links automatically after verified Android publication.</li></ul> |
