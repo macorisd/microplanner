@@ -424,7 +424,7 @@ void main() {
         await tester.tap(
           find.byWidgetPredicate(
             (w) =>
-                w is AnimatedContainer &&
+                w is Container &&
                 w.decoration is BoxDecoration &&
                 (w.decoration as BoxDecoration).color ==
                     const Color(0xfff06292),

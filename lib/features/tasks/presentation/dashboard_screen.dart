@@ -163,9 +163,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   name: boardName,
                                   icon: boardIcon,
                                   color: boardColor,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.displaySmall,
+                                  style: Theme.of(context).textTheme.titleLarge,
                                 ),
                               ),
                             ),

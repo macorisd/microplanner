@@ -98,3 +98,13 @@ Keep all other saved colors and column header colors. New tones need readable
 contrast on their matching pale surfaces. In Android's app bar, the visible gap
 from the left edge to the menu glyph matches the gap from that glyph to the
 rounded board title surface.
+
+
+Palette order refinement, 2026-11-03: arrange the same 21 board/subject presets
+as a continuous rainbow from reds through orange/yellow, green, blue, violet and
+pink, with muted brown/blue-gray neutrals last. Selectors use consistent 40-pixel
+circles and 8-pixel gaps, wrapping naturally
+to the available width (including Windows; a fixed seven-column layout was
+reviewed and rejected by the user). Use the same selector in board/subject forms.
+The Windows board title uses the compact Android text/icon/surface proportions.
+Reordering presets never changes saved colors or assignments.

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:microplanner/features/boards/data/board_catalog.dart';
 import 'package:microplanner/core/theme/app_colors.dart';
+import 'package:microplanner/features/tasks/presentation/widgets/category_editor.dart';
 
 void main() {
   test('initial lists contain valid selectable icons and distinct names', () {
@@ -32,7 +33,7 @@ void main() {
   });
 
   test('new palette additions are readable on their pastel backgrounds', () {
-    for (final value in boardColors.skip(17)) {
+    for (final value in [0xffad7c32, 0xffa86178, 0xff568578, 0xff687f9c]) {
       final color = Color(value);
       final ratio =
           (boardRowBackground(color).computeLuminance() + .05) /
@@ -40,6 +41,66 @@ void main() {
       expect(ratio, greaterThanOrEqualTo(3));
     }
   });
+
+  test('chromatic presets follow the rainbow with neutral tones last', () {
+    final hues = AppColors.subjectColors
+        .take(19)
+        .map((color) => HSVColor.fromColor(color).hue)
+        .toList();
+    expect(hues, orderedEquals([...hues]..sort()));
+    expect(boardColors.skip(19), [0xffa1887f, 0xff90a4ae]);
+  });
+
+  for (final (platform, width) in [
+    (TargetPlatform.windows, 432.0),
+    (TargetPlatform.android, 328.0),
+    (TargetPlatform.android, 256.0),
+  ]) {
+    testWidgets(
+      '$platform color selector fits $width with consistent swatches',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(platform: platform),
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: width,
+                  child: ColorChoices(color: 0xffad7c32, onChanged: (_) {}),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final rects = [
+          for (var number = 1; number <= 21; number++)
+            tester.getRect(find.byTooltip('Color $number')),
+        ];
+        expect(rects.map((rect) => rect.size).toSet(), {const Size(40, 40)});
+        if (width >= 328) {
+          expect(rects.map((rect) => rect.top).toSet().length, 3);
+          final columns = platform == TargetPlatform.windows ? 9 : 7;
+          for (var row = 0; row < 3; row++) {
+            expect(
+              rects
+                  .skip(row * columns)
+                  .take(columns)
+                  .map((rect) => rect.top)
+                  .toSet()
+                  .length,
+              1,
+            );
+          }
+          expect(rects[columns].left, rects[0].left);
+          expect(rects[1].left - rects[0].right, 8);
+        }
+        expect(rects.every((rect) => rect.right <= width), isTrue);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   test('board backgrounds are pale tints of the existing palette', () {
     for (final value in [...boardColors, 0xff172b4d, 0xff000000, 0xffffffff]) {
