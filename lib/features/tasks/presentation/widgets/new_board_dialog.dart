@@ -1,3 +1,4 @@
+import 'task_form_keyboard.dart';
 import 'package:flutter/material.dart';
 import 'save_status.dart';
 import '../../../../core/data/workspace_limits.dart';
@@ -55,42 +56,44 @@ class _NewBoardDialogState extends State<NewBoardDialog>
   @override
   Widget build(BuildContext context) => PendingForm(
     pending: _saving,
-    child: AlertDialog(
-      scrollable: true,
-      title: const Text('New Board'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          LimitedTextField(
-            limit: WorkspaceLimits.boardName,
-            validator: _nameError,
-            enabled: !_saving,
-            controller: _controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Board name',
-              hintText: 'Enter board name',
+    child: TaskFormKeyboard(
+      canSubmit: !_saving && _nameError(_controller.text) == null,
+      onSubmit: _save,
+      child: AlertDialog(
+        scrollable: true,
+        title: const Text('New Board'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LimitedTextField(
+              limit: WorkspaceLimits.boardName,
+              validator: _nameError,
+              enabled: !_saving,
+              controller: _controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Board name',
+                hintText: 'Enter board name',
+              ),
+              onSubmitted: (_) => _save(),
             ),
-            onSubmitted: (_) {
-              if (_controller.text.trim().isNotEmpty) _save();
-            },
+            SaveStatus(error: submissionError),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : closeForm,
+            style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+            child: const Text('Cancel'),
           ),
-          SaveStatus(error: submissionError),
+          FilledButton(
+            onPressed: _saving || _nameError(_controller.text) != null
+                ? null
+                : _save,
+            child: const Text('Create'),
+          ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: _saving ? null : closeForm,
-          style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _saving || _nameError(_controller.text) != null
-              ? null
-              : _save,
-          child: const Text('Create'),
-        ),
-      ],
     ),
   );
 }

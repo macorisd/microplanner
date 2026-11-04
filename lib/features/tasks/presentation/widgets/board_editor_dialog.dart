@@ -17,6 +17,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/widgets/limited_text_field.dart';
 import 'editor_panel.dart';
+import '../../../../core/widgets/form_message.dart';
 
 class BoardEditorDialog extends StatefulWidget {
   const BoardEditorDialog({super.key, required this.board});
@@ -288,6 +289,8 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
     pending: _saving,
     child: EditorPanel(
       dialog: true,
+      canSubmit: _canSave,
+      onSubmit: _save,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -384,14 +387,7 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
               label: const Text('Apply default list'),
             ),
           ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
+          FormMessage(message: _error, lines: 2),
           const SizedBox(height: AppTheme.spacingMedium),
           OverflowBar(
             alignment: MainAxisAlignment.end,

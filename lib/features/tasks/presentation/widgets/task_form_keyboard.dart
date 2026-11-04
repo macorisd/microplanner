@@ -4,13 +4,13 @@ import 'package:flutter/services.dart';
 /// Route-scoped submission also works when a picker leaves focus on its scope.
 /// Handle it before focused buttons consume Enter, without intercepting popups.
 class TaskFormKeyboard extends StatefulWidget {
-  final FocusNode descriptionFocus;
+  final FocusNode? descriptionFocus;
   final bool canSubmit;
   final VoidCallback onSubmit;
   final Widget child;
   const TaskFormKeyboard({
     super.key,
-    required this.descriptionFocus,
+    this.descriptionFocus,
     required this.canSubmit,
     required this.onSubmit,
     required this.child,
@@ -34,12 +34,12 @@ class _TaskFormKeyboardState extends State<TaskFormKeyboard> {
             event.logicalKey != LogicalKeyboardKey.numpadEnter)) {
       return KeyEventResult.ignored;
     }
-    if (widget.descriptionFocus.hasFocus &&
+    if (widget.descriptionFocus?.hasFocus == true &&
         !(Theme.of(context).platform == TargetPlatform.windows &&
             HardwareKeyboard.instance.isControlPressed)) {
       return KeyEventResult.ignored;
     }
-    if (!widget.canSubmit) return KeyEventResult.ignored;
+    if (!widget.canSubmit) return KeyEventResult.handled;
     if (event is KeyDownEvent) widget.onSubmit();
     return KeyEventResult.handled;
   }

@@ -387,6 +387,8 @@ class _TypeListDialogState extends State<_TypeListDialog>
     pending: actionBlocked,
     child: EditorPanel(
       dialog: true,
+      canSubmit: _canSave,
+      onSubmit: _save,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -405,10 +407,8 @@ class _TypeListDialogState extends State<_TypeListDialog>
             validator: (_) => _error,
             enabled: !actionBlocked,
             onSubmitted: (_) => _save(),
-            decoration: InputDecoration(
-              labelText: 'List name',
-              errorText: _error,
-            ),
+            errorText: _error,
+            decoration: const InputDecoration(labelText: 'List name'),
           ),
           const SizedBox(height: AppTheme.spacingMedium),
           EditableCategoryList(

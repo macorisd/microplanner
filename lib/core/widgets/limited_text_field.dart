@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'form_message.dart';
 
 /// Uses the API's UTF-16 length without splitting emoji or composed characters.
 class ContractLengthFormatter extends TextInputFormatter {
@@ -48,6 +49,8 @@ class LimitedTextField extends StatelessWidget {
   final ValueChanged<String>? onSubmitted;
   final TextStyle? style;
   final TextInputType? keyboardType;
+  final String? errorText;
+  final int validationLines;
   const LimitedTextField({
     super.key,
     required this.controller,
@@ -63,6 +66,8 @@ class LimitedTextField extends StatelessWidget {
     this.onSubmitted,
     this.style,
     this.keyboardType,
+    this.errorText,
+    this.validationLines = 1,
   });
 
   @override
@@ -85,6 +90,9 @@ class LimitedTextField extends StatelessWidget {
         ? TextCapitalization.sentences
         : TextCapitalization.none,
     validator: validator,
+    forceErrorText: errorText,
+    errorBuilder: (context, error) =>
+        FormMessage(message: error, lines: validationLines),
     autovalidateMode: AutovalidateMode.onUserInteraction,
     onFieldSubmitted: onSubmitted,
     onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
@@ -95,6 +103,7 @@ class LimitedTextField extends StatelessWidget {
         (_, {required currentLength, required isFocused, required maxLength}) =>
             null,
     decoration: decoration.copyWith(
+      helper: FormMessage(lines: validationLines),
       suffix: ValueListenableBuilder<TextEditingValue>(
         valueListenable: controller,
         builder: (context, value, _) => value.text.length < limit * 0.8

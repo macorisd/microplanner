@@ -14,6 +14,11 @@ consolidated 2026-11-02. Detailed setup lives in
 - Before 1.0.0, features increment minor and fixes patch. No major release until
   the user explicitly decides the app is ready. Synchronize product version
   manifests and increasing Android build numbers when releasing app changes.
+  Corrections and refinements of existing controls (keyboard, focus, visual
+  consistency or removing redundant confirmation steps) are patches. Scope,
+  implementation effort and the number of fixes do not make them minor; minor
+  requires a new product capability. Respect the user's explicit classification.
+  Source: user clarification, 2026-11-04.
 - PR bodies contain only `## Changes`, then nonempty `### Major`, `### Minor`,
   `### Patch` subsections in that order. One concise, user-facing bullet per
   requested change, classified individually. Omit absent categories and retain

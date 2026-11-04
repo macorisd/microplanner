@@ -30,9 +30,18 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Back from expanded description returns to Edit Task with its draft intact.
   Android Back first dismisses the keyboard when appropriate; a later Back follows
   the current dialog/navigation level. Test Back, Escape and dismissal paths.
-- On Windows, Enter submits when Save is enabled unless editing description.
-  Description Enter inserts a newline; Ctrl+Enter submits. This must still work
-  after returning from a date/time picker. Save is disabled without changes.
+- Enter (including numeric-keypad Enter) activates the enabled save/create action
+  in every editable form, including board, subject, task type and default-list
+  editors, even with focus outside its text fields or after a picker returns.
+  Preserve description newlines; Ctrl+Enter submits descriptions on Windows.
+  Disabled, unchanged, invalid or pending forms never submit; nested dialogs
+  handle their own keys without submitting an underlying form.
+- Selecting a calendar day immediately accepts it and returns to the task draft;
+  selecting clock minutes does the same for time. Hour selection advances to
+  minutes; dial dragging accepts only on release. Omit OK in both selectors.
+  Keep validated manual entry with Apply/Enter, date bounds, precise minutes,
+  12/24-hour handling, Cancel and Back/Escape. Picker completion never saves the
+  task or restores stale text focus. Source: user correction, 2026-11-04.
 
 ## Actions, persistence and errors
 

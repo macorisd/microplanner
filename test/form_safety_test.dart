@@ -16,6 +16,7 @@ import 'package:microplanner/features/tasks/presentation/widgets/new_board_dialo
 import 'package:microplanner/features/tasks/presentation/widgets/subject_dialog.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_card.dart';
 import 'support/fakes.dart';
+import 'package:microplanner/features/tasks/presentation/widgets/task_time_picker.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_date_picker.dart';
 
 void main() {
@@ -563,7 +564,7 @@ void main() {
     expect(find.text('Enter a valid date.'), findsOneWidget);
     expect(
       tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'OK'))
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Apply'))
           .onPressed,
       isNull,
     );
@@ -571,11 +572,11 @@ void main() {
     await tester.pump();
     expect(
       tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'OK'))
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Apply'))
           .onPressed,
       isNotNull,
     );
-    await tester.tap(find.text('OK'));
+    await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
     expect(find.byType(TaskDatePickerDialog), findsNothing);
     await tester.pumpWidget(const SizedBox());
@@ -607,7 +608,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.byType(
-          label == 'Deadline' ? TaskDatePickerDialog : TimePickerDialog,
+          label == 'Deadline' ? TaskDatePickerDialog : TaskTimePickerDialog,
           skipOffstage: false,
         ),
         findsOneWidget,

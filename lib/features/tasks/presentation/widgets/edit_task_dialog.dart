@@ -1,4 +1,4 @@
-import 'picker_enter_confirmation.dart';
+import 'task_time_picker.dart';
 import 'expanded_description.dart';
 import 'task_form_keyboard.dart';
 import '../../../../core/theme/app_motion.dart';
@@ -250,7 +250,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                       validator: WorkspaceLimits.nameError,
                       onSubmitted: (_) => _submit(),
                     ),
-                    const SizedBox(height: AppTheme.spacingMedium),
+                    // The reserved validation line provides field separation.
 
                     // Description
                     ScrollbarTheme(
@@ -285,7 +285,6 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                         minLines: 2,
                       ),
                     ),
-                    const SizedBox(height: AppTheme.spacingMedium),
 
                     // Subject dropdown
                     _buildSubjectDropdown(subjects),
@@ -315,8 +314,8 @@ class _EditTaskDialogState extends State<EditTaskDialog>
 
                     // Priority selector
                     _buildPrioritySelector(),
-                    const SizedBox(height: AppTheme.spacingLarge),
 
+                    // The stable status area also provides footer spacing.
                     // Actions
                     SaveStatus(error: submissionError),
                     OverflowBar(
@@ -380,25 +379,23 @@ class _EditTaskDialogState extends State<EditTaskDialog>
             lastDate: range.last,
             locale: const Locale('en', 'GB'), // Week starts on Monday
             builder: (context, child) {
-              return PickerEnterConfirmation(
-                child: Theme(
-                  data: Theme.of(context).copyWith(
-                    timePickerTheme: TimePickerThemeData(
-                      cancelButtonStyle: TextButton.styleFrom(
-                        foregroundColor: Colors.red.shade700,
-                      ),
-                    ),
-                    colorScheme: const ColorScheme.light(
-                      primary: AppColors.primary,
-                      onPrimary: Colors.white,
-                      surface: AppColors.surface,
-                      onSurface: AppColors.textPrimary,
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  timePickerTheme: TimePickerThemeData(
+                    cancelButtonStyle: TextButton.styleFrom(
+                      foregroundColor: Colors.red.shade700,
                     ),
                   ),
-                  child: MediaQuery.sizeOf(context).height < 520
-                      ? SingleChildScrollView(child: child!)
-                      : child!,
+                  colorScheme: const ColorScheme.light(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    surface: AppColors.surface,
+                    onSurface: AppColors.textPrimary,
+                  ),
                 ),
+                child: MediaQuery.sizeOf(context).height < 520
+                    ? SingleChildScrollView(child: child!)
+                    : child!,
               );
             },
           ),
@@ -454,29 +451,27 @@ class _EditTaskDialogState extends State<EditTaskDialog>
     return InkWell(
       onTap: () async {
         final time = await pickOnce(
-          () => showTimePicker(
+          () => showTaskTimePicker(
             context: context,
             initialTime: _deadlineTime,
             builder: (context, child) {
-              return PickerEnterConfirmation(
-                child: Theme(
-                  data: Theme.of(context).copyWith(
-                    timePickerTheme: TimePickerThemeData(
-                      cancelButtonStyle: TextButton.styleFrom(
-                        foregroundColor: Colors.red.shade700,
-                      ),
-                    ),
-                    colorScheme: const ColorScheme.light(
-                      primary: AppColors.primary,
-                      onPrimary: Colors.white,
-                      surface: AppColors.surface,
-                      onSurface: AppColors.textPrimary,
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  timePickerTheme: TimePickerThemeData(
+                    cancelButtonStyle: TextButton.styleFrom(
+                      foregroundColor: Colors.red.shade700,
                     ),
                   ),
-                  child: MediaQuery.sizeOf(context).height < 520
-                      ? SingleChildScrollView(child: child!)
-                      : child!,
+                  colorScheme: const ColorScheme.light(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    surface: AppColors.surface,
+                    onSurface: AppColors.textPrimary,
+                  ),
                 ),
+                child: MediaQuery.sizeOf(context).height < 520
+                    ? SingleChildScrollView(child: child!)
+                    : child!,
               );
             },
           ),

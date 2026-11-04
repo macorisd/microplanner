@@ -338,7 +338,11 @@ void main() {
                 expect(tester.testTextInput.isVisible, isTrue);
                 await tester.tap(find.text(selector));
                 await tester.pumpAndSettle();
-                await tester.tap(find.text(outcome).last);
+                if (outcome == 'Cancel') {
+                  await tester.tap(find.text('Cancel').last);
+                } else {
+                  await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+                }
                 await tester.pumpAndSettle();
                 expect(
                   focus.hasFocus,
