@@ -3,6 +3,7 @@ import 'expanded_description.dart';
 import 'task_form_keyboard.dart';
 import '../../../../core/theme/app_motion.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/disclosure_icon.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -294,10 +295,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                     if (MediaQuery.sizeOf(context).width < 600) ...[
                       _buildDeadlinePicker(context),
                       const SizedBox(height: AppTheme.spacingSmall),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: _buildTimePicker(context),
-                      ),
+                      _buildTimePicker(context),
                     ] else
                       Row(
                         children: [
@@ -437,10 +435,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textTertiary,
-            ),
+            const DisclosureIcon(right: true),
           ],
         ),
       ),
@@ -448,6 +443,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
   }
 
   Widget _buildTimePicker(BuildContext context) {
+    final fullWidth = MediaQuery.sizeOf(context).width < 600;
     return InkWell(
       onTap: () async {
         final time = await pickOnce(
@@ -488,6 +484,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
               Icons.access_time_rounded,
@@ -495,17 +492,24 @@ class _EditTaskDialogState extends State<EditTaskDialog>
               size: 20,
             ),
             const SizedBox(width: AppTheme.spacingMedium),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Time', style: Theme.of(context).textTheme.labelMedium),
-                const SizedBox(height: 2),
-                Text(
-                  _deadlineTime.format(context),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
+            Flexible(
+              fit: fullWidth ? FlexFit.tight : FlexFit.loose,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Time', style: Theme.of(context).textTheme.labelMedium),
+                  const SizedBox(height: 2),
+                  Text(
+                    _deadlineTime.format(context),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(width: AppTheme.spacingSmall),
+            const DisclosureIcon(right: true),
           ],
         ),
       ),
@@ -525,6 +529,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
             onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
             value: _selectedTypeId ?? '',
             isExpanded: true,
+            icon: const DisclosureIcon(),
             items: [
               const DropdownMenuItem(value: '', child: Text('No type')),
               for (final type in types)
@@ -563,7 +568,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
           onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
           value: _type,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          icon: const DisclosureIcon(),
           items: TaskType.values.map((type) {
             return DropdownMenuItem<TaskType>(
               value: type,

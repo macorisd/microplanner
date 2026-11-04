@@ -22,6 +22,10 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
   as the existing task forms/sidebar. A new feature is not a separate redesign.
 - Cancel actions are red consistently. Destructive actions and confirmations must
   remain distinguishable; subdued controls must still be readable.
+- Use Subject's rounded downward chevron for selectors throughout the app;
+  direction disclosures rotate the same shape. Deadline and Time use its same
+  secondary text color, and both show a trailing chevron on Windows and Android.
+  Source: user refinement, 2026-11-04.
 
 ## Forms and cards
 
@@ -29,6 +33,11 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
   its controls. Reserve stable message space in shared fields and status areas;
   preserve complete messages through scrolling and accessibility on narrow screens.
   Source: user correction, 2026-11-04.
+- Board forms keep compact vertical spacing: no extra gap after the name's
+  reserved message row, no divider between Subjects and Task types, and a compact
+  fixed error slot before Edit Board's actions. New Board shares its name's
+  fixed message row with save failures instead of reserving a second status area.
+  Source: user spacing review, 2026-11-04.
 - Align adjacent icons and punctuation with the text input's filled surface,
   excluding its reserved validation area. Date/time mode switches, Cancel and
   Apply share a vertically centered footer row aligned to the right edge; wrap
@@ -100,6 +109,14 @@ both platforms, on a matching rounded very pale surface like its sidebar row;
 keep the task area on the original neutral background without a board-color wash.
 On Android, group board Edit/Delete glyphs more closely and
 place Delete slightly nearer the right edge, with separate usable touch targets.
+
+Navigation refinement, 2026-11-04: Boards has a leading dashboard icon aligned
+with Weekly Plan's icon and label, retaining its collapse and add controls on the
+right. Clicking/tapping the open board title opens Edit Board. Hover or keyboard
+focus expands its tinted title surface slightly to the right to reveal Delete;
+use the same confirmation and last-board protection as the sidebar. Preserve
+the title's left edge and height, truncate long titles within the available width,
+and respect reduced motion.
 
 
 Palette refinement, 2026-11-03: board/subject selectors contain exactly 21 distinct

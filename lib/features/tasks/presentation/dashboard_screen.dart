@@ -8,6 +8,8 @@ import '../../../core/theme/app_motion.dart';
 import '../../../core/utils/input_mode.dart';
 import '../../boards/providers/boards_provider.dart';
 import '../../boards/data/board_catalog.dart';
+import '../../boards/data/models/board.dart';
+import 'widgets/board_actions.dart';
 import '../data/models/task.dart';
 import '../providers/tasks_provider.dart';
 import 'widgets/add_task_dialog.dart';
@@ -75,17 +77,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final page = context.select<BoardsProvider, DashboardPage>(
       (boards) => boards.page,
     );
-    final boardColor = context.select<BoardsProvider, int?>(
-      (boards) => boards.currentBoard?.color,
+    final board = context.select<BoardsProvider, Board?>(
+      (boards) => boards.currentBoard,
     );
-    final boardIcon = context.select<BoardsProvider, String?>(
-      (boards) => boards.currentBoard?.icon,
-    );
-    final boardName =
-        context.select<BoardsProvider, String?>(
-          (boards) => boards.currentBoard?.name,
-        ) ??
-        'My Tasks';
+    final boardName = board?.name ?? 'My Tasks';
     final pageName = switch (page) {
       DashboardPage.board => boardName,
       DashboardPage.weeklyPlan => 'Weekly Plan',
@@ -109,12 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 title: MotionSwap(
                   alignment: Alignment.centerLeft,
                   child: page == DashboardPage.board
-                      ? _BoardHeading(
-                          key: ValueKey((pageName, boardIcon, boardColor)),
-                          name: boardName,
-                          icon: boardIcon,
-                          color: boardColor,
-                        )
+                      ? _BoardHeading(key: ValueKey(board?.id), board: board)
                       : Text(
                           pageName,
                           key: ValueKey(pageName),
@@ -155,14 +145,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               child: MotionSwap(
                                 alignment: Alignment.centerLeft,
                                 child: _BoardHeading(
-                                  key: ValueKey((
-                                    boardName,
-                                    boardIcon,
-                                    boardColor,
-                                  )),
-                                  name: boardName,
-                                  icon: boardIcon,
-                                  color: boardColor,
+                                  key: ValueKey(board?.id),
+                                  board: board,
                                   style: Theme.of(context).textTheme.titleLarge,
                                 ),
                               ),
@@ -374,58 +358,135 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class _BoardHeading extends StatelessWidget {
-  const _BoardHeading({
-    super.key,
-    required this.name,
-    this.icon,
-    this.color,
-    this.style,
-  });
+class _BoardHeading extends StatefulWidget {
+  const _BoardHeading({super.key, required this.board, this.style});
 
-  final String name;
-  final String? icon;
-  final int? color;
+  final Board? board;
   final TextStyle? style;
 
   @override
+  State<_BoardHeading> createState() => _BoardHeadingState();
+}
+
+class _BoardHeadingState extends State<_BoardHeading> {
+  bool _hovered = false;
+  bool _focused = false;
+
+  @override
   Widget build(BuildContext context) {
-    final foreground = Color(color ?? 0xff7986cb);
-    final textStyle = (style ?? Theme.of(context).textTheme.titleLarge)
+    final board = widget.board;
+    final canDelete = context.select<BoardsProvider, bool>(
+      (boards) => boards.boards.length > 1,
+    );
+    final foreground = Color(board?.color ?? 0xff7986cb);
+    final textStyle = (widget.style ?? Theme.of(context).textTheme.titleLarge)
         ?.copyWith(color: foreground, fontWeight: FontWeight.w700);
+    final touch = usesTouchControls(context);
     return Align(
       alignment: Alignment.centerLeft,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: boardRowBackground(foreground),
-          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            key: const ValueKey('board-heading'),
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                boardIcons[icon] ?? Icons.dashboard_rounded,
-                color: foreground,
-                size: (textStyle?.fontSize ?? 22).clamp(24, 36).toDouble(),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Focus(
+          canRequestFocus: false,
+          onFocusChange: (value) => setState(() => _focused = value),
+          child: _HeadingSize(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: boardRowBackground(foreground),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
               ),
-              const SizedBox(width: AppTheme.spacingSmall),
-              Flexible(
-                child: Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textStyle,
+              child: Material(
+                color: Colors.transparent,
+                child: Row(
+                  key: const ValueKey('board-heading'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Tooltip(
+                        message: 'Edit board',
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusMedium,
+                          ),
+                          onTap: board == null
+                              ? null
+                              : () => editBoard(context, board),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: touch ? 36 : 24,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    boardIcons[board?.icon] ??
+                                        Icons.dashboard_rounded,
+                                    color: foreground,
+                                    size: (textStyle?.fontSize ?? 22)
+                                        .clamp(24, 36)
+                                        .toDouble(),
+                                  ),
+                                  const SizedBox(width: AppTheme.spacingSmall),
+                                  Flexible(
+                                    child: Text(
+                                      board?.name ?? 'My Tasks',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: textStyle,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (board != null && canDelete && (_hovered || _focused))
+                      SizedBox(
+                        width: touch ? 48 : 36,
+                        height: touch ? 48 : 36,
+                        child: IconButton(
+                          tooltip: 'Delete board',
+                          padding: EdgeInsets.zero,
+                          icon: Icon(
+                            Icons.delete_outline_rounded,
+                            size: 20,
+                            color: foreground,
+                          ),
+                          onPressed: () => confirmBoardDeletion(context, board),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Reduced motion bypasses size interpolation, including live preference changes.
+class _HeadingSize extends StatelessWidget {
+  const _HeadingSize({required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => MediaQuery.disableAnimationsOf(context)
+      ? child
+      : AnimatedSize(
+          alignment: Alignment.centerLeft,
+          duration: AppMotion.normal,
+          curve: AppMotion.curve,
+          child: child,
+        );
 }
 
 /// Cloud status changes do not rebuild or re-sort the task workspace.

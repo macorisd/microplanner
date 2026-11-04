@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/disclosure_icon.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -140,12 +141,7 @@ class SettingsEntry extends StatelessWidget {
       leading: Icon(icon, color: AppColors.primary),
       title: Text(title, style: Theme.of(context).textTheme.titleMedium),
       subtitle: subtitle == null ? null : Text(subtitle!),
-      trailing:
-          trailing ??
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.textSecondary,
-          ),
+      trailing: trailing ?? const DisclosureIcon(right: true),
       onTap: onTap,
     ),
   );

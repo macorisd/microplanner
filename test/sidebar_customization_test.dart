@@ -130,7 +130,12 @@ void main() {
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: tester.getCenter(row));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Edit board'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(Sidebar),
+        matching: find.byTooltip('Edit board'),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Queued board name'), findsOneWidget);
     gate.complete(jsonResponse(harness.server.states['A']!.toJson()));
@@ -181,7 +186,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Edit board').first);
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(Sidebar),
+            matching: find.byTooltip('Edit board'),
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Choose board icon'));
     await tester.pumpAndSettle();
@@ -313,7 +325,12 @@ void main() {
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await mouse.addPointer(location: tester.getCenter(row));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Edit board'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(Sidebar),
+          matching: find.byTooltip('Edit board'),
+        ),
+      );
       await tester.pumpAndSettle();
       final tile = find.ancestor(
         of: find.text('Homework'),
