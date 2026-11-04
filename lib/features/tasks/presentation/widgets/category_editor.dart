@@ -299,7 +299,12 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _iconChoice(),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom: LimitedTextField.supportingHeightOf(context),
+                      ),
+                      child: _iconChoice(),
+                    ),
                     const SizedBox(width: 16),
                     Expanded(child: _nameField()),
                   ],

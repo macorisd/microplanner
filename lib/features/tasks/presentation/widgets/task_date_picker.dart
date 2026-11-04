@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'task_form_keyboard.dart';
+import 'picker_actions.dart';
 import '../../../../core/widgets/limited_text_field.dart';
 
 Future<DateTime?> showTaskDatePicker({
@@ -79,9 +80,11 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
       context,
     ).parseCompactDate(value ?? '');
     if (date == null) return 'Enter a valid date.';
-    if (date.isBefore(widget.firstDate) || date.isAfter(widget.lastDate)) {
-      final localizations = MaterialLocalizations.of(context);
-      return 'Use a date from ${localizations.formatCompactDate(widget.firstDate)} to ${localizations.formatCompactDate(widget.lastDate)}.';
+    if (date.isBefore(widget.firstDate)) {
+      return "A bit odd to plan something before you were born, isn't it?";
+    }
+    if (date.isAfter(widget.lastDate)) {
+      return "Trust me, you won't have to worry about this task by then.";
     }
     return null;
   }
@@ -143,6 +146,10 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
       child: IgnorePointer(
         ignoring: _closing,
         child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 360),
             child: SingleChildScrollView(
@@ -151,28 +158,12 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Select date',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: _input
-                              ? 'Switch to calendar'
-                              : 'Switch to input',
-                          onPressed: _closing ? null : _toggle,
-                          icon: Icon(
-                            _input
-                                ? Icons.calendar_today_rounded
-                                : Icons.edit_outlined,
-                          ),
-                        ),
-                      ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Select date',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
                     ),
                     if (_input)
                       Padding(
@@ -209,32 +200,19 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
                         lastDate: widget.lastDate,
                         onDateChanged: _dateChanged,
                       ),
-                    OverflowBar(
-                      alignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: _closing ? null : () => _close(null),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.red.shade700,
-                          ),
-                          child: const Text('Cancel'),
-                        ),
-                        if (_input)
-                          FilledButton(
-                            onPressed:
-                                _closing ||
-                                    (_input && _error(_controller.text) != null)
-                                ? null
-                                : () => _close(
-                                    _input
-                                        ? MaterialLocalizations.of(
-                                            context,
-                                          ).parseCompactDate(_controller.text)
-                                        : _selected,
-                                  ),
-                            child: const Text('Apply'),
-                          ),
-                      ],
+                    PickerActions(
+                      modeTooltip: _input
+                          ? 'Switch to calendar'
+                          : 'Switch to input',
+                      modeIcon: _input
+                          ? Icons.calendar_today_rounded
+                          : Icons.edit_outlined,
+                      onModeChanged: _closing ? null : _toggle,
+                      onCancel: _closing ? null : () => _close(null),
+                      showApply: _input,
+                      onApply: !_closing && _error(_controller.text) == null
+                          ? _accept
+                          : null,
                     ),
                   ],
                 ),

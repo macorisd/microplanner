@@ -36,6 +36,11 @@ class ContractLengthFormatter extends TextInputFormatter {
 }
 
 class LimitedTextField extends StatelessWidget {
+  /// Align adjacent controls with the input surface rather than its message row.
+  static double supportingHeightOf(BuildContext context, {int lines = 1}) =>
+      FormMessage.heightOf(context, lines: lines) +
+      (Theme.of(context).useMaterial3 ? 4 : 8);
+
   final TextEditingController controller;
   final int limit;
   final String? Function(String?) validator;

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/limited_text_field.dart';
 import 'task_form_keyboard.dart';
+import 'picker_actions.dart';
 
 Future<TimeOfDay?> showTaskTimePicker({
   required BuildContext context,
@@ -199,9 +200,16 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
                                 children: [
                                   Expanded(child: hour),
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                    ),
+                                    padding:
+                                        const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                        ).copyWith(
+                                          bottom: _input
+                                              ? LimitedTextField.supportingHeightOf(
+                                                  context,
+                                                )
+                                              : 0,
+                                        ),
                                     child: Text(
                                       ':',
                                       style: Theme.of(
@@ -260,34 +268,17 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
                         ),
                       ),
                     const SizedBox(height: 16),
-                    Wrap(
-                      alignment: WrapAlignment.end,
-                      spacing: 8,
-                      children: [
-                        IconButton(
-                          tooltip: _input
-                              ? 'Switch to dial'
-                              : 'Switch to input',
-                          onPressed: _toggleInput,
-                          icon: Icon(
-                            _input
-                                ? Icons.access_time
-                                : Icons.keyboard_outlined,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => _close(null),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.red.shade700,
-                          ),
-                          child: Text(localizations.cancelButtonLabel),
-                        ),
-                        if (_input)
-                          FilledButton(
-                            onPressed: _valid ? _accept : null,
-                            child: const Text('Apply'),
-                          ),
-                      ],
+                    PickerActions(
+                      modeTooltip: _input
+                          ? 'Switch to dial'
+                          : 'Switch to input',
+                      modeIcon: _input
+                          ? Icons.access_time
+                          : Icons.keyboard_outlined,
+                      onModeChanged: _closing ? null : _toggleInput,
+                      onCancel: _closing ? null : () => _close(null),
+                      showApply: _input,
+                      onApply: !_closing && _valid ? _accept : null,
                     ),
                   ],
                 ),

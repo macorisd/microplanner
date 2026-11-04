@@ -42,6 +42,11 @@ plan choices (for example, restoring each board's column instead of Upcoming).
   Keep validated manual entry with Apply/Enter, date bounds, precise minutes,
   12/24-hour handling, Cancel and Back/Escape. Picker completion never saves the
   task or restores stale text focus. Source: user correction, 2026-11-04.
+- Date pickers use fixed internal bounds from 1900-01-01 through 2999-12-31.
+  Opening an older legacy deadline clamps only the picker's initial selection;
+  cancellation and unrelated edits preserve saved data. Do not expose numeric
+  bounds in validation messages: use the agreed playful English messages for
+  dates below and above the range. Source: user refinement, 2026-11-04.
 
 ## Actions, persistence and errors
 

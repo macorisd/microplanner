@@ -173,3 +173,27 @@ jobs:
           RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
           RELEASE_SHA: ${{ needs.resolve.outputs.sha }}
         run: python3 scripts/release_readme.py publish --tag "$RELEASE_TAG"
+  cleanup:
+    needs: [resolve, build, publish, readme]
+    if: >-
+      ${{ always() && !cancelled() && needs.resolve.result == 'success' &&
+          needs.readme.result == 'success' &&
+          ((needs.build.result == 'success' && needs.publish.result == 'success') ||
+           (needs.resolve.outputs.skip == 'true' && needs.build.result == 'skipped' &&
+            needs.publish.result == 'skipped')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+      - name: Remove the verified merged PR branch after successful publication
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+          RELEASE_SHA: ${{ needs.resolve.outputs.sha }}
+        run: python3 scripts/cleanup_release_branch.py --tag "$RELEASE_TAG" --sha "$RELEASE_SHA"

@@ -29,6 +29,10 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
   its controls. Reserve stable message space in shared fields and status areas;
   preserve complete messages through scrolling and accessibility on narrow screens.
   Source: user correction, 2026-11-04.
+- Align adjacent icons and punctuation with the text input's filled surface,
+  excluding its reserved validation area. Date/time mode switches, Cancel and
+  Apply share a vertically centered footer row; wrap only when space requires it.
+  Source: user screenshot review, 2026-11-04.
 - Expanded description is a dialog with the **same size and shape** as its task
   form, a back button, the noneditable task title and description field. Keep
   unsaved content. Its expand control is compact, uses matching colors and aligns

@@ -7,8 +7,7 @@ class FormMessage extends StatelessWidget {
   final String? message;
   final int lines;
 
-  @override
-  Widget build(BuildContext context) {
+  static double heightOf(BuildContext context, {int lines = 1}) {
     final style = Theme.of(
       context,
     ).textTheme.bodySmall!.copyWith(color: Theme.of(context).colorScheme.error);
@@ -19,8 +18,16 @@ class FormMessage extends StatelessWidget {
     )..layout();
     final height = painter.height * lines;
     painter.dispose();
+    return height;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(
+      context,
+    ).textTheme.bodySmall!.copyWith(color: Theme.of(context).colorScheme.error);
     return SizedBox(
-      height: height,
+      height: heightOf(context, lines: lines),
       child: message == null
           ? null
           : Semantics(
