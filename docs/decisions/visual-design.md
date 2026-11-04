@@ -31,7 +31,8 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
   Source: user correction, 2026-11-04.
 - Align adjacent icons and punctuation with the text input's filled surface,
   excluding its reserved validation area. Date/time mode switches, Cancel and
-  Apply share a vertically centered footer row; wrap only when space requires it.
+  Apply share a vertically centered footer row aligned to the right edge; wrap
+  only when space requires it.
   Source: user screenshot review, 2026-11-04.
 - Expanded description is a dialog with the **same size and shape** as its task
   form, a back button, the noneditable task title and description field. Keep

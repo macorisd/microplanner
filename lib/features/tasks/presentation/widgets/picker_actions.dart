@@ -19,35 +19,38 @@ class PickerActions extends StatelessWidget {
   final VoidCallback? onApply;
 
   @override
-  Widget build(BuildContext context) => Wrap(
-    alignment: WrapAlignment.end,
-    crossAxisAlignment: WrapCrossAlignment.center,
-    spacing: 8,
-    runSpacing: 8,
-    children: [
-      IconButton(
-        tooltip: modeTooltip,
-        icon: Icon(modeIcon),
-        onPressed: onModeChanged,
-      ),
-      TextButton(
-        onPressed: onCancel,
-        style: TextButton.styleFrom(
-          foregroundColor: Colors.red.shade700,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          minimumSize: const Size(64, 40),
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    child: Wrap(
+      alignment: WrapAlignment.end,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        IconButton(
+          tooltip: modeTooltip,
+          icon: Icon(modeIcon),
+          onPressed: onModeChanged,
         ),
-        child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-      ),
-      if (showApply)
-        FilledButton(
-          style: FilledButton.styleFrom(
+        TextButton(
+          onPressed: onCancel,
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.red.shade700,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             minimumSize: const Size(64, 40),
           ),
-          onPressed: onApply,
-          child: const Text('Apply'),
+          child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
         ),
-    ],
+        if (showApply)
+          FilledButton(
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              minimumSize: const Size(64, 40),
+            ),
+            onPressed: onApply,
+            child: const Text('Apply'),
+          ),
+      ],
+    ),
   );
 }

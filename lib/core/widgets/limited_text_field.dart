@@ -56,6 +56,7 @@ class LimitedTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final String? errorText;
   final int validationLines;
+  final List<TextInputFormatter> inputFormatters;
   const LimitedTextField({
     super.key,
     required this.controller,
@@ -73,6 +74,7 @@ class LimitedTextField extends StatelessWidget {
     this.keyboardType,
     this.errorText,
     this.validationLines = 1,
+    this.inputFormatters = const [],
   });
 
   @override
@@ -103,7 +105,7 @@ class LimitedTextField extends StatelessWidget {
     onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
     maxLength: limit,
     maxLengthEnforcement: MaxLengthEnforcement.none,
-    inputFormatters: [ContractLengthFormatter(limit)],
+    inputFormatters: [...inputFormatters, ContractLengthFormatter(limit)],
     buildCounter:
         (_, {required currentLength, required isFocused, required maxLength}) =>
             null,

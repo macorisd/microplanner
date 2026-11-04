@@ -1,8 +1,11 @@
 import 'dart:math' as math;
+import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/widgets/limited_text_field.dart';
 import 'task_form_keyboard.dart';
 import 'picker_actions.dart';
@@ -36,6 +39,8 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
   bool _input = false;
   bool _closing = false;
   bool _initialized = false;
+  bool _settling = false;
+  Timer? _selectionTimer;
 
   bool get _use24 {
     final format = MaterialLocalizations.of(context).timeOfDayFormat();
@@ -84,12 +89,13 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
 
   void _close(TimeOfDay? time) {
     if (_closing) return;
+    _selectionTimer?.cancel();
     setState(() => _closing = true);
     Navigator.pop(context, time);
   }
 
   void _accept() {
-    if (!_valid) return;
+    if (_closing || _settling || !_valid) return;
     _close(
       _input
           ? TimeOfDay(
@@ -101,21 +107,41 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
   }
 
   void _select(int value, {required bool complete}) {
-    if (_closing) return;
+    if (_closing || _settling) return;
     setState(
       () => _time = _minutes
           ? _time.replacing(minute: value)
           : _time.replacing(hour: _use24 ? value : _fullHour(value)),
     );
     if (!complete) return;
-    if (_minutes) {
-      _close(_time);
-    } else {
-      setState(() => _minutes = true);
+    final duration = AppMotion.duration(
+      context,
+      AppMotion.normal + AppMotion.fast,
+    );
+    void finish() {
+      if (!mounted || _closing || ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+      if (_minutes) {
+        _close(_time);
+      } else {
+        setState(() {
+          _settling = false;
+          _minutes = true;
+        });
+      }
     }
+
+    if (duration == Duration.zero) {
+      finish();
+      return;
+    }
+    setState(() => _settling = true);
+    _selectionTimer = Timer(duration, finish);
   }
 
   void _toggleInput() {
+    if (_settling) return;
     FocusManager.instance.primaryFocus?.unfocus();
     if (_input && _valid) {
       _time = TimeOfDay(
@@ -130,6 +156,7 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
 
   @override
   void dispose() {
+    _selectionTimer?.cancel();
     _hour.dispose();
     _minute.dispose();
     super.dispose();
@@ -139,7 +166,7 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
   Widget build(BuildContext context) {
     final localizations = MaterialLocalizations.of(context);
     return TaskFormKeyboard(
-      canSubmit: !_closing && _valid,
+      canSubmit: !_closing && !_settling && _valid,
       onSubmit: _accept,
       child: PopScope(
         canPop: !_closing,
@@ -175,7 +202,11 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
                                 _displayHour.toString().padLeft(2, '0'),
                                 localizations.timePickerHourLabel,
                                 !_minutes,
-                                () => setState(() => _minutes = false),
+                                () {
+                                  if (!_settling) {
+                                    setState(() => _minutes = false);
+                                  }
+                                },
                               );
                         final minute = _input
                             ? _inputField(
@@ -187,7 +218,11 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
                                 _time.minute.toString().padLeft(2, '0'),
                                 localizations.timePickerMinuteLabel,
                                 _minutes,
-                                () => setState(() => _minutes = true),
+                                () {
+                                  if (!_settling) {
+                                    setState(() => _minutes = true);
+                                  }
+                                },
                               );
                         return Column(
                           children: [
@@ -234,13 +269,17 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
                                                   .postMeridiemAbbreviation,
                                       ),
                                       selected: _time.period == period,
-                                      onSelected: (_) => setState(
-                                        () => _time = _time.replacing(
-                                          hour:
-                                              _time.hour % 12 +
-                                              (period == DayPeriod.pm ? 12 : 0),
-                                        ),
-                                      ),
+                                      onSelected: _settling
+                                          ? null
+                                          : (_) => setState(
+                                              () => _time = _time.replacing(
+                                                hour:
+                                                    _time.hour % 12 +
+                                                    (period == DayPeriod.pm
+                                                        ? 12
+                                                        : 0),
+                                              ),
+                                            ),
                                     ),
                                 ],
                               ),
@@ -256,12 +295,16 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
                           child: AspectRatio(
                             aspectRatio: 1,
                             child: LayoutBuilder(
-                              builder: (context, constraints) => _TimeDial(
-                                size: constraints.maxWidth,
-                                minutes: _minutes,
-                                use24: _use24,
-                                value: _minutes ? _time.minute : _time.hour,
-                                onChanged: _select,
+                              builder: (context, constraints) => IgnorePointer(
+                                ignoring: _settling,
+                                child: _TimeDial(
+                                  size: constraints.maxWidth,
+                                  minutes: _minutes,
+                                  use24: _use24,
+                                  settling: _settling,
+                                  value: _minutes ? _time.minute : _time.hour,
+                                  onChanged: _select,
+                                ),
                               ),
                             ),
                           ),
@@ -275,7 +318,9 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
                       modeIcon: _input
                           ? Icons.access_time
                           : Icons.keyboard_outlined,
-                      onModeChanged: _closing ? null : _toggleInput,
+                      onModeChanged: _closing || _settling
+                          ? null
+                          : _toggleInput,
                       onCancel: _closing ? null : () => _close(null),
                       showApply: _input,
                       onApply: !_closing && _valid ? _accept : null,
@@ -298,6 +343,7 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
     controller: controller,
     limit: 2,
     keyboardType: TextInputType.number,
+    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
     validator: validator,
     decoration: InputDecoration(labelText: label),
     onSubmitted: (_) => _accept(),
@@ -327,19 +373,85 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
   );
 }
 
-class _TimeDial extends StatelessWidget {
+class _TimeDial extends StatefulWidget {
   const _TimeDial({
     required this.size,
     required this.minutes,
     required this.use24,
+    required this.settling,
     required this.value,
     required this.onChanged,
   });
   final double size;
   final bool minutes;
   final bool use24;
+  final bool settling;
   final int value;
   final void Function(int value, {required bool complete}) onChanged;
+
+  @override
+  State<_TimeDial> createState() => _TimeDialState();
+}
+
+class _TimeDialState extends State<_TimeDial>
+    with SingleTickerProviderStateMixin {
+  late final _motion = AnimationController(vsync: this, value: 1);
+  late double _fromAngle = _angle;
+  late double _toAngle = _angle;
+  late double _fromRadius = _radius;
+  late double _toRadius = _radius;
+  bool _hold = false;
+
+  double get size => widget.size;
+  bool get minutes => widget.minutes;
+  bool get use24 => widget.use24;
+  int get value => widget.value;
+  void Function(int, {required bool complete}) get onChanged =>
+      widget.onChanged;
+  double get _angle =>
+      (minutes ? value / 60 : value / 12) * math.pi * 2 - math.pi / 2;
+  double get _radius =>
+      !minutes && use24 && (value == 0 || value > 12) ? .26 : .40;
+  double get _progress => _hold
+      ? Interval(
+          0,
+          AppMotion.normal.inMilliseconds /
+              (AppMotion.normal + AppMotion.fast).inMilliseconds,
+          curve: AppMotion.curve,
+        ).transform(_motion.value)
+      : AppMotion.curve.transform(_motion.value);
+  double get _paintAngle => _fromAngle + (_toAngle - _fromAngle) * _progress;
+  double get _paintRadius =>
+      _fromRadius + (_toRadius - _fromRadius) * _progress;
+
+  @override
+  void didUpdateWidget(_TimeDial oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value == value &&
+        oldWidget.minutes == minutes &&
+        oldWidget.use24 == use24 &&
+        oldWidget.settling == widget.settling) {
+      return;
+    }
+    final from = _paintAngle;
+    _fromRadius = _paintRadius;
+    _fromAngle = from;
+    // Take the shortest arc, including across midnight and the 59/00 boundary.
+    _toAngle = from + (_angle - from + math.pi) % (2 * math.pi) - math.pi;
+    _toRadius = _radius;
+    _hold = widget.settling;
+    _motion.duration = AppMotion.duration(
+      context,
+      _hold ? AppMotion.normal + AppMotion.fast : AppMotion.normal,
+    );
+    _motion.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _motion.dispose();
+    super.dispose();
+  }
 
   int _valueAt(Offset point) {
     final offset = point - Offset(size / 2, size / 2);
@@ -371,12 +483,15 @@ class _TimeDial extends StatelessWidget {
         minutes ? value : (use24 ? value : (value % 12 == 0 ? 12 : value % 12)),
         complete: true,
       ),
-      child: CustomPaint(
-        painter: _DialPainter(
-          value: value,
-          minutes: minutes,
-          use24: use24,
-          colors: colors,
+      child: AnimatedBuilder(
+        animation: _motion,
+        builder: (context, child) => CustomPaint(
+          painter: _DialPainter(
+            angle: _paintAngle,
+            radius: _paintRadius,
+            colors: colors,
+          ),
+          child: child,
         ),
         child: Stack(
           children: [
@@ -434,25 +549,20 @@ class _TimeDial extends StatelessWidget {
 
 class _DialPainter extends CustomPainter {
   const _DialPainter({
-    required this.value,
-    required this.minutes,
-    required this.use24,
+    required this.angle,
+    required this.radius,
     required this.colors,
   });
-  final int value;
-  final bool minutes;
-  final bool use24;
+  final double angle;
+  final double radius;
   final ColorScheme colors;
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final paint = Paint()..color = AppColors.surfaceVariant;
     canvas.drawCircle(center, size.width / 2, paint);
-    final inner = !minutes && use24 && (value == 0 || value > 12);
-    final radius = size.width * (inner ? .26 : .40);
-    final angle =
-        (minutes ? value / 60 : value / 12) * math.pi * 2 - math.pi / 2;
-    final end = center + Offset(math.cos(angle), math.sin(angle)) * radius;
+    final end =
+        center + Offset(math.cos(angle), math.sin(angle)) * size.width * radius;
     paint
       ..color = colors.primary
       ..strokeWidth = 2;
@@ -463,8 +573,5 @@ class _DialPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DialPainter old) =>
-      value != old.value ||
-      minutes != old.minutes ||
-      use24 != old.use24 ||
-      colors != old.colors;
+      angle != old.angle || radius != old.radius || colors != old.colors;
 }

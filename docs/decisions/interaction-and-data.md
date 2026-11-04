@@ -47,6 +47,14 @@ plan choices (for example, restoring each board's column instead of Upcoming).
   cancellation and unrelated edits preserve saved data. Do not expose numeric
   bounds in validation messages: use the agreed playful English messages for
   dates below and above the range. Source: user refinement, 2026-11-04.
+- Manual dates accept ASCII digits only and insert slashes after the day and
+  month (`dd/MM/yyyy`). Until all eight digits are present, show no validation
+  message and keep Apply/Enter disabled. Time inputs also ignore everything
+  except ASCII digits. Source: user refinement, 2026-11-04.
+- Clock selection visibly animates the needle to the chosen hour/minute before
+  advancing or accepting. Keep this brief, preserve precise minute selection,
+  cancellation and duplicate-input guards, and honor reduced motion.
+  Source: user refinement, 2026-11-04.
 
 ## Actions, persistence and errors
 

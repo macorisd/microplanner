@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'task_form_keyboard.dart';
 import 'picker_actions.dart';
+import 'date_digits_formatter.dart';
 import '../../../../core/widgets/limited_text_field.dart';
 
 Future<DateTime?> showTaskDatePicker({
@@ -75,7 +76,7 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
   }
 
   String? _error(String? value) {
-    if ((value?.length ?? 0) > 10) return 'Use at most 10 characters.';
+    if (!_complete(value ?? '')) return null;
     final date = MaterialLocalizations.of(
       context,
     ).parseCompactDate(value ?? '');
@@ -89,6 +90,11 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
     return null;
   }
 
+  bool _complete(String value) =>
+      RegExp(r'^[0-9]{2}/[0-9]{2}/[0-9]{4}$').hasMatch(value);
+  bool get _valid =>
+      _complete(_controller.text) && _error(_controller.text) == null;
+
   void _close(DateTime? date) {
     if (_closing) return;
     setState(() => _closing = true);
@@ -97,7 +103,7 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
 
   void _toggle() {
     if (_input) {
-      if (_error(_controller.text) == null) {
+      if (_valid) {
         _selected = MaterialLocalizations.of(
           context,
         ).parseCompactDate(_controller.text)!;
@@ -111,7 +117,7 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
   }
 
   void _accept() {
-    if (_input && _error(_controller.text) != null) return;
+    if (_input && !_valid) return;
     _close(
       _input
           ? MaterialLocalizations.of(context).parseCompactDate(_controller.text)
@@ -139,7 +145,7 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
 
   @override
   Widget build(BuildContext context) => TaskFormKeyboard(
-    canSubmit: !_closing && (!_input || _error(_controller.text) == null),
+    canSubmit: !_closing && (!_input || _valid),
     onSubmit: _accept,
     child: PopScope(
       canPop: !_closing,
@@ -170,7 +176,8 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         child: LimitedTextField(
                           controller: _controller,
-                          keyboardType: TextInputType.datetime,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: const [DateDigitsFormatter()],
                           limit: 10,
                           validationLines: 3,
                           validator: _error,
@@ -181,15 +188,7 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
                               context,
                             ).dateHelpText,
                           ),
-                          onSubmitted: (_) {
-                            if (_error(_controller.text) == null) {
-                              _close(
-                                MaterialLocalizations.of(
-                                  context,
-                                ).parseCompactDate(_controller.text),
-                              );
-                            }
-                          },
+                          onSubmitted: (_) => _accept(),
                         ),
                       )
                     else
@@ -210,9 +209,7 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
                       onModeChanged: _closing ? null : _toggle,
                       onCancel: _closing ? null : () => _close(null),
                       showApply: _input,
-                      onApply: !_closing && _error(_controller.text) == null
-                          ? _accept
-                          : null,
+                      onApply: !_closing && _valid ? _accept : null,
                     ),
                   ],
                 ),

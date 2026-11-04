@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:microplanner/core/theme/app_theme.dart';
@@ -76,6 +77,22 @@ void main() {
             );
             await tester.ensureVisible(find.byTooltip('Switch to input'));
             final mode = tester.getCenter(find.byTooltip('Switch to input'));
+            final footerRight =
+                tester
+                    .getRect(
+                      find
+                          .descendant(
+                            of: find.byType(Dialog),
+                            matching: find.byType(Material),
+                          )
+                          .first,
+                    )
+                    .right -
+                (time ? 24 : 16);
+            expect(
+              tester.getRect(find.widgetWithText(TextButton, 'Cancel')).right,
+              closeTo(footerRight, .1),
+            );
             expect(
               tester.getCenter(find.widgetWithText(TextButton, 'Cancel')).dy,
               closeTo(mode.dy, .1),
@@ -93,6 +110,7 @@ void main() {
             );
             final apply = find.widgetWithText(FilledButton, 'Apply');
             final applyRect = tester.getRect(apply);
+            expect(applyRect.right, closeTo(footerRight, .1));
             if (width == 320) {
               // The test font has unusually wide glyphs: wrapping is permitted
               // when all controls cannot fit, with every action still reachable.
@@ -119,6 +137,74 @@ void main() {
         },
       );
     }
+
+    testWidgets(
+      '$platform date entry waits for eight digits and inserts separators',
+      (tester) async {
+        await open(
+          tester,
+          platform,
+          393,
+          TaskDatePickerDialog(
+            initialDate: DateTime(2026, 11, 19),
+            firstDate: DateTime(1900),
+            lastDate: DateTime(2999, 12, 31),
+            input: true,
+          ),
+        );
+        final field = find.byType(TextFormField);
+        for (final digits in [
+          '',
+          '1',
+          '19',
+          '191',
+          '1911',
+          '19112',
+          '191120',
+          '1911202',
+        ]) {
+          await tester.enterText(field, digits);
+          await tester.pump();
+          expect(find.textContaining('before you were born'), findsNothing);
+          expect(find.text('Enter a valid date.'), findsNothing);
+          expect(
+            tester
+                .widget<FilledButton>(
+                  find.widgetWithText(FilledButton, 'Apply'),
+                )
+                .onPressed,
+            isNull,
+          );
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pump();
+          expect(find.byType(TaskDatePickerDialog), findsOneWidget);
+        }
+        await tester.enterText(field, '19x11-2026é٩');
+        await tester.pump();
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          '19/11/2026',
+        );
+        expect(
+          tester
+              .widget<FilledButton>(find.widgetWithText(FilledButton, 'Apply'))
+              .onPressed,
+          isNotNull,
+        );
+        await tester.enterText(field, '31022026');
+        await tester.pump();
+        expect(find.text('Enter a valid date.'), findsOneWidget);
+        expect(
+          tester
+              .widget<FilledButton>(find.widgetWithText(FilledButton, 'Apply'))
+              .onPressed,
+          isNull,
+        );
+        await tester.enterText(field, '3102202');
+        await tester.pump();
+        expect(find.text('Enter a valid date.'), findsNothing);
+      },
+    );
 
     testWidgets(
       '$platform date entry accepts wide bounds and uses friendly boundary errors',
