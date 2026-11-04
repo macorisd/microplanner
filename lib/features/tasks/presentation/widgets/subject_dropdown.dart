@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/disclosure_icon.dart';
 import '../../../boards/data/models/subject.dart';
 
 /// The same color/name pairing is used in the selected field and its menu.
@@ -26,10 +27,7 @@ class SubjectDropdown extends StatelessWidget {
       child: DropdownButton<String?>(
         value: value,
         isExpanded: true,
-        icon: const Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: AppColors.textSecondary,
-        ),
+        icon: const DisclosureIcon(),
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         items: [
           const DropdownMenuItem<String?>(

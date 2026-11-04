@@ -5,13 +5,13 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/utils/input_mode.dart';
 import '../../../../core/widgets/bounded_reorderable_list.dart';
+import '../../../../core/widgets/disclosure_icon.dart';
 import '../../../auth/data/auth_service.dart';
 import '../../../boards/data/models/board.dart';
 import '../../../boards/providers/boards_provider.dart';
 import 'new_board_dialog.dart';
-import 'action_confirmation_dialog.dart';
+import 'board_actions.dart';
 import '../../../boards/data/board_catalog.dart';
-import 'board_editor_dialog.dart';
 
 /// Resizable sidebar navigation widget
 /// Contains navigation, boards and the current account.
@@ -229,9 +229,17 @@ class _BoardsSectionState extends State<_BoardsSection> {
                     ),
                     child: Row(
                       children: [
+                        const Icon(
+                          Icons.dashboard_outlined,
+                          size: 22,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: AppTheme.spacingMedium),
                         Expanded(
                           child: Text(
                             'Boards',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.labelLarge
                                 ?.copyWith(
                                   color: AppColors.textSecondary,
@@ -239,12 +247,7 @@ class _BoardsSectionState extends State<_BoardsSection> {
                                 ),
                           ),
                         ),
-                        Icon(
-                          _expanded
-                              ? Icons.keyboard_arrow_down
-                              : Icons.keyboard_arrow_right,
-                          size: 20,
-                        ),
+                        DisclosureIcon(right: !_expanded),
                       ],
                     ),
                   ),
@@ -317,25 +320,8 @@ class _BoardCard extends StatefulWidget {
 class _BoardCardState extends State<_BoardCard> {
   bool _hovered = false;
   bool _focused = false;
-  void _edit() => showMotionDialog(
-    context: context,
-    builder: (_) => BoardEditorDialog(board: widget.board),
-  );
-  void _delete() {
-    final boards = context.read<BoardsProvider>();
-    showMotionDialog(
-      context: context,
-      builder: (_) => ActionConfirmationDialog(
-        title: 'Delete Board',
-        actionLabel: 'Delete',
-        pendingLabel: 'Deleting…',
-        destructive: true,
-        message:
-            'Are you sure you want to delete "${widget.board.name}"? This will also delete all subjects and tasks in this board.',
-        onConfirm: () => boards.deleteBoard(widget.board.id),
-      ),
-    );
-  }
+  void _edit() => editBoard(context, widget.board);
+  void _delete() => confirmBoardDeletion(context, widget.board);
 
   @override
   Widget build(BuildContext context) {

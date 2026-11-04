@@ -21,6 +21,9 @@ plan choices (for example, restoring each board's column instead of Upcoming).
   requiring a system Back gesture. Keep the menu button and Android Back usable.
 - Tap/click a task to edit on **both** platforms; no edit icon on task cards.
   Checkbox/delete and other nested actions must not also open the editor.
+- Tapping/clicking the open board heading opens its existing Edit Board dialog;
+  the heading's hover/focus Delete action opens the same confirmation as sidebar
+  deletion and must not also open the editor. Source: user refinement, 2026-11-04.
 - Editing must not select/focus the title or open the Android keyboard by default.
   Opening date/time/selectors or expanded description clears stale text focus.
   Closing them must not restore focus or reopen the keyboard unexpectedly.
