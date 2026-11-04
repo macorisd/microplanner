@@ -33,6 +33,11 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
   its controls. Reserve stable message space in shared fields and status areas;
   preserve complete messages through scrolling and accessibility on narrow screens.
   Source: user correction, 2026-11-04.
+- Board forms keep compact vertical spacing: no extra gap after the name's
+  reserved message row, no divider between Subjects and Task types, and a compact
+  fixed error slot before Edit Board's actions. New Board shares its name's
+  fixed message row with save failures instead of reserving a second status area.
+  Source: user spacing review, 2026-11-04.
 - Align adjacent icons and punctuation with the text input's filled surface,
   excluding its reserved validation area. Date/time mode switches, Cancel and
   Apply share a vertically centered footer row aligned to the right edge; wrap

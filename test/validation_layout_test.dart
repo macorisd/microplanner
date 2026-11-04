@@ -9,11 +9,12 @@ import 'package:microplanner/features/tasks/data/models/task.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/add_task_dialog.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/edit_task_dialog.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/subject_dialog.dart';
+import 'package:microplanner/features/tasks/presentation/widgets/new_board_dialog.dart';
 import 'support/fakes.dart';
 
 void main() {
   for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
-    for (final kind in ['create task', 'edit task', 'subject']) {
+    for (final kind in ['create task', 'edit task', 'subject', 'new board']) {
       testWidgets(
         '$platform $kind keeps dialog and controls fixed for validation and save errors',
         (tester) async {
@@ -41,6 +42,7 @@ void main() {
             boardId: 'default-board',
           );
           final Widget editor = switch (kind) {
+            'new board' => NewBoardDialog(onSave: (_) async => false),
             'subject' => SubjectDialog(
               title: 'Edit subject',
               initialName: 'Math',
@@ -93,11 +95,25 @@ void main() {
           final field = find.byType(TextFormField).first;
           final fieldRect = tester.getRect(field);
           final cancelRect = tester.getRect(find.text('Cancel'));
+          if (kind == 'new board') {
+            final container = InputDecorator.containerOf(
+              tester.element(find.byType(EditableText)),
+            )!;
+            final bottom =
+                container.localToGlobal(Offset.zero).dy + container.size.height;
+            final buttonTop = tester
+                .getTopLeft(find.widgetWithText(FilledButton, 'Create'))
+                .dy;
+            expect(buttonTop - bottom, lessThanOrEqualTo(40));
+          }
           await tester.enterText(field, 'A valid name');
           await tester.pumpAndSettle();
           await tester.enterText(field, '');
           await tester.pumpAndSettle();
-          expect(find.text('Please enter a name.'), findsOneWidget);
+          expect(
+            find.text('Please enter a name.'),
+            kind == 'new board' ? findsNothing : findsOneWidget,
+          );
           expect(tester.getRect(find.byType(Dialog)), dialog);
           expect(tester.getRect(field), fieldRect);
           expect(tester.getRect(find.text('Cancel')), cancelRect);
@@ -106,6 +122,8 @@ void main() {
           expect(tester.getRect(find.byType(Dialog)), dialog);
           final action = kind == 'subject'
               ? 'Save'
+              : kind == 'new board'
+              ? 'Create'
               : kind == 'edit task'
               ? 'Save Changes'
               : 'Create Task';

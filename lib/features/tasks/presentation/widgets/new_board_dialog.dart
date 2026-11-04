@@ -1,6 +1,7 @@
 import 'task_form_keyboard.dart';
 import 'package:flutter/material.dart';
-import 'save_status.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/data/workspace_controller.dart';
 import '../../../../core/data/workspace_limits.dart';
 import '../../../../core/widgets/limited_text_field.dart';
 import '../../../../core/widgets/pending_action.dart';
@@ -62,23 +63,20 @@ class _NewBoardDialogState extends State<NewBoardDialog>
       child: AlertDialog(
         scrollable: true,
         title: const Text('New Board'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            LimitedTextField(
-              limit: WorkspaceLimits.boardName,
-              validator: _nameError,
-              enabled: !_saving,
-              controller: _controller,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Board name',
-                hintText: 'Enter board name',
-              ),
-              onSubmitted: (_) => _save(),
-            ),
-            SaveStatus(error: submissionError),
-          ],
+        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+        content: LimitedTextField(
+          limit: WorkspaceLimits.boardName,
+          validator: _nameError,
+          enabled: !_saving,
+          controller: _controller,
+          autofocus: true,
+          errorText:
+              context.watch<WorkspaceController>().error ?? submissionError,
+          decoration: const InputDecoration(
+            labelText: 'Board name',
+            hintText: 'Enter board name',
+          ),
+          onSubmitted: (_) => _save(),
         ),
         actions: [
           TextButton(

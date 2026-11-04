@@ -309,7 +309,6 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
             onSubmitted: (_) => _save(),
             decoration: const InputDecoration(labelText: 'Board name'),
           ),
-          const SizedBox(height: AppTheme.spacingMedium),
           LayoutBuilder(
             builder: (context, constraints) {
               final icon = IconChoice(
@@ -371,7 +370,7 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
             items: _subjects,
             onChanged: (value) => setState(() => _subjects = value),
           ),
-          const Divider(height: AppTheme.spacingLarge),
+          const SizedBox(height: AppTheme.spacingMedium),
           EditableCategoryList(
             title: 'Task types',
             label: 'task type',
@@ -387,8 +386,7 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
               label: const Text('Apply default list'),
             ),
           ),
-          FormMessage(message: _error, lines: 2),
-          const SizedBox(height: AppTheme.spacingMedium),
+          FormMessage(message: _error),
           OverflowBar(
             alignment: MainAxisAlignment.end,
             spacing: 8,
