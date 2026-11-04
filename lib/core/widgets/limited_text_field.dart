@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'form_message.dart';
 
 /// Uses the API's UTF-16 length without splitting emoji or composed characters.
 class ContractLengthFormatter extends TextInputFormatter {
@@ -35,6 +36,11 @@ class ContractLengthFormatter extends TextInputFormatter {
 }
 
 class LimitedTextField extends StatelessWidget {
+  /// Align adjacent controls with the input surface rather than its message row.
+  static double supportingHeightOf(BuildContext context, {int lines = 1}) =>
+      FormMessage.heightOf(context, lines: lines) +
+      (Theme.of(context).useMaterial3 ? 4 : 8);
+
   final TextEditingController controller;
   final int limit;
   final String? Function(String?) validator;
@@ -48,6 +54,9 @@ class LimitedTextField extends StatelessWidget {
   final ValueChanged<String>? onSubmitted;
   final TextStyle? style;
   final TextInputType? keyboardType;
+  final String? errorText;
+  final int validationLines;
+  final List<TextInputFormatter> inputFormatters;
   const LimitedTextField({
     super.key,
     required this.controller,
@@ -63,6 +72,9 @@ class LimitedTextField extends StatelessWidget {
     this.onSubmitted,
     this.style,
     this.keyboardType,
+    this.errorText,
+    this.validationLines = 1,
+    this.inputFormatters = const [],
   });
 
   @override
@@ -85,16 +97,20 @@ class LimitedTextField extends StatelessWidget {
         ? TextCapitalization.sentences
         : TextCapitalization.none,
     validator: validator,
+    forceErrorText: errorText,
+    errorBuilder: (context, error) =>
+        FormMessage(message: error, lines: validationLines),
     autovalidateMode: AutovalidateMode.onUserInteraction,
     onFieldSubmitted: onSubmitted,
     onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
     maxLength: limit,
     maxLengthEnforcement: MaxLengthEnforcement.none,
-    inputFormatters: [ContractLengthFormatter(limit)],
+    inputFormatters: [...inputFormatters, ContractLengthFormatter(limit)],
     buildCounter:
         (_, {required currentLength, required isFocused, required maxLength}) =>
             null,
     decoration: decoration.copyWith(
+      helper: FormMessage(lines: validationLines),
       suffix: ValueListenableBuilder<TextEditingValue>(
         valueListenable: controller,
         builder: (context, value, _) => value.text.length < limit * 0.8

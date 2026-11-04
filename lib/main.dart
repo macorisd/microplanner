@@ -27,6 +27,7 @@ void main() {
 
 Future<Widget> _initializeApplication() async {
   if (defaultTargetPlatform == TargetPlatform.android) {
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
   await Hive.initFlutter();

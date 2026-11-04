@@ -260,7 +260,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     limit: WorkspaceLimits.categoryName,
     validator: (_) => _error,
     onSubmitted: (_) => _save(),
-    decoration: InputDecoration(labelText: 'Name', errorText: _error),
+    errorText: _error,
+    decoration: const InputDecoration(labelText: 'Name'),
   );
 
   Widget _iconChoice() => IconChoice(
@@ -276,6 +277,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   @override
   Widget build(BuildContext context) => EditorPanel(
     dialog: true,
+    canSubmit: _canSave,
+    onSubmit: _save,
     child: Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,7 +299,12 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _iconChoice(),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom: LimitedTextField.supportingHeightOf(context),
+                      ),
+                      child: _iconChoice(),
+                    ),
                     const SizedBox(width: 16),
                     Expanded(child: _nameField()),
                   ],

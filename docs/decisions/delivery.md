@@ -14,6 +14,11 @@ consolidated 2026-11-02. Detailed setup lives in
 - Before 1.0.0, features increment minor and fixes patch. No major release until
   the user explicitly decides the app is ready. Synchronize product version
   manifests and increasing Android build numbers when releasing app changes.
+  Corrections and refinements of existing controls (keyboard, focus, visual
+  consistency or removing redundant confirmation steps) are patches. Scope,
+  implementation effort and the number of fixes do not make them minor; minor
+  requires a new product capability. Respect the user's explicit classification.
+  Source: user clarification, 2026-11-04.
 - PR bodies contain only `## Changes`, then nonempty `### Major`, `### Minor`,
   `### Patch` subsections in that order. One concise, user-facing bullet per
   requested change, classified individually. Omit absent categories and retain
@@ -26,6 +31,12 @@ consolidated 2026-11-02. Detailed setup lives in
   build waits), remove branches from merged PRs only after verifying merge status,
   no unpublished work, and no active worktree. Keep main and unmerged/uncertain
   branches. Never merge the user's PR just because implementation is complete.
+- Starting with PR 17, successful Android release publication removes the merged
+  PR's remote source branch only after checks, APK publication and README update
+  have succeeded. Verify the release/merged PR association and unchanged head;
+  preserve protected branches, reused branches with open PRs and newer commits.
+  Failed or canceled publication retains its branch for recovery. This does not
+  remove a local checkout. Source: explicit user request, 2026-11-04.
 - Keep credentials in ignored local/server configuration. Never print, commit or
   package database/OAuth/session secrets or signing keys. The API owns MongoDB
   access, validates identity and isolates every account; clients never get DB

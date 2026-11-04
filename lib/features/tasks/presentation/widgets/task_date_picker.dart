@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'picker_enter_confirmation.dart';
+import 'task_form_keyboard.dart';
+import 'picker_actions.dart';
+import 'date_digits_formatter.dart';
 import '../../../../core/widgets/limited_text_field.dart';
 
 Future<DateTime?> showTaskDatePicker({
@@ -23,9 +25,7 @@ Future<DateTime?> showTaskDatePicker({
         input: initialEntryMode == DatePickerEntryMode.inputOnly,
       ),
     );
-    return PickerEnterConfirmation(
-      child: builder?.call(context, child) ?? child,
-    );
+    return builder?.call(context, child) ?? child;
   },
 );
 
@@ -50,6 +50,7 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
   late DateTime _selected = widget.initialDate;
   late bool _input = widget.input;
   final _controller = TextEditingController();
+  final _calendarKey = GlobalKey();
   bool _initialized = false;
   bool _closing = false;
   @override
@@ -75,17 +76,24 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
   }
 
   String? _error(String? value) {
-    if ((value?.length ?? 0) > 10) return 'Use at most 10 characters.';
+    if (!_complete(value ?? '')) return null;
     final date = MaterialLocalizations.of(
       context,
     ).parseCompactDate(value ?? '');
     if (date == null) return 'Enter a valid date.';
-    if (date.isBefore(widget.firstDate) || date.isAfter(widget.lastDate)) {
-      final localizations = MaterialLocalizations.of(context);
-      return 'Use a date from ${localizations.formatCompactDate(widget.firstDate)} to ${localizations.formatCompactDate(widget.lastDate)}.';
+    if (date.isBefore(widget.firstDate)) {
+      return "A bit odd to plan something before you were born, isn't it?";
+    }
+    if (date.isAfter(widget.lastDate)) {
+      return "Trust me, you won't have to worry about this task by then.";
     }
     return null;
   }
+
+  bool _complete(String value) =>
+      RegExp(r'^[0-9]{2}/[0-9]{2}/[0-9]{4}$').hasMatch(value);
+  bool get _valid =>
+      _complete(_controller.text) && _error(_controller.text) == null;
 
   void _close(DateTime? date) {
     if (_closing) return;
@@ -95,7 +103,7 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
 
   void _toggle() {
     if (_input) {
-      if (_error(_controller.text) == null) {
+      if (_valid) {
         _selected = MaterialLocalizations.of(
           context,
         ).parseCompactDate(_controller.text)!;
@@ -108,104 +116,103 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
     setState(() => _input = !_input);
   }
 
+  void _accept() {
+    if (_input && !_valid) return;
+    _close(
+      _input
+          ? MaterialLocalizations.of(context).parseCompactDate(_controller.text)
+          : _selected,
+    );
+  }
+
+  void _dateChanged(DateTime date) {
+    // CalendarDatePicker also emits onDateChanged when navigating its year list.
+    // Accept only the day grid; its public YearPicker is still mounted here
+    // until the calendar rebuilds after the year selection callback.
+    var choosingYear = false;
+    void visit(Element element) {
+      if (element.widget is YearPicker) choosingYear = true;
+      if (!choosingYear) element.visitChildren(visit);
+    }
+
+    _calendarKey.currentContext?.visitChildElements(visit);
+    if (choosingYear) {
+      setState(() => _selected = date);
+    } else {
+      _close(date);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !_closing,
-    child: IgnorePointer(
-      ignoring: _closing,
-      child: Dialog(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Select date',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
+  Widget build(BuildContext context) => TaskFormKeyboard(
+    canSubmit: !_closing && (!_input || _valid),
+    onSubmit: _accept,
+    child: PopScope(
+      canPop: !_closing,
+      child: IgnorePointer(
+        ignoring: _closing,
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Select date',
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      IconButton(
-                        tooltip: _input
-                            ? 'Switch to calendar'
-                            : 'Switch to input',
-                        onPressed: _closing ? null : _toggle,
-                        icon: Icon(
-                          _input
-                              ? Icons.calendar_today_rounded
-                              : Icons.edit_outlined,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_input)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: LimitedTextField(
-                        controller: _controller,
-                        keyboardType: TextInputType.datetime,
-                        limit: 10,
-                        validator: _error,
-                        autofocus: true,
-                        decoration: InputDecoration(
-                          labelText: 'Date',
-                          hintText: MaterialLocalizations.of(
-                            context,
-                          ).dateHelpText,
-                        ),
-                        onSubmitted: (_) {
-                          if (_error(_controller.text) == null) {
-                            _close(
-                              MaterialLocalizations.of(
-                                context,
-                              ).parseCompactDate(_controller.text),
-                            );
-                          }
-                        },
-                      ),
-                    )
-                  else
-                    CalendarDatePicker(
-                      initialDate: _selected,
-                      firstDate: widget.firstDate,
-                      lastDate: widget.lastDate,
-                      onDateChanged: (value) =>
-                          setState(() => _selected = value),
                     ),
-                  OverflowBar(
-                    alignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: _closing ? null : () => _close(null),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red.shade700,
+                    if (_input)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: LimitedTextField(
+                          controller: _controller,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: const [DateDigitsFormatter()],
+                          limit: 10,
+                          validationLines: 3,
+                          validator: _error,
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            labelText: 'Date',
+                            hintText: MaterialLocalizations.of(
+                              context,
+                            ).dateHelpText,
+                          ),
+                          onSubmitted: (_) => _accept(),
                         ),
-                        child: const Text('Cancel'),
+                      )
+                    else
+                      CalendarDatePicker(
+                        key: _calendarKey,
+                        initialDate: _selected,
+                        firstDate: widget.firstDate,
+                        lastDate: widget.lastDate,
+                        onDateChanged: _dateChanged,
                       ),
-                      FilledButton(
-                        onPressed:
-                            _closing ||
-                                (_input && _error(_controller.text) != null)
-                            ? null
-                            : () => _close(
-                                _input
-                                    ? MaterialLocalizations.of(
-                                        context,
-                                      ).parseCompactDate(_controller.text)
-                                    : _selected,
-                              ),
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                ],
+                    PickerActions(
+                      modeTooltip: _input
+                          ? 'Switch to calendar'
+                          : 'Switch to input',
+                      modeIcon: _input
+                          ? Icons.calendar_today_rounded
+                          : Icons.edit_outlined,
+                      onModeChanged: _closing ? null : _toggle,
+                      onCancel: _closing ? null : () => _close(null),
+                      showApply: _input,
+                      onApply: !_closing && _valid ? _accept : null,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

@@ -142,7 +142,11 @@ void main() {
           initial: const CategoryDraft(id: 'type', name: 'Homework'),
         );
         await tester.pumpAndSettle();
-        final name = tester.getRect(find.byType(TextField));
+        final inputContainer = InputDecorator.containerOf(
+          tester.element(find.byType(EditableText)),
+        )!;
+        final name =
+            inputContainer.localToGlobal(Offset.zero) & inputContainer.size;
         final icon = tester.getRect(find.byTooltip('Choose icon'));
         if (platform == TargetPlatform.windows) {
           expect(icon.right, lessThan(name.left));

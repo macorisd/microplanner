@@ -25,6 +25,15 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
 
 ## Forms and cards
 
+- Validation and save-error messages must not change form/dialog height or move
+  its controls. Reserve stable message space in shared fields and status areas;
+  preserve complete messages through scrolling and accessibility on narrow screens.
+  Source: user correction, 2026-11-04.
+- Align adjacent icons and punctuation with the text input's filled surface,
+  excluding its reserved validation area. Date/time mode switches, Cancel and
+  Apply share a vertically centered footer row aligned to the right edge; wrap
+  only when space requires it.
+  Source: user screenshot review, 2026-11-04.
 - Expanded description is a dialog with the **same size and shape** as its task
   form, a back button, the noneditable task title and description field. Keep
   unsaved content. Its expand control is compact, uses matching colors and aligns
@@ -45,6 +54,9 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
 
 ## Platform appearance and motion
 
+- Android uses portrait orientation only, including startup, editors and pickers;
+  rotating the phone must not switch microplanner to landscape. Source: explicit
+  user preference, 2026-11-04.
 - Android launcher artwork extends the original logo colors to a square; let the
   launcher apply its own mask. No added white border or baked-in extra curvature.
   Sidebar logo keeps the Windows artwork's proportions and curvature. Android

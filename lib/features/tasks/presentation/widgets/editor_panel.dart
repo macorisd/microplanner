@@ -3,12 +3,21 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/input_mode.dart';
+import 'task_form_keyboard.dart';
 
 /// Common form proportions for account pages and customization dialogs.
 class EditorPanel extends StatelessWidget {
-  const EditorPanel({super.key, required this.child, this.dialog = false});
+  const EditorPanel({
+    super.key,
+    required this.child,
+    this.dialog = false,
+    this.onSubmit,
+    this.canSubmit = false,
+  });
   final Widget child;
   final bool dialog;
+  final VoidCallback? onSubmit;
+  final bool canSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -21,13 +30,20 @@ class EditorPanel extends StatelessWidget {
       child: child,
     );
     if (dialog) {
-      return Dialog(
+      final panel = Dialog(
         insetPadding: EdgeInsets.symmetric(
           horizontal: compact ? 16 : 40,
           vertical: 24,
         ),
         child: SizedBox(width: 480, child: contents),
       );
+      return onSubmit == null
+          ? panel
+          : TaskFormKeyboard(
+              canSubmit: canSubmit,
+              onSubmit: onSubmit!,
+              child: panel,
+            );
     }
     return Center(
       child: SingleChildScrollView(

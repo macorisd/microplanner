@@ -1,3 +1,4 @@
+import 'task_form_keyboard.dart';
 import 'category_editor.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -68,54 +69,58 @@ class _SubjectDialogState extends State<SubjectDialog>
   Widget build(BuildContext context) {
     return PendingForm(
       pending: _saving,
-      child: AlertDialog(
-        scrollable: true,
-        title: Text(widget.title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            LimitedTextField(
-              limit: WorkspaceLimits.name,
-              validator: WorkspaceLimits.nameError,
-              enabled: !_saving,
-              controller: _controller,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Subject name',
-                hintText: 'e.g., Mathematics, Physics',
+      child: TaskFormKeyboard(
+        canSubmit: _canSave,
+        onSubmit: _save,
+        child: AlertDialog(
+          scrollable: true,
+          title: Text(widget.title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LimitedTextField(
+                limit: WorkspaceLimits.name,
+                validator: WorkspaceLimits.nameError,
+                enabled: !_saving,
+                controller: _controller,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Subject name',
+                  hintText: 'e.g., Mathematics, Physics',
+                ),
+                onSubmitted: (_) => _save(),
               ),
-              onSubmitted: (_) => _save(),
+              const SizedBox(height: AppTheme.spacingMedium),
+              SaveStatus(error: submissionError),
+              Text(
+                'Color',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppTheme.spacingSmall),
+              ColorChoices(
+                color: _selectedColor,
+                onChanged: (color) {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  setState(() => _selectedColor = color);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: _saving ? null : closeForm,
+              style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(height: AppTheme.spacingMedium),
-            SaveStatus(error: submissionError),
-            Text(
-              'Color',
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: AppTheme.spacingSmall),
-            ColorChoices(
-              color: _selectedColor,
-              onChanged: (color) {
-                FocusManager.instance.primaryFocus?.unfocus();
-                setState(() => _selectedColor = color);
-              },
+            FilledButton(
+              onPressed: _canSave ? _save : null,
+              child: const Text('Save'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : closeForm,
-            style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: _canSave ? _save : null,
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }

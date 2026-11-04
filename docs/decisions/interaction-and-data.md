@@ -30,9 +30,31 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Back from expanded description returns to Edit Task with its draft intact.
   Android Back first dismisses the keyboard when appropriate; a later Back follows
   the current dialog/navigation level. Test Back, Escape and dismissal paths.
-- On Windows, Enter submits when Save is enabled unless editing description.
-  Description Enter inserts a newline; Ctrl+Enter submits. This must still work
-  after returning from a date/time picker. Save is disabled without changes.
+- Enter (including numeric-keypad Enter) activates the enabled save/create action
+  in every editable form, including board, subject, task type and default-list
+  editors, even with focus outside its text fields or after a picker returns.
+  Preserve description newlines; Ctrl+Enter submits descriptions on Windows.
+  Disabled, unchanged, invalid or pending forms never submit; nested dialogs
+  handle their own keys without submitting an underlying form.
+- Selecting a calendar day immediately accepts it and returns to the task draft;
+  selecting clock minutes does the same for time. Hour selection advances to
+  minutes; dial dragging accepts only on release. Omit OK in both selectors.
+  Keep validated manual entry with Apply/Enter, date bounds, precise minutes,
+  12/24-hour handling, Cancel and Back/Escape. Picker completion never saves the
+  task or restores stale text focus. Source: user correction, 2026-11-04.
+- Date pickers use fixed internal bounds from 1900-01-01 through 2999-12-31.
+  Opening an older legacy deadline clamps only the picker's initial selection;
+  cancellation and unrelated edits preserve saved data. Do not expose numeric
+  bounds in validation messages: use the agreed playful English messages for
+  dates below and above the range. Source: user refinement, 2026-11-04.
+- Manual dates accept ASCII digits only and insert slashes after the day and
+  month (`dd/MM/yyyy`). Until all eight digits are present, show no validation
+  message and keep Apply/Enter disabled. Time inputs also ignore everything
+  except ASCII digits. Source: user refinement, 2026-11-04.
+- Clock selection visibly animates the needle to the chosen hour/minute before
+  advancing or accepting. Keep this brief, preserve precise minute selection,
+  cancellation and duplicate-input guards, and honor reduced motion.
+  Source: user refinement, 2026-11-04.
 
 ## Actions, persistence and errors
 
