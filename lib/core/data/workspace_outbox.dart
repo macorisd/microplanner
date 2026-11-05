@@ -37,10 +37,12 @@ class WorkspaceOutbox extends ChangeNotifier {
   String? storageError;
   bool _unreadable = false;
   Set<String>? _pendingTaskIds;
+  Set<String>? _pendingBoardIds;
   WorkspaceSnapshot? _projected;
 
   void _invalidate() {
     _pendingTaskIds = null;
+    _pendingBoardIds = null;
     _projected = null;
   }
 
@@ -103,6 +105,11 @@ class WorkspaceOutbox extends ChangeNotifier {
       if (operation.failure == null)
         for (final item in operation.delta.items)
           if (item.kind == 'tasks') item.id,
+  });
+
+  Set<String> get pendingBoardIds => _pendingBoardIds ??= Set.unmodifiable({
+    for (final operation in _operations)
+      if (operation.failure == null) ...operation.delta.savingBoardIds,
   });
 
   WorkspaceSnapshot get projected {

@@ -14,6 +14,24 @@ class WorkspaceDelta {
   final List<WorkspaceDeltaItem> items;
   const WorkspaceDelta(this.items);
 
+  /// Board editor saves can change only a board-local category list.
+  Set<String> get savingBoardIds => {
+    for (final item in items)
+      if (item.kind == 'boards' &&
+          item.after != null &&
+          (item.before == null ||
+              [
+                'name',
+                'icon',
+                'color',
+              ].any((key) => item.before![key] != item.after![key])))
+        item.id
+      else if (item.kind == 'subjects' || item.kind == 'boardTypes') ...{
+        if (item.before?['boardId'] case final String id) id,
+        if (item.after?['boardId'] case final String id) id,
+      },
+  };
+
   factory WorkspaceDelta.between(
     WorkspaceSnapshot before,
     WorkspaceSnapshot after,

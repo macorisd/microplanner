@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/data/workspace_controller.dart';
+import '../../../../core/widgets/board_sync_glow.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_motion.dart';
@@ -205,8 +207,46 @@ class _BoardsSection extends StatefulWidget {
   State<_BoardsSection> createState() => _BoardsSectionState();
 }
 
-class _BoardsSectionState extends State<_BoardsSection> {
+class _BoardsSectionState extends State<_BoardsSection>
+    with SingleTickerProviderStateMixin {
   bool _expanded = true;
+  late final _motion = AnimationController(
+    vsync: this,
+    duration: AppMotion.entrance,
+    value: 1,
+  );
+  late final _curve = CurvedAnimation(
+    parent: _motion,
+    curve: AppMotion.curve,
+    reverseCurve: Curves.easeInOutCubic,
+  );
+
+  void _toggle() {
+    setState(() => _expanded = !_expanded);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _motion.value = _expanded ? 1 : 0;
+    } else if (_expanded) {
+      _motion.forward();
+    } else {
+      _motion.reverse();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _motion.value = _expanded ? 1 : 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _motion.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,7 +260,7 @@ class _BoardsSectionState extends State<_BoardsSection> {
                 button: true,
                 expanded: _expanded,
                 child: InkWell(
-                  onTap: () => setState(() => _expanded = !_expanded),
+                  onTap: _toggle,
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -247,7 +287,13 @@ class _BoardsSectionState extends State<_BoardsSection> {
                                 ),
                           ),
                         ),
-                        DisclosureIcon(right: !_expanded),
+                        RotationTransition(
+                          turns: Tween<double>(
+                            begin: -.25,
+                            end: 0,
+                          ).animate(_curve),
+                          child: const DisclosureIcon(),
+                        ),
                       ],
                     ),
                   ),
@@ -271,8 +317,36 @@ class _BoardsSectionState extends State<_BoardsSection> {
           ],
         ),
       ),
-      if (_expanded)
-        Consumer<BoardsProvider>(
+      AnimatedBuilder(
+        animation: _motion,
+        builder: (context, child) => !_expanded && _motion.isDismissed
+            ? const SizedBox.shrink()
+            : ClipRect(
+                child: SizeTransition(
+                  sizeFactor: _curve,
+                  axisAlignment: -1,
+                  child: FadeTransition(
+                    opacity: _curve,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, -.035),
+                        end: Offset.zero,
+                      ).animate(_curve),
+                      child: IgnorePointer(
+                        ignoring: !_expanded,
+                        child: ExcludeFocus(
+                          excluding: !_expanded,
+                          child: ExcludeSemantics(
+                            excluding: !_expanded,
+                            child: child!,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+        child: Consumer<BoardsProvider>(
           builder: (context, provider, _) => BoundedReorderableList(
             proxyColor: AppColors.sidebarBackground,
             onReorder: provider.reorderBoards,
@@ -300,6 +374,7 @@ class _BoardsSectionState extends State<_BoardsSection> {
             },
           ),
         ),
+      ),
     ],
   );
 }
@@ -326,6 +401,9 @@ class _BoardCardState extends State<_BoardCard> {
   @override
   Widget build(BuildContext context) {
     final touch = usesTouchControls(context);
+    final pending = context.select<WorkspaceController, bool>(
+      (workspace) => workspace.pendingBoardIds.contains(widget.board.id),
+    );
     final show = touch || _hovered || _focused;
     final color = Color(widget.board.color);
     final foreground = color;
@@ -353,12 +431,6 @@ class _BoardCardState extends State<_BoardCard> {
                 }
               },
               child: Ink(
-                padding: EdgeInsets.fromLTRB(
-                  AppTheme.spacingMedium,
-                  touch ? 4 : 8,
-                  touch ? AppTheme.spacingSmall : AppTheme.spacingMedium,
-                  touch ? 4 : 8,
-                ),
                 decoration: BoxDecoration(
                   color: boardRowBackground(color),
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -370,61 +442,72 @@ class _BoardCardState extends State<_BoardCard> {
                         : Colors.transparent,
                   ),
                 ),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: touch ? 48 : 24),
-                  child: Row(
-                    children: [
-                      Icon(
-                        boardIcons[widget.board.icon] ??
-                            Icons.dashboard_rounded,
-                        size: 20,
-                        color: foreground,
-                      ),
-                      const SizedBox(width: AppTheme.spacingSmall),
-                      Expanded(
-                        child: Text(
-                          widget.board.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: foreground,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                      ),
-                      Visibility(
-                        visible: show,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _BoardActionButton(
-                              compact: touch,
-                              alignment: touch
-                                  ? Alignment.centerRight
-                                  : Alignment.center,
-                              icon: Icons.edit_outlined,
-                              tooltip: 'Edit board',
-                              color: foreground,
-                              onTap: _edit,
+                child: BoardSyncGlow(
+                  active: pending,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppTheme.spacingMedium,
+                      touch ? 4 : 8,
+                      touch ? AppTheme.spacingSmall : AppTheme.spacingMedium,
+                      touch ? 4 : 8,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: touch ? 48 : 24),
+                      child: Row(
+                        children: [
+                          Icon(
+                            boardIcons[widget.board.icon] ??
+                                Icons.dashboard_rounded,
+                            size: 20,
+                            color: foreground,
+                          ),
+                          const SizedBox(width: AppTheme.spacingSmall),
+                          Expanded(
+                            child: Text(
+                              widget.board.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: foreground,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                             ),
-                            Visibility(
-                              visible: widget.canDelete,
-                              maintainState: true,
-                              maintainAnimation: true,
-                              maintainSize: true,
-                              child: _BoardActionButton(
-                                compact: touch,
-                                icon: Icons.delete_outline_rounded,
-                                tooltip: 'Delete board',
-                                color: foreground,
-                                onTap: _delete,
-                              ),
+                          ),
+                          Visibility(
+                            visible: show,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _BoardActionButton(
+                                  compact: touch,
+                                  alignment: touch
+                                      ? Alignment.centerRight
+                                      : Alignment.center,
+                                  icon: Icons.edit_outlined,
+                                  tooltip: 'Edit board',
+                                  color: foreground,
+                                  onTap: pending ? null : _edit,
+                                ),
+                                Visibility(
+                                  visible: widget.canDelete,
+                                  maintainState: true,
+                                  maintainAnimation: true,
+                                  maintainSize: true,
+                                  child: _BoardActionButton(
+                                    compact: touch,
+                                    icon: Icons.delete_outline_rounded,
+                                    tooltip: 'Delete board',
+                                    color: foreground,
+                                    onTap: pending ? null : _delete,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),

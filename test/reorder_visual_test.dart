@@ -75,11 +75,23 @@ void main() {
           final area = tester
               .getRect(find.byType(BoundedReorderableList))
               .intersect(tester.getRect(find.byType(SingleChildScrollView)));
+          final row = find.byKey(const ValueKey('beta'));
           final handle = find.descendant(
             of: find.byKey(const ValueKey('beta')),
-            matching: find.byType(ReorderableDragStartListener),
+            matching: find.byIcon(Icons.drag_indicator_rounded),
           );
-          final gesture = await tester.startGesture(tester.getCenter(handle));
+          // The outer edge of the enlarged target must work, not just the glyph.
+          final gesture = await tester.startGesture(
+            tester.getCenter(handle) + const Offset(20, 0),
+          );
+          if (platform == TargetPlatform.android) {
+            expect(
+              tester.widget<ReorderableDelayedDragStartListener>(row).enabled,
+              isTrue,
+            );
+            await tester.pump(const Duration(milliseconds: 1200));
+            expect(find.text('Edit task type'), findsNothing);
+          }
           await tester.pump();
           await gesture.moveBy(const Offset(0, 5));
           await tester.pump(const Duration(milliseconds: 300));
@@ -138,6 +150,21 @@ void main() {
           await gesture.up();
           await tester.pumpAndSettle();
           expect(items.map((item) => item.id), ['alpha', 'gamma', 'beta']);
+          final upward = await tester.startGesture(
+            tester.getCenter(handle) + const Offset(20, 0),
+          );
+          if (platform == TargetPlatform.android) {
+            await tester.pump(const Duration(milliseconds: 1200));
+          }
+          await upward.moveBy(const Offset(0, -5));
+          await tester.pump();
+          await upward.moveTo(
+            Offset(tester.getCenter(handle).dx, area.top - 300),
+          );
+          await tester.pump(const Duration(milliseconds: 700));
+          await upward.up();
+          await tester.pumpAndSettle();
+          expect(items.map((item) => item.id), ['beta', 'alpha', 'gamma']);
           expect(tester.takeException(), isNull);
         },
       );

@@ -5,6 +5,7 @@ import 'package:microplanner/core/data/workspace_delta.dart';
 import 'package:microplanner/core/data/workspace_snapshot.dart';
 import 'package:microplanner/features/tasks/data/models/task.dart';
 import 'package:microplanner/features/boards/data/models/board.dart';
+import 'package:microplanner/features/boards/data/models/subject.dart';
 import 'support/fakes.dart';
 
 Task _task(String id, {String name = 'Original', String? description}) =>
@@ -19,6 +20,46 @@ Task _task(String id, {String name = 'Original', String? description}) =>
     );
 
 void main() {
+  test(
+    'board save feedback includes category-only edits but excludes unrelated writes',
+    () {
+      final base = snapshot('Board');
+      expect(
+        WorkspaceDelta.between(
+          base,
+          base.copyWith(
+            boards: [base.boards.single.copyWith(name: 'New name')],
+          ),
+        ).savingBoardIds,
+        {'default-board'},
+      );
+      expect(
+        WorkspaceDelta.between(
+          base,
+          base.copyWith(boards: [base.boards.single.copyWith(sortOrder: 4)]),
+        ).savingBoardIds,
+        isEmpty,
+      );
+      final categories = base.copyWith(
+        subjects: const [
+          Subject(id: 's', name: 'Subject', boardId: 'default-board'),
+        ],
+      );
+      expect(WorkspaceDelta.between(base, categories).savingBoardIds, {
+        'default-board',
+      });
+      expect(WorkspaceDelta.between(categories, base).savingBoardIds, {
+        'default-board',
+      });
+      expect(
+        WorkspaceDelta.between(
+          base,
+          base.copyWith(tasks: [_task('one')]),
+        ).savingBoardIds,
+        isEmpty,
+      );
+    },
+  );
   test(
     'queued board reordering survives later edits and cache restoration',
     () {

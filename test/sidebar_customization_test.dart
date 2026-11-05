@@ -8,6 +8,8 @@ import 'package:http/http.dart' as http;
 import 'package:microplanner/core/constants/app_constants.dart';
 import 'package:microplanner/core/data/workspace_controller.dart';
 import 'package:microplanner/core/data/workspace_storage.dart';
+import 'package:microplanner/core/widgets/board_sync_glow.dart';
+import 'package:microplanner/features/boards/data/models/board.dart';
 import 'package:microplanner/features/auth/data/auth_service.dart';
 import 'package:microplanner/features/boards/providers/boards_provider.dart';
 import 'package:microplanner/features/tasks/data/models/task.dart';
@@ -78,78 +80,172 @@ void main() {
     },
   );
 
-  testWidgets('board editor starts from the latest queued board changes', (
-    tester,
-  ) async {
-    final harness = Harness(cache: _JournalCache());
-    await tester.runAsync(() async {
-      await harness.initialize();
-      await harness.login('A');
-    });
-    final boards = BoardsProvider(harness.workspace);
-    final tasks = TasksProvider(harness.workspace, boards);
-    final gate = Completer<http.Response>();
-    harness.server.nextWrite = gate;
-    late Future<bool> pending;
-    await tester.runAsync(() async {
-      pending = harness.workspace.mutate(
-        (snapshot) => snapshot.copyWith(
-          boards: [snapshot.boards.single.copyWith(name: 'Queued board name')],
+  testWidgets(
+    'only the syncing board locks editing and deletion until confirmed',
+    (tester) async {
+      final harness = Harness(cache: _JournalCache());
+      harness.server.states['A'] = harness.server.states['A']!.copyWith(
+        boards: [
+          ...harness.server.states['A']!.boards,
+          Board(
+            id: 'other-board',
+            name: 'Other board',
+            createdAt: DateTime(2027),
+            sortOrder: 1,
+          ),
+        ],
+      );
+      await tester.runAsync(() async {
+        await harness.initialize();
+        await harness.login('A');
+      });
+      final boards = BoardsProvider(harness.workspace);
+      final tasks = TasksProvider(harness.workspace, boards);
+      final gate = Completer<http.Response>();
+      harness.server.nextWrite = gate;
+      late Future<bool> pending;
+      await tester.runAsync(() async {
+        pending = harness.workspace.mutate(
+          (snapshot) => snapshot.copyWith(
+            boards: [
+              snapshot.boards.first.copyWith(name: 'Queued board name'),
+              snapshot.boards.last,
+            ],
+          ),
+        );
+        await settleAsync();
+      });
+      expect(harness.workspace.snapshot.boards.first.name, 'A private');
+      tester.view.physicalSize = const Size(1200, 850);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AuthService>.value(value: harness.auth),
+            ChangeNotifierProvider<WorkspaceController>.value(
+              value: harness.workspace,
+            ),
+            ChangeNotifierProvider<BoardsProvider>.value(value: boards),
+            ChangeNotifierProvider<TasksProvider>.value(value: tasks),
+          ],
+          child: MaterialApp(
+            theme: ThemeData(platform: TargetPlatform.windows),
+            home: const DashboardScreen(),
+          ),
         ),
       );
-      await settleAsync();
-    });
-    expect(harness.workspace.snapshot.boards.single.name, 'A private');
-    tester.view.physicalSize = const Size(1200, 850);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<AuthService>.value(value: harness.auth),
-          ChangeNotifierProvider<WorkspaceController>.value(
-            value: harness.workspace,
-          ),
-          ChangeNotifierProvider<BoardsProvider>.value(value: boards),
-          ChangeNotifierProvider<TasksProvider>.value(value: tasks),
-        ],
-        child: MaterialApp(
-          theme: ThemeData(platform: TargetPlatform.windows),
-          home: const DashboardScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final row = find.descendant(
-      of: find.byType(Sidebar),
-      matching: find.text('A private'),
-    );
-    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await mouse.addPointer(location: tester.getCenter(row));
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
+      await tester.pump(const Duration(seconds: 1));
+      final row = find.descendant(
         of: find.byType(Sidebar),
-        matching: find.byTooltip('Edit board'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Queued board name'), findsOneWidget);
-    gate.complete(jsonResponse(harness.server.states['A']!.toJson()));
-    await tester.runAsync(() async {
-      await pending;
-      await settleAsync();
-    });
-    await tester.pumpAndSettle();
-    await mouse.removePointer();
-    await tester.pumpWidget(const SizedBox());
-    tasks.dispose();
-    boards.dispose();
-    harness.dispose();
-  });
+        matching: find.text('A private'),
+      );
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: tester.getCenter(row));
+      await tester.pump(const Duration(seconds: 1));
+      expect(
+        find
+            .byType(BoardSyncGlow)
+            .evaluate()
+            .where((e) => (e.widget as BoardSyncGlow).active)
+            .length,
+        2,
+      );
+      expect(
+        tester
+            .widget<IconButton>(
+              find.ancestor(
+                of: find.descendant(
+                  of: find.byType(Sidebar),
+                  matching: find.byTooltip('Edit board'),
+                ),
+                matching: find.byType(IconButton),
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<IconButton>(
+              find.ancestor(
+                of: find.descendant(
+                  of: find.byType(Sidebar),
+                  matching: find.byTooltip('Delete board'),
+                ),
+                matching: find.byType(IconButton),
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(Sidebar),
+          matching: find.byTooltip('Edit board'),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Edit Board'), findsNothing);
+      await mouse.moveTo(
+        tester.getCenter(
+          find.descendant(
+            of: find.byType(Sidebar),
+            matching: find.text('Other board'),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(Sidebar),
+          matching: find.byTooltip('Edit board'),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Edit Board'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pump(const Duration(milliseconds: 400));
+      gate.complete(jsonResponse(harness.server.states['A']!.toJson()));
+      await tester.runAsync(() async {
+        await pending;
+        await settleAsync();
+      });
+      await tester.pumpAndSettle();
+      expect(
+        find
+            .byType(BoardSyncGlow)
+            .evaluate()
+            .every((e) => !(e.widget as BoardSyncGlow).active),
+        isTrue,
+      );
+      await mouse.moveTo(
+        tester.getCenter(
+          find.descendant(
+            of: find.byType(Sidebar),
+            matching: find.text('Queued board name'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(Sidebar),
+          matching: find.byTooltip('Edit board'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Edit Board'), findsOneWidget);
+      await mouse.removePointer();
+      await tester.pumpWidget(const SizedBox());
+      tasks.dispose();
+      boards.dispose();
+      harness.dispose();
+    },
+  );
 
   testWidgets('Android board editor and icon picker fit a narrow phone', (
     tester,

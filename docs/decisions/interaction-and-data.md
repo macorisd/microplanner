@@ -76,6 +76,11 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Disable controls on a task only while its real operation is unresolved. Once it
   has arrived in the destination, controls work immediately even during its color
   fade; another move/delete starts smoothly from the current visual state.
+- While a board creation/save is unresolved, disable that board's Edit/Delete
+  controls in the sidebar and open heading. Other boards and navigation remain
+  available; confirmation or a definite failure releases the pending state.
+  Include saves that change only subjects or task types. Newly accepted boards
+  appear in the sidebar immediately. Source: user refinement, 2026-11-05.
 - Offline mode shows the last account-scoped cache and prevents new edits. Startup
   sync happens while the logo is visible; do not flash a sync notice on first
   entering the board. Do not expose another account's data on sign-out/switch.
@@ -134,6 +139,10 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
   Source: explicit user decision, 2026-11-05.
 - Subjects/task types are reordered by dragging their handles; omit redundant
   three-dot Move up/Move down menus, including in default-list editors.
+- Subject/type drag handles have a full 48-pixel square hit area. On Android,
+  holding the handle or row starts reordering, as with sidebar boards; it must
+  not show an Edit/name tooltip or open the editor. Normal taps still edit and
+  desktop hover tooltips remain available. Source: user refinement, 2026-11-05.
 - Applying a default list makes an independent copy. Match existing type names
   ignoring case/outer whitespace only when unambiguous; confirm the number of
   assignments that will be cleared. Removing/reordering categories must not

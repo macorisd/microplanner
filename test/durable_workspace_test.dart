@@ -91,6 +91,40 @@ class _RejectFirstServer extends FakeServer {
 }
 
 void main() {
+  for (final reject in [false, true]) {
+    test(
+      'new board appears while syncing and ${reject ? 'unlocks after rejection' : 'stops pending on confirmation'}',
+      () async {
+        final h = Harness(cache: _Cache());
+        await h.initialize();
+        await h.login('A');
+        final boards = BoardsProvider(h.workspace);
+        final gate = Completer<http.Response>();
+        h.server.nextWrite = gate;
+        final save = boards.addBoard(name: 'Pending board');
+        await settleAsync();
+        final created = boards.boards.singleWhere(
+          (b) => b.name == 'Pending board',
+        );
+        expect(h.workspace.pendingBoardIds, {created.id});
+        expect(
+          h.workspace.snapshot.boards.map((b) => b.name),
+          contains('Pending board'),
+        );
+        gate.complete(
+          reject
+              ? jsonResponse({'code': 'bad', 'message': 'Rejected'}, 400)
+              : jsonResponse(h.server.states['A']!.toJson()),
+        );
+        expect(await save, !reject);
+        await settleAsync();
+        expect(h.workspace.pendingBoardIds, isEmpty);
+        expect(boards.boards.any((b) => b.id == created.id), !reject);
+        boards.dispose();
+        h.dispose();
+      },
+    );
+  }
   testWidgets(
     'a confirmed card waits for the entire cloud queue before moving',
     (tester) async {

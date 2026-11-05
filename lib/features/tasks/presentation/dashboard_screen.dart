@@ -2,6 +2,7 @@ import 'widgets/action_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/data/workspace_controller.dart';
+import '../../../core/widgets/board_sync_glow.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_motion.dart';
@@ -375,6 +376,9 @@ class _BoardHeadingState extends State<_BoardHeading> {
   @override
   Widget build(BuildContext context) {
     final board = widget.board;
+    final pending = context.select<WorkspaceController, bool>(
+      (workspace) => workspace.pendingBoardIds.contains(board?.id),
+    );
     final canDelete = context.select<BoardsProvider, bool>(
       (boards) => boards.boards.length > 1,
     );
@@ -396,74 +400,81 @@ class _BoardHeadingState extends State<_BoardHeading> {
                 color: boardRowBackground(foreground),
                 borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
               ),
-              child: Material(
-                color: Colors.transparent,
-                child: Row(
-                  key: const ValueKey('board-heading'),
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Tooltip(
-                        message: 'Edit board',
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.radiusMedium,
-                          ),
-                          onTap: board == null
-                              ? null
-                              : () => editBoard(context, board),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
+              child: BoardSyncGlow(
+                active: pending,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Row(
+                    key: const ValueKey('board-heading'),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Tooltip(
+                          message: 'Edit board',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusMedium,
                             ),
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: touch ? 36 : 24,
+                            onTap: board == null || pending
+                                ? null
+                                : () => editBoard(context, board),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    boardIcons[board?.icon] ??
-                                        Icons.dashboard_rounded,
-                                    color: foreground,
-                                    size: (textStyle?.fontSize ?? 22)
-                                        .clamp(24, 36)
-                                        .toDouble(),
-                                  ),
-                                  const SizedBox(width: AppTheme.spacingSmall),
-                                  Flexible(
-                                    child: Text(
-                                      board?.name ?? 'My Tasks',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: textStyle,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: touch ? 36 : 24,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      boardIcons[board?.icon] ??
+                                          Icons.dashboard_rounded,
+                                      color: foreground,
+                                      size: (textStyle?.fontSize ?? 22)
+                                          .clamp(24, 36)
+                                          .toDouble(),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(
+                                      width: AppTheme.spacingSmall,
+                                    ),
+                                    Flexible(
+                                      child: Text(
+                                        board?.name ?? 'My Tasks',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: textStyle,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    if (board != null && canDelete && (_hovered || _focused))
-                      SizedBox(
-                        width: touch ? 48 : 36,
-                        height: touch ? 48 : 36,
-                        child: IconButton(
-                          tooltip: 'Delete board',
-                          padding: EdgeInsets.zero,
-                          icon: Icon(
-                            Icons.delete_outline_rounded,
-                            size: 20,
-                            color: foreground,
+                      if (board != null && canDelete && (_hovered || _focused))
+                        SizedBox(
+                          width: touch ? 48 : 36,
+                          height: touch ? 48 : 36,
+                          child: IconButton(
+                            tooltip: 'Delete board',
+                            padding: EdgeInsets.zero,
+                            icon: Icon(
+                              Icons.delete_outline_rounded,
+                              size: 20,
+                              color: foreground,
+                            ),
+                            onPressed: pending
+                                ? null
+                                : () => confirmBoardDeletion(context, board),
                           ),
-                          onPressed: () => confirmBoardDeletion(context, board),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

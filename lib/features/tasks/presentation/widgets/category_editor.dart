@@ -6,6 +6,7 @@ import '../../../../core/data/workspace_limits.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_motion.dart';
+import '../../../../core/utils/input_mode.dart';
 import '../../../../core/widgets/limited_text_field.dart';
 import '../../../../core/widgets/bounded_reorderable_list.dart';
 import 'editor_panel.dart';
@@ -490,6 +491,7 @@ class EditableCategoryList extends StatelessWidget {
           onChanged(values);
         },
         itemBuilder: (context, index) {
+          final touch = usesTouchControls(context);
           final item = items[index];
           Future<void> editItem() async {
             final edited = await editCategory(
@@ -507,11 +509,24 @@ class EditableCategoryList extends StatelessWidget {
             }
           }
 
-          return Padding(
-            key: ValueKey(item.id),
+          final handle = Container(
+            width: 48,
+            height: 48,
+            color: Colors.transparent,
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.drag_indicator_rounded,
+              size: 18,
+              color: AppColors.textTertiary,
+            ),
+          );
+          final row = Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Tooltip(
               message: 'Edit $label',
+              triggerMode: touch
+                  ? TooltipTriggerMode.manual
+                  : TooltipTriggerMode.longPress,
               child: Material(
                 color: AppColors.surfaceVariant,
                 borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -540,6 +555,9 @@ class EditableCategoryList extends StatelessWidget {
                   ),
                   title: Tooltip(
                     message: item.name,
+                    triggerMode: touch
+                        ? TooltipTriggerMode.manual
+                        : TooltipTriggerMode.longPress,
                     child: Text(
                       item.name,
                       maxLines: 2,
@@ -550,18 +568,13 @@ class EditableCategoryList extends StatelessWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ReorderableDragStartListener(
-                        index: index,
-                        child: const SizedBox(
-                          width: 28,
-                          height: 48,
-                          child: Icon(
-                            Icons.drag_indicator_rounded,
-                            size: 18,
-                            color: AppColors.textTertiary,
-                          ),
+                      if (touch)
+                        handle
+                      else
+                        ReorderableDragStartListener(
+                          index: index,
+                          child: handle,
                         ),
-                      ),
                       IconButton(
                         tooltip: 'Remove $label',
                         icon: const Icon(Icons.delete_outline, size: 18),
@@ -575,6 +588,13 @@ class EditableCategoryList extends StatelessWidget {
               ),
             ),
           );
+          return touch
+              ? ReorderableDelayedDragStartListener(
+                  key: ValueKey(item.id),
+                  index: index,
+                  child: row,
+                )
+              : KeyedSubtree(key: ValueKey(item.id), child: row);
         },
       ),
     ],
