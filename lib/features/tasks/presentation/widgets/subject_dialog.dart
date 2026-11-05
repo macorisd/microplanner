@@ -3,7 +3,6 @@ import 'category_editor.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
-import 'save_status.dart';
 import '../../../../core/data/workspace_limits.dart';
 import '../../../../core/widgets/limited_text_field.dart';
 import '../../../../core/widgets/pending_action.dart';
@@ -14,6 +13,8 @@ class SubjectDialog extends StatefulWidget {
   final int initialColor;
   final Future<bool> Function(String name, int color) onSave;
   final bool allowUnchanged;
+  final bool? creating;
+  final Iterable<String> otherNames;
 
   const SubjectDialog({
     super.key,
@@ -22,6 +23,8 @@ class SubjectDialog extends StatefulWidget {
     required this.initialColor,
     required this.onSave,
     this.allowUnchanged = false,
+    this.creating,
+    this.otherNames = const [],
   });
 
   @override
@@ -33,12 +36,19 @@ class _SubjectDialogState extends State<SubjectDialog>
   late TextEditingController _controller;
   late int _selectedColor;
   bool get _saving => actionBlocked;
+  bool get _creating => widget.creating ?? widget.initialName.isEmpty;
   bool get _canSave =>
       !_saving &&
-      WorkspaceLimits.nameError(_controller.text) == null &&
+      _nameError(_controller.text) == null &&
       (widget.allowUnchanged ||
           _controller.text.trim() != widget.initialName.trim() ||
           _selectedColor != widget.initialColor);
+  String? _nameError(String? value) => WorkspaceLimits.namedItemError(
+    value,
+    originalName: _creating ? null : widget.initialName,
+    otherNames: widget.otherNames,
+    kind: 'subject',
+  );
   void _textChanged() {
     if (mounted) setState(() {});
   }
@@ -80,19 +90,19 @@ class _SubjectDialogState extends State<SubjectDialog>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               LimitedTextField(
-                limit: WorkspaceLimits.name,
-                validator: WorkspaceLimits.nameError,
+                limit: WorkspaceLimits.categoryName,
+                validator: _nameError,
+                validateOnBlur: true,
+                errorText: submissionError,
                 enabled: !_saving,
                 controller: _controller,
-                autofocus: true,
+                autofocus: _creating,
                 decoration: const InputDecoration(
                   labelText: 'Subject name',
                   hintText: 'e.g., Mathematics, Physics',
                 ),
                 onSubmitted: (_) => _save(),
               ),
-              const SizedBox(height: AppTheme.spacingMedium),
-              SaveStatus(error: submissionError),
               Text(
                 'Color',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(

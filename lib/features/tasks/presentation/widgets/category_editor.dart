@@ -6,6 +6,7 @@ import '../../../../core/data/workspace_limits.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_motion.dart';
+import '../../../../core/utils/input_mode.dart';
 import '../../../../core/widgets/limited_text_field.dart';
 import '../../../../core/widgets/bounded_reorderable_list.dart';
 import 'editor_panel.dart';
@@ -95,6 +96,8 @@ class IconChoice extends StatelessWidget {
     required this.color,
     required this.onPressed,
     this.labelStyle,
+    this.showLabel = true,
+    this.filledPanel = false,
   });
 
   final String label;
@@ -102,29 +105,49 @@ class IconChoice extends StatelessWidget {
   final Color color;
   final VoidCallback? onPressed;
   final TextStyle? labelStyle;
+  final bool showLabel;
+  final bool filledPanel;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(label, style: labelStyle),
-      const SizedBox(height: AppTheme.spacingSmall),
-      IconButton.outlined(
-        tooltip: 'Choose ${label.toLowerCase()}',
-        onPressed: onPressed,
-        style: IconButton.styleFrom(
-          foregroundColor: color,
-          backgroundColor: boardRowBackground(color),
-          side: BorderSide(color: color.withValues(alpha: .45)),
-          minimumSize: const Size.square(48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-          ),
+  Widget build(BuildContext context) {
+    final button = IconButton.outlined(
+      tooltip: 'Choose ${label.toLowerCase()}',
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        foregroundColor: color,
+        backgroundColor: boardRowBackground(color),
+        side: BorderSide(color: color.withValues(alpha: .45)),
+        minimumSize: const Size.square(48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         ),
-        icon: Icon(icon, size: 24),
       ),
-    ],
-  );
+      icon: Icon(icon, size: 24),
+    );
+    final selector = filledPanel
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppTheme.spacingSmall),
+              child: Center(child: button),
+            ),
+          )
+        : button;
+    if (!showLabel) return selector;
+    return Column(
+      crossAxisAlignment: filledPanel
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.start,
+      children: [
+        Text(label, style: labelStyle),
+        const SizedBox(height: AppTheme.spacingSmall),
+        selector,
+      ],
+    );
+  }
 }
 
 class ColorChoices extends StatelessWidget {
@@ -175,12 +198,17 @@ Future<CategoryDraft?> editCategory(
   required String label,
   required bool useIcon,
   CategoryDraft? initial,
+  List<CategoryDraft> siblings = const [],
 }) async {
   FocusManager.instance.primaryFocus?.unfocus();
   final result = await showMotionDialog<CategoryDraft>(
     context: context,
-    builder: (_) =>
-        _CategoryDialog(label: label, useIcon: useIcon, initial: initial),
+    builder: (_) => _CategoryDialog(
+      label: label,
+      useIcon: useIcon,
+      initial: initial,
+      siblings: siblings,
+    ),
   );
   if (context.mounted) FocusScope.of(context).unfocus();
   return result;
@@ -191,10 +219,12 @@ class _CategoryDialog extends StatefulWidget {
     required this.label,
     required this.useIcon,
     this.initial,
+    this.siblings = const [],
   });
   final String label;
   final bool useIcon;
   final CategoryDraft? initial;
+  final List<CategoryDraft> siblings;
   @override
   State<_CategoryDialog> createState() => _CategoryDialogState();
 }
@@ -203,7 +233,6 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   late final TextEditingController _controller;
   late String _icon;
   late int _color;
-  String? _error;
   bool _closing = false;
   @override
   void initState() {
@@ -215,8 +244,17 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   }
 
   void _changed() {
-    setState(() => _error = null);
+    setState(() {});
   }
+
+  String? _nameError(String? value) => WorkspaceLimits.namedItemError(
+    value,
+    originalName: widget.initial?.name,
+    otherNames: widget.siblings
+        .where((item) => item.id != widget.initial?.id)
+        .map((item) => item.name),
+    kind: widget.label,
+  );
 
   bool get _hasChanges =>
       widget.initial == null ||
@@ -224,11 +262,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       _icon != widget.initial!.icon ||
       _color != widget.initial!.color;
   bool get _canSave =>
-      !_closing &&
-      _hasChanges &&
-      _controller.text.trim().isNotEmpty &&
-      (_controller.text.trim().length <= WorkspaceLimits.categoryName ||
-          _controller.text.trim() == widget.initial?.name);
+      !_closing && _hasChanges && _nameError(_controller.text) == null;
   void _save() {
     if (!_canSave) return;
     setState(() => _closing = true);
@@ -258,14 +292,16 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   Widget _nameField() => LimitedTextField(
     controller: _controller,
     limit: WorkspaceLimits.categoryName,
-    validator: (_) => _error,
+    validator: _nameError,
+    autofocus: widget.initial == null,
+    validateOnBlur: true,
     onSubmitted: (_) => _save(),
-    errorText: _error,
     decoration: const InputDecoration(labelText: 'Name'),
   );
 
-  Widget _iconChoice() => IconChoice(
+  Widget _iconChoice({bool showLabel = true}) => IconChoice(
     label: 'Icon',
+    showLabel: showLabel,
     color: AppColors.primary,
     onPressed: () async {
       final chosen = await chooseBoardIcon(context, _icon);
@@ -294,8 +330,39 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         if (widget.useIcon)
           LayoutBuilder(
             builder: (context, constraints) {
-              if (Theme.of(context).platform == TargetPlatform.windows &&
-                  constraints.maxWidth >= 320) {
+              if (Theme.of(context).platform == TargetPlatform.android &&
+                  constraints.maxWidth >= 240) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Icon'),
+                    const SizedBox(height: AppTheme.spacingSmall),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(
+                              bottom: LimitedTextField.supportingHeightOf(
+                                context,
+                              ),
+                            ),
+                            child: AspectRatio(
+                              aspectRatio: 1,
+                              child: _iconChoice(showLabel: false),
+                            ),
+                          ),
+                          const SizedBox(width: AppTheme.spacingMedium),
+                          Expanded(child: _nameField()),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+              if (constraints.maxWidth >= 320 ||
+                  (Theme.of(context).platform != TargetPlatform.windows &&
+                      constraints.maxWidth >= 240)) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -312,19 +379,14 @@ class _CategoryDialogState extends State<_CategoryDialog> {
               }
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _nameField(),
-                  const SizedBox(height: 20),
-                  _iconChoice(),
-                ],
+                children: [_nameField(), _iconChoice()],
               );
             },
           )
         else ...[
           _nameField(),
-          const SizedBox(height: 20),
           const Text('Color'),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppTheme.spacingSmall),
           ColorChoices(
             color: _color,
             onChanged: (value) => setState(() => _color = value),
@@ -387,7 +449,12 @@ class EditableCategoryList extends StatelessWidget {
       );
       return;
     }
-    final value = await editCategory(context, label: label, useIcon: useIcon);
+    final value = await editCategory(
+      context,
+      label: label,
+      useIcon: useIcon,
+      siblings: items,
+    );
     if (value != null) onChanged([...items, value]);
   }
 
@@ -424,6 +491,7 @@ class EditableCategoryList extends StatelessWidget {
           onChanged(values);
         },
         itemBuilder: (context, index) {
+          final touch = usesTouchControls(context);
           final item = items[index];
           Future<void> editItem() async {
             final edited = await editCategory(
@@ -431,6 +499,7 @@ class EditableCategoryList extends StatelessWidget {
               label: label,
               useIcon: useIcon,
               initial: item,
+              siblings: items,
             );
             if (edited != null && context.mounted) {
               onChanged([
@@ -440,11 +509,24 @@ class EditableCategoryList extends StatelessWidget {
             }
           }
 
-          return Padding(
-            key: ValueKey(item.id),
+          final handle = Container(
+            width: 48,
+            height: 48,
+            color: Colors.transparent,
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.drag_indicator_rounded,
+              size: 18,
+              color: AppColors.textTertiary,
+            ),
+          );
+          final row = Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Tooltip(
               message: 'Edit $label',
+              triggerMode: touch
+                  ? TooltipTriggerMode.manual
+                  : TooltipTriggerMode.longPress,
               child: Material(
                 color: AppColors.surfaceVariant,
                 borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -473,6 +555,9 @@ class EditableCategoryList extends StatelessWidget {
                   ),
                   title: Tooltip(
                     message: item.name,
+                    triggerMode: touch
+                        ? TooltipTriggerMode.manual
+                        : TooltipTriggerMode.longPress,
                     child: Text(
                       item.name,
                       maxLines: 2,
@@ -483,21 +568,10 @@ class EditableCategoryList extends StatelessWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ReorderableDragStartListener(
-                        index: index,
-                        child: const SizedBox(
-                          width: 28,
-                          height: 48,
-                          child: Icon(
-                            Icons.drag_indicator_rounded,
-                            size: 18,
-                            color: AppColors.textTertiary,
-                          ),
-                        ),
-                      ),
+                      ReorderableDragStartListener(index: index, child: handle),
                       IconButton(
                         tooltip: 'Remove $label',
-                        icon: const Icon(Icons.delete_outline),
+                        icon: const Icon(Icons.delete_outline, size: 18),
                         onPressed: () => onChanged(
                           items.where((value) => value.id != item.id).toList(),
                         ),
@@ -508,6 +582,13 @@ class EditableCategoryList extends StatelessWidget {
               ),
             ),
           );
+          return touch
+              ? ReorderableDelayedDragStartListener(
+                  key: ValueKey(item.id),
+                  index: index,
+                  child: row,
+                )
+              : KeyedSubtree(key: ValueKey(item.id), child: row);
         },
       ),
     ],

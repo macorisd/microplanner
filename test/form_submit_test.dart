@@ -182,28 +182,33 @@ void main() {
       h.dispose();
     });
 
-    testWidgets(
-      '$platform new board Enter matches enabled default-name Create',
-      (tester) async {
-        var calls = 0;
-        await open(
-          tester,
-          platform,
-          (_) => NewBoardDialog(
-            onSave: (name) async {
-              expect(name, isNull);
-              calls++;
-              return true;
-            },
-          ),
-        );
-        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-        await tester.pumpAndSettle();
-        expect(calls, 1);
-        expect(find.byType(NewBoardDialog), findsNothing);
-        await tester.pumpWidget(const SizedBox());
-      },
-    );
+    testWidgets('$platform new board requires a name before Enter creates it', (
+      tester,
+    ) async {
+      var calls = 0;
+      await open(
+        tester,
+        platform,
+        (_) => NewBoardDialog(
+          onSave: (name) async {
+            expect(name, 'Named board');
+            calls++;
+            return true;
+          },
+        ),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(calls, 0);
+      expect(find.text('Please enter a name.'), findsNothing);
+      await tester.enterText(find.byType(TextFormField), 'Named board');
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(calls, 1);
+      expect(find.byType(NewBoardDialog), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    });
 
     testWidgets(
       '$platform subject Enter after color change submits once while pending',

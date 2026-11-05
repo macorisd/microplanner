@@ -20,6 +20,7 @@ class WorkspaceController extends ChangeNotifier {
   int _refreshVersion = 0;
   bool _loading = false;
   bool _saving = false;
+  Set<String> _savingBoardIds = const {};
   bool _online = false;
   bool _hasCache = false;
   bool _canImport = false;
@@ -33,6 +34,8 @@ class WorkspaceController extends ChangeNotifier {
   String? _legacySource;
   DateTime? get cachedSeenAt => _cachedSeenAt;
   WorkspaceOutbox? get outbox => _outbox;
+  Set<String> get pendingBoardIds =>
+      _outbox?.pendingBoardIds ?? _savingBoardIds;
   WorkspaceController({
     required this.auth,
     required this.api,
@@ -55,11 +58,32 @@ class WorkspaceController extends ChangeNotifier {
                 item.after != null)
               item.id,
     };
-    if (pendingNew.isEmpty) return _snapshot;
-    final additions = queue.projected.tasks.where(
+    final projected = queue.projected;
+    final existingBoards = _snapshot.boards.map((board) => board.id).toSet();
+    final newBoards = projected.boards
+        .where((board) => !existingBoards.contains(board.id))
+        .toList();
+    if (pendingNew.isEmpty && newBoards.isEmpty) return _snapshot;
+    final newBoardIds = newBoards.map((board) => board.id).toSet();
+    final additions = projected.tasks.where(
       (task) => pendingNew.contains(task.id) && !existing.contains(task.id),
     );
-    return _snapshot.copyWith(tasks: [..._snapshot.tasks, ...additions]);
+    return _snapshot.copyWith(
+      tasks: [..._snapshot.tasks, ...additions],
+      boards: [..._snapshot.boards, ...newBoards],
+      subjects: [
+        ..._snapshot.subjects,
+        ...projected.subjects.where(
+          (subject) => newBoardIds.contains(subject.boardId),
+        ),
+      ],
+      boardTypes: [
+        ..._snapshot.boardTypes,
+        ...projected.boardTypes.where(
+          (type) => newBoardIds.contains(type.boardId),
+        ),
+      ],
+    );
   }
 
   bool get isLoading => _loading;
@@ -106,6 +130,7 @@ class WorkspaceController extends ChangeNotifier {
     _canImport = false;
     _dismissingImport = false;
     _saving = false;
+    _savingBoardIds = const {};
     _loading = owner != null;
     _error = null;
     notifyListeners();
@@ -400,6 +425,7 @@ class WorkspaceController extends ChangeNotifier {
     final token = auth.token!;
     final generation = _generation;
     _saving = true;
+    _savingBoardIds = WorkspaceDelta.between(_snapshot, data).savingBoardIds;
     _error = null;
     notifyListeners();
     try {
@@ -435,6 +461,7 @@ class WorkspaceController extends ChangeNotifier {
       if (e.code == 'already_imported') _canImport = false;
       if (e.code == 'revision_conflict') {
         _saving = false;
+        _savingBoardIds = const {};
         await refresh();
         if (_current(generation, owner)) _error = e.message;
       }
@@ -449,6 +476,7 @@ class WorkspaceController extends ChangeNotifier {
     } finally {
       if (_current(generation, owner)) {
         _saving = false;
+        _savingBoardIds = const {};
         notifyListeners();
       }
     }

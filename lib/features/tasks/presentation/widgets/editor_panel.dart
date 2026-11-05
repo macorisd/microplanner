@@ -14,19 +14,26 @@ class EditorPanel extends StatelessWidget {
     this.dialog = false,
     this.onSubmit,
     this.canSubmit = false,
+    this.footer,
   });
   final Widget child;
   final bool dialog;
   final VoidCallback? onSubmit;
   final bool canSubmit;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
     final compact =
         usesTouchControls(context) || MediaQuery.sizeOf(context).width < 600;
     final contents = SingleChildScrollView(
-      padding: EdgeInsets.all(
+      padding: EdgeInsets.fromLTRB(
         compact ? AppTheme.spacingMedium : AppTheme.spacingLarge,
+        compact ? AppTheme.spacingMedium : AppTheme.spacingLarge,
+        compact ? AppTheme.spacingMedium : AppTheme.spacingLarge,
+        footer == null
+            ? (compact ? AppTheme.spacingMedium : AppTheme.spacingLarge)
+            : AppTheme.spacingSmall,
       ),
       child: child,
     );
@@ -36,7 +43,31 @@ class EditorPanel extends StatelessWidget {
           horizontal: compact ? 16 : 40,
           vertical: 24,
         ),
-        child: SizedBox(width: 480, child: contents),
+        clipBehavior: Clip.antiAlias,
+        child: SizedBox(
+          width: 480,
+          child: footer == null
+              ? contents
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Flexible(child: contents),
+                    Material(
+                      color: AppColors.surface,
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          compact ? 16 : 24,
+                          8,
+                          compact ? 16 : 24,
+                          8,
+                        ),
+                        child: footer,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
       );
       return onSubmit == null
           ? panel

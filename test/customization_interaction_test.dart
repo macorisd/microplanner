@@ -124,6 +124,30 @@ void main() {
               tester.getRect(find.byTooltip('Color $i')),
           ];
           expect(swatches.map((r) => r.top).toSet().length, 3);
+          final iconButton = find.byTooltip('Choose board icon');
+          final panelRect = tester.getRect(
+            find
+                .ancestor(of: iconButton, matching: find.byType(DecoratedBox))
+                .first,
+          );
+          expect(panelRect.top, swatches.first.top);
+          expect(panelRect.bottom, swatches.last.bottom);
+          expect(
+            tester.getCenter(
+              find.descendant(of: iconButton, matching: find.byType(Icon)),
+            ),
+            panelRect.center,
+          );
+          expect(tester.getSize(iconButton), const Size.square(48));
+          await tester.tapAt(panelRect.topLeft + const Offset(4, 4));
+          await tester.pumpAndSettle();
+          expect(find.text('Choose an icon'), findsNothing);
+          await tester.tap(iconButton);
+          await tester.pumpAndSettle();
+          expect(find.text('Choose an icon'), findsOneWidget);
+          await tester.tap(find.text('Cancel').last);
+          await tester.pumpAndSettle();
+
           for (var row = 0; row < 3; row++) {
             expect(
               swatches.skip(row * 7).take(7).map((r) => r.top).toSet().length,
@@ -148,11 +172,24 @@ void main() {
         final name =
             inputContainer.localToGlobal(Offset.zero) & inputContainer.size;
         final icon = tester.getRect(find.byTooltip('Choose icon'));
-        if (platform == TargetPlatform.windows) {
-          expect(icon.right, lessThan(name.left));
-          expect(icon.bottom, closeTo(name.bottom, .1));
-        } else {
-          expect(icon.top, greaterThan(name.bottom));
+        expect(icon.right, lessThan(name.left));
+        expect(icon.bottom, closeTo(name.bottom, .1));
+        if (platform == TargetPlatform.android) {
+          expect(icon.top, closeTo(name.top, .1));
+          expect(icon.height, closeTo(name.height, .1));
+          expect(icon.width, closeTo(icon.height, .1));
+          tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          await tester.pumpAndSettle();
+          final scaledInput = InputDecorator.containerOf(
+            tester.element(find.byType(EditableText)),
+          )!;
+          final scaledName =
+              scaledInput.localToGlobal(Offset.zero) & scaledInput.size;
+          final scaledIcon = tester.getRect(find.byTooltip('Choose icon'));
+          expect(scaledIcon.top, closeTo(scaledName.top, .1));
+          expect(scaledIcon.height, closeTo(scaledName.height, .1));
+          expect(scaledIcon.width, closeTo(scaledIcon.height, .1));
         }
         expect(tester.takeException(), isNull);
         await tester.tap(find.text('Cancel'));

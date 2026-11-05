@@ -110,10 +110,7 @@ void main() {
           await tester.pumpAndSettle();
           await tester.enterText(field, '');
           await tester.pumpAndSettle();
-          expect(
-            find.text('Please enter a name.'),
-            kind == 'new board' ? findsNothing : findsOneWidget,
-          );
+          expect(find.text('Please enter a name.'), findsOneWidget);
           expect(tester.getRect(find.byType(Dialog)), dialog);
           expect(tester.getRect(field), fieldRect);
           expect(tester.getRect(find.text('Cancel')), cancelRect);

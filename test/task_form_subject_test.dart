@@ -133,6 +133,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Pending board');
+    await tester.pump();
     await tester.tap(find.text('Create'));
     await tester.pump();
     await tester.testTextInput.receiveAction(TextInputAction.done);

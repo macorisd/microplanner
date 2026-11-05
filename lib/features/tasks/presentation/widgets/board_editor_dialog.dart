@@ -41,6 +41,17 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
   late final List<CategoryDraft> _initialTypes;
   bool _saving = false;
   String? _error;
+  final _errorKey = GlobalKey();
+
+  void _showError(String message) {
+    setState(() => _error = message);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final errorContext = _errorKey.currentContext;
+      if (mounted && errorContext != null) {
+        Scrollable.ensureVisible(errorContext, alignment: 1);
+      }
+    });
+  }
 
   bool get _hasChanges =>
       _name.text.trim() != _originalBoard.name ||
@@ -49,11 +60,20 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
       !sameCategories(_subjects, _initialSubjects) ||
       !sameCategories(_types, _initialTypes);
   bool get _canSave =>
-      !_saving &&
-      _hasChanges &&
-      _name.text.trim().isNotEmpty &&
-      (_name.text.trim().length <= WorkspaceLimits.boardName ||
-          _name.text.trim() == _originalBoard.name);
+      !_saving && _hasChanges && _nameError(_name.text) == null;
+
+  String? _nameError(String? value) => WorkspaceLimits.namedItemError(
+    value,
+    limit: WorkspaceLimits.boardName,
+    originalName: _originalBoard.name,
+    otherNames:
+        (context.read<WorkspaceController>().outbox?.projected ??
+                context.read<WorkspaceController>().snapshot)
+            .boards
+            .where((board) => board.id != widget.board.id)
+            .map((board) => board.name),
+    kind: 'board',
+  );
 
   @override
   void initState() {
@@ -130,6 +150,15 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
       ),
     );
     if (selected == null || !mounted) return;
+    final names = selected.types
+        .map((type) => WorkspaceLimits.nameKey(type.name))
+        .toSet();
+    if (names.length != selected.types.length) {
+      _showError(
+        'This default list contains duplicate task type names. Edit the list before applying it.',
+      );
+      return;
+    }
     final result = replaceTypeList(
       existing: [
         for (final type in _types)
@@ -214,10 +243,7 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
     if (workspace.ownerId != _owner ||
         workspace.auth.token != _token ||
         !workspace.canWrite) {
-      setState(
-        () => _error =
-            'Your account or connection changed. Refresh and try again.',
-      );
+      _showError('Your account or connection changed. Refresh and try again.');
       return;
     }
     final after = _base.copyWith(
@@ -274,13 +300,12 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
     if (saved) {
       closeForm();
     } else {
-      setState(() {
-        _saving = false;
-        _error =
-            submissionError ??
+      setState(() => _saving = false);
+      _showError(
+        submissionError ??
             workspace.error ??
-            'Could not save changes. Refresh and try again.';
-      });
+            'Could not save changes. Refresh and try again.',
+      );
     }
   }
 
@@ -291,6 +316,29 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
       dialog: true,
       canSubmit: _canSave,
       onSubmit: _save,
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          OverflowBar(
+            alignment: MainAxisAlignment.end,
+            spacing: 8,
+            children: [
+              TextButton(
+                onPressed: _saving ? null : closeForm,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red.shade700,
+                ),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: _canSave ? _save : null,
+                child: const Text('Save changes'),
+              ),
+            ],
+          ),
+        ],
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -305,15 +353,21 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
             controller: _name,
             limit: WorkspaceLimits.boardName,
             enabled: !_saving,
-            validator: (_) => null,
+            validator: _nameError,
+            validateOnBlur: true,
             onSubmitted: (_) => _save(),
             decoration: const InputDecoration(labelText: 'Board name'),
           ),
           LayoutBuilder(
             builder: (context, constraints) {
+              final desktop =
+                  Theme.of(context).platform == TargetPlatform.windows;
+              final sideBySide = desktop && constraints.maxWidth >= 432;
               final icon = IconChoice(
                 label: 'Board icon',
                 labelStyle: Theme.of(context).textTheme.titleMedium,
+                showLabel: !sideBySide,
+                filledPanel: desktop,
                 color: Color(_color),
                 icon: boardIcons[_icon] ?? Icons.dashboard_rounded,
                 onPressed: _saving
@@ -341,14 +395,47 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
                   ),
                 ],
               );
-              if (Theme.of(context).platform == TargetPlatform.windows &&
-                  constraints.maxWidth >= 432) {
-                return Row(
+              if (sideBySide) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(width: 328, child: colors),
-                    const SizedBox(width: AppTheme.spacingMedium),
-                    Expanded(child: icon),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 328,
+                          child: Text(
+                            'Board color',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        const SizedBox(width: AppTheme.spacingMedium),
+                        Expanded(
+                          child: Text(
+                            'Board icon',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTheme.spacingSmall),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(
+                            width: 328,
+                            child: ColorChoices(
+                              color: _color,
+                              onChanged: (value) =>
+                                  setState(() => _color = value),
+                            ),
+                          ),
+                          const SizedBox(width: AppTheme.spacingMedium),
+                          Expanded(child: icon),
+                        ],
+                      ),
+                    ),
                   ],
                 );
               }
@@ -386,24 +473,7 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
               label: const Text('Apply default list'),
             ),
           ),
-          FormMessage(message: _error),
-          OverflowBar(
-            alignment: MainAxisAlignment.end,
-            spacing: 8,
-            children: [
-              TextButton(
-                onPressed: _saving ? null : closeForm,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red.shade700,
-                ),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: _canSave ? _save : null,
-                child: const Text('Save changes'),
-              ),
-            ],
-          ),
+          FormMessage(key: _errorKey, message: _error),
         ],
       ),
     ),

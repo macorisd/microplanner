@@ -5,7 +5,8 @@ Applies to navigation, forms and cloud state. Sources: approved plans
 [0.6.0](../plans/plan-20261028T185419457Z-version0.6.0.md),
 [0.9.0](../plans/plan-20261030T112258066Z-version0.9.0.md),
 [0.10.0](../plans/plan-20261030T185610007Z-version0.10.0.md), and explicit user
-refinements through validated 0.10.2. Later instructions below supersede older
+refinements audited through [PR #19](https://github.com/macorisd/microplanner/pull/19)
+on 2026-11-05. Later instructions below supersede older
 plan choices (for example, restoring each board's column instead of Upcoming).
 
 ## Navigation and focus
@@ -24,12 +25,26 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Tapping/clicking the open board heading opens its existing Edit Board dialog;
   the heading's hover/focus Delete action opens the same confirmation as sidebar
   deletion and must not also open the editor. Source: user refinement, 2026-11-04.
+- Sidebar Edit/Delete actions must not also select their board. Keep name/row
+  selection separate from nested actions, including disabled targets. Source:
+  [PR #15](https://github.com/macorisd/microplanner/pull/15) and the PR #19 correction.
 - Editing must not select/focus the title or open the Android keyboard by default.
   Opening date/time/selectors or expanded description clears stale text focus.
   Closing them must not restore focus or reopen the keyboard unexpectedly.
 - Android text fields request sentence capitalization (including names and
   descriptions) without rewriting entered text; date/numeric keyboards keep their
   appropriate input modes. Apply this through the shared text-field component.
+- Every creation form with a name (tasks, boards, subjects, task types and default
+  lists, including reviewed failed creation drafts) focuses Name on opening.
+  A pristine empty field shows no error; leaving it empty after focus or clearing
+  its contents shows "Please enter a name." and keeps Save/Create disabled.
+  Edit forms do not focus Name automatically. Source: user refinement, 2026-11-05.
+- Save in an edit form is enabled only for a valid change; reverting all changes
+  disables it again. Invalid or unchanged saves must not enqueue redundant writes.
+  Source: [PR #15](https://github.com/macorisd/microplanner/pull/15).
+- Repeated taps/keys must not open duplicate instances of the same dialog or
+  picker, including nested editors, or close/submit a route twice. Keep distinct
+  nested routes usable. Source: PR #15's approved interaction refinements.
 - Back from expanded description returns to Edit Task with its draft intact.
   Android Back first dismisses the keyboard when appropriate; a later Back follows
   the current dialog/navigation level. Test Back, Escape and dismissal paths.
@@ -48,8 +63,11 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Date pickers use fixed internal bounds from 1900-01-01 through 2999-12-31.
   Opening an older legacy deadline clamps only the picker's initial selection;
   cancellation and unrelated edits preserve saved data. Do not expose numeric
-  bounds in validation messages: use the agreed playful English messages for
-  dates below and above the range. Source: user refinement, 2026-11-04.
+  bounds in validation messages. For dates below the range, use "A bit odd to
+  plan something before you were born, isn't it?" For dates above it, use "Trust
+  me, you won't have to worry about this task by then." Show either message only
+  after complete date entry, as specified below. Source: user refinement in
+  [PR #17](https://github.com/macorisd/microplanner/pull/17), 2026-11-04.
 - Manual dates accept ASCII digits only and insert slashes after the day and
   month (`dd/MM/yyyy`). Until all eight digits are present, show no validation
   message and keep Apply/Enter disabled. Time inputs also ignore everything
@@ -71,6 +89,13 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Disable controls on a task only while its real operation is unresolved. Once it
   has arrived in the destination, controls work immediately even during its color
   fade; another move/delete starts smoothly from the current visual state.
+- While a board creation/save is unresolved, disable that board's Edit/Delete
+  controls in the sidebar and open heading. Other boards and navigation remain
+  available; confirmation or a definite failure releases the pending state.
+  Include saves that change only subjects or task types. Newly accepted boards
+  appear in the sidebar immediately. Source: user refinement, 2026-11-05.
+  Disabled Edit/Delete targets consume clicks without selecting/opening the board;
+  its name area still selects it. Source: user correction, 2026-11-05.
 - Offline mode shows the last account-scoped cache and prevents new edits. Startup
   sync happens while the logo is visible; do not flash a sync notice on first
   entering the board. Do not expose another account's data on sign-out/switch.
@@ -84,22 +109,27 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 ## Task transition contract
 
 - Destination colors: Completed green, Late yellow, Upcoming blue; deletion red.
-  All paths, including deadline edits, refresh/startup reclassification and bulk
-  changes, need origin/destination detail without moving the user's viewport.
+  Column moves from any path, including deadline edits, refresh/startup
+  reclassification and bulk changes, need origin/destination detail without
+  moving the user's viewport.
 - For column moves, color the origin for at least **1 second**, then keep its
   animated colored haze until the write is confirmed and sync is finished. Only
   then transfer. The destination holds full color **1.5 seconds** and fades to its
   normal surface over **1 second** (2.5 seconds total), even on a fast response.
-- Creation/deletion have a **2.5-second minimum from the original action** in
-  their single column, also awaiting confirmed synchronization when necessary.
-  No additional destination timer for these actions. Creation appears pending
-  immediately; deletion remains visually pending until it can disappear safely.
+- Creation, deletion and edits that stay in the same board/column show feedback
+  only while their own real operation is unresolved. End it on confirmation or
+  definite failure, without a minimum duration or a destination hold/fade;
+  unrelated pending writes must not prolong it. Creation appears pending
+  immediately; deletion remains present until confirmed, and failure restores
+  the confirmed state. Source: [PR #14](https://github.com/macorisd/microplanner/pull/14)
+  (0.10.3), which supersedes PR #13's earlier standalone minimum duration.
 - Completion strikes animate left to right; uncompletion reverses them. Source
   completion strike is black; destination uses its normal muted appearance without
   a sudden end-of-animation color change. Keep the colored haze alive on slow sync.
-- Independent transitions can overlap. Confirmed failures restore original state
-  with inverse motion; late responses, old timers, account switches or new actions
-  must not overwrite newer state. Check chains during the destination fade.
+- Independent transitions can overlap. Failed column moves restore original state
+  with inverse motion; standalone actions end their pending feedback as above.
+  Late responses, old timers, account switches or new actions must not overwrite
+  newer state. Check chains during the destination fade.
 
 ## Board customization and account pages
 
@@ -116,16 +146,41 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
 - Subjects and types are ordered, editable board-local lists, limited to 25 each.
   Names are trimmed, nonempty and at most 50 characters. Preserve longer existing
   names and over-limit legacy subject lists; unrelated edits never truncate them.
+- New boards start with no subjects and the six types Homework, Test,
+  Presentation, Project, Reading and Other. No type remains an unassigned choice,
+  not a removable entry. Explain the 25-item limit when an addition is attempted
+  beyond it, rather than showing a permanent warning. Source: the approved
+  0.11.0 plan, B02, and [PR #15](https://github.com/macorisd/microplanner/pull/15).
+- Preserve board order through subsequent queued edits, refresh and cache restore;
+  reordering retains board IDs. Windows board rows can be dragged immediately;
+  Android rows require a long press, while ordinary swipes scroll without
+  reordering. Source: PR #15's ordering and touch refinements.
 - Dragged boards, subjects and task types stay visually inside their own visible
   list region, including inside a scrolled form. They cannot cover form headings,
   other category sections or footer actions. Keep first/last drop positions
   reachable, preserve IDs and show complete rounded rows throughout the drag.
+- Board names are unique within an account. Subject and task type names are unique
+  within their board; task types are also unique within each default list.
+  Compare names ignoring case and outer whitespace, irrespective of color/icon.
+  Enforce creation and renaming in forms, queued/rebased writes and the API.
+  Preserve existing duplicates and assignments on unrelated edits; allow users
+  to resolve them without silently deleting or renaming their data.
+  Source: explicit user decision, 2026-11-05.
 - Subjects/task types are reordered by dragging their handles; omit redundant
   three-dot Move up/Move down menus, including in default-list editors.
+- Subject/type drag handles have a full 48-pixel square hit area. On Android,
+  dragging the handle starts immediately; the name area requires a long press,
+  as with sidebar boards. Neither gesture shows an Edit/name tooltip or opens
+  the editor. Normal name taps still edit; Windows handle behavior and desktop
+  hover tooltips remain unchanged. Source: user refinement, 2026-11-05.
 - Applying a default list makes an independent copy. Match existing type names
   ignoring case/outer whitespace only when unambiguous; confirm the number of
   assignments that will be cleared. Removing/reordering categories must not
   silently lose or reassign task associations.
+- Removing/replacing subjects or types preserves the tasks themselves. Before
+  saving destructive category changes, confirm how many task assignments will
+  be cleared; canceling leaves saved categories and associations intact. Source:
+  the approved 0.11.0 plan, B02/Q04, and PR #15.
 - The five editable initial lists are Academic tasks, Software development, Work,
   Personal life and Creative projects. Editing/deleting a default never changes
   boards that previously copied it. Preserve the unassigned No type choice.

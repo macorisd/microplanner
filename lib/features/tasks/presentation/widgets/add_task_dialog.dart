@@ -244,6 +244,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
                     // Task name
                     LimitedTextField(
                       controller: _nameController,
+                      validateOnBlur: true,
                       limit: WorkspaceLimits.name,
                       enabled: !_isLoading,
                       decoration: const InputDecoration(
@@ -294,6 +295,10 @@ class _AddTaskDialogState extends State<AddTaskDialog>
                     _buildSubjectDropdown(subjects),
                     const SizedBox(height: AppTheme.spacingMedium),
 
+                    // Type dropdown
+                    _buildTypeDropdown(typeOptions, customized),
+                    const SizedBox(height: AppTheme.spacingMedium),
+
                     // Deadline date and time
                     if (MediaQuery.sizeOf(context).width < 600) ...[
                       _buildDeadlinePicker(context),
@@ -307,10 +312,6 @@ class _AddTaskDialogState extends State<AddTaskDialog>
                           _buildTimePicker(context),
                         ],
                       ),
-                    const SizedBox(height: AppTheme.spacingMedium),
-
-                    // Type dropdown
-                    _buildTypeDropdown(typeOptions, customized),
                     const SizedBox(height: AppTheme.spacingMedium),
 
                     // Priority selector

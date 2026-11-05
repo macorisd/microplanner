@@ -5,7 +5,9 @@ Applies to visible UI on Windows and Android. Source: user-approved plans
 [0.4.0](../plans/plan-20261025T191235062Z-version0.4.0.md),
 [0.5.0](../plans/plan-20261027T085951733Z-version0.5.0.md),
 [0.10.0](../plans/plan-20261030T185610007Z-version0.10.0.md), and subsequent explicit
-user refinements validated through 0.10.2 (consolidated 2026-11-02).
+user refinements (initial consolidation 2026-11-02; audited against
+[PR #13](https://github.com/macorisd/microplanner/pull/13) through
+[PR #19](https://github.com/macorisd/microplanner/pull/19) on 2026-11-05).
 
 ## Palette and components
 
@@ -29,24 +31,36 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
 
 ## Forms and cards
 
+- Task creation and editing forms place Task type immediately after Subject and
+  before Deadline and Time on Windows and Android. Source: user refinement,
+  2026-11-05.
 - Validation and save-error messages must not change form/dialog height or move
   its controls. Reserve stable message space in shared fields and status areas;
   preserve complete messages through scrolling and accessibility on narrow screens.
   Source: user correction, 2026-11-04.
 - Board forms keep compact vertical spacing: no extra gap after the name's
   reserved message row, no divider between Subjects and Task types, and a compact
-  fixed error slot before Edit Board's actions. New Board shares its name's
-  fixed message row with save failures instead of reserving a second status area.
+  stable save-error slot in Edit Board's scrolling content. New Board shares its
+  fixed name message row with save failures instead of reserving a second status area.
   Source: user spacing review, 2026-11-04.
 - Align adjacent icons and punctuation with the text input's filled surface,
   excluding its reserved validation area. Date/time mode switches, Cancel and
   Apply share a vertically centered footer row aligned to the right edge; wrap
   only when space requires it.
   Source: user screenshot review, 2026-11-04.
+- Edit Board keeps Cancel and Save changes in a compact white footer outside its
+  scrolling content, visible at every scroll position and above the keyboard.
+  Center the buttons vertically with equal compact top/bottom padding; keep the
+  stable save-error row in the scrolling content and reveal it when an error occurs.
+  Subject forms omit extra spacing after Name's reserved validation row before
+  Color. Source: user refinement, 2026-11-05.
 - Expanded description is a dialog with the **same size and shape** as its task
   form, a back button, the noneditable task title and description field. Keep
   unsaved content. Its expand control is compact, uses matching colors and aligns
   with adjacent fields such as Subject; it is not an oversized separate action.
+- Description scrollbars must remain clear of the entered text and its selection,
+  including in the expanded editor; reserve space instead of painting the thumb
+  over text. Source: [PR #14](https://github.com/macorisd/microplanner/pull/14).
 - Preserve compact task cards on Android: bottom spacing comparable to side
   spacing, no blank subject row or extra title/date gap when Subject is absent.
   Align the checkbox with the date's left edge. Priority has breathing room after
@@ -77,6 +91,19 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
 - Motion should be smooth, light and meaningful. Respect reduced motion, avoid
   idle tickers and broad rebuilds, and measure performance-sensitive work rather
   than claiming smoothness from an automated widget test alone.
+- Expanding/collapsing sidebar Boards uses a brief coordinated size, fade and
+  slight vertical slide, with the disclosure rotating in sync. Reverse smoothly
+  on repeated input; collapsed controls must not receive input or keep animating.
+- During a board's creation or save, a small neutral light travels around its
+  rounded sidebar row and open heading until synchronization resolves. Keep a
+  soft luminous tail and visible contrast, without sweeping bands or shading
+  across the interior. Preserve board colors and content; omit task-style color
+  washes and destination holds. Reduced motion keeps the light stationary.
+  On Windows and Android, draw the moving light over the card's perimeter using
+  the complete surface bounds, aligned evenly at the top and bottom, including
+  display scaling. Android shares the approved Windows placement.
+  Source: user requested a different, minimal but noticeable approach after
+  rejecting the interior sheen, 2026-11-05.
 - Windows keeps the animated startup logo. Android starts with a centered static
   logo and a smooth reveal toward the saved column's logo color. Do not restore
   the Android shuffling startup animation that visibly froze during initialization.
@@ -146,13 +173,25 @@ icon-only selector tinted with the current board color. Type editors show an
 as its compact button. Use matching rounded surfaces and accessible tooltips.
 Windows subject/type rows center 20-pixel markers vertically with names and use
 an 8-pixel gap, matching Android's compact separation.
+Subject/type list Remove glyphs use 18 pixels on both platforms, centered with
+the row and adjacent drag handle; preserve the existing button hit area.
+Source: user refinement, 2026-11-05.
 Newly created boards default to the final blue-gray preset (#90A4AE), preserving
 all existing board colors and legacy deserialization defaults.
 
 Desktop layout refinement, 2026-11-03: Edit Board places Board color on the left
 (three rows of seven 40-pixel swatches) and Board icon on the right within the
-normal form width. Edit task type places Icon left and Name right. Stack these
-sections on narrow Windows layouts; keep Android's current vertical layout.
+normal form width. The Windows board icon sits centered in a light-gray rounded
+panel aligned with the color grid's top and bottom. Keep the original compact
+button with its colored border and pastel fill inside; only that inner button
+opens the icon picker. The gray container is passive. Keep both headings aligned, including wrapped labels. Narrow
+Windows layouts stack the sections and retain the centered gray selector.
+Source: user refinement, 2026-11-05. Task type forms place Icon left and Name right on Windows and
+Android, aligned with the input surface rather than its validation row. On
+Android the icon button is square, with both sides matching the Name surface's
+full height, including enlarged text. Stack
+only when the available width cannot fit both controls. This supersedes Android's
+previous vertical layout. Source: user refinement, 2026-11-05.
 The desktop Choose an icon grid uses eight compact cells per row (five on
 unusually narrow dialogs); Android retains five. Hidden desktop board actions
 must not shorten names; revealing them truncates names without changing row height.

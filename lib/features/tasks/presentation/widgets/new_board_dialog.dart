@@ -9,10 +9,14 @@ import '../../../../core/widgets/pending_action.dart';
 class NewBoardDialog extends StatefulWidget {
   final Future<bool> Function(String? name) onSave;
   final String initialName;
+  final bool creating;
+  final String? originalBoardId;
   const NewBoardDialog({
     super.key,
     required this.onSave,
     this.initialName = '',
+    this.creating = true,
+    this.originalBoardId,
   });
   @override
   State<NewBoardDialog> createState() => _NewBoardDialogState();
@@ -22,9 +26,18 @@ class _NewBoardDialogState extends State<NewBoardDialog>
     with PendingActionState<NewBoardDialog> {
   final _controller = TextEditingController();
   bool get _saving => actionBlocked;
-  String? _nameError(String? value) => (value?.trim().isEmpty ?? true)
-      ? null
-      : WorkspaceLimits.boardNameError(value);
+  String? _nameError(String? value) => WorkspaceLimits.namedItemError(
+    value,
+    limit: WorkspaceLimits.boardName,
+    originalName: widget.creating ? null : widget.initialName,
+    otherNames:
+        (context.read<WorkspaceController>().outbox?.projected ??
+                context.read<WorkspaceController>().snapshot)
+            .boards
+            .where((board) => board.id != widget.originalBoardId)
+            .map((board) => board.name),
+    kind: 'board',
+  );
   @override
   void initState() {
     super.initState();
@@ -69,7 +82,8 @@ class _NewBoardDialogState extends State<NewBoardDialog>
           validator: _nameError,
           enabled: !_saving,
           controller: _controller,
-          autofocus: true,
+          autofocus: widget.creating,
+          validateOnBlur: true,
           errorText:
               context.watch<WorkspaceController>().error ?? submissionError,
           decoration: const InputDecoration(
