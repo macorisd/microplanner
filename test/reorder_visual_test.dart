@@ -8,6 +8,86 @@ import 'package:microplanner/core/widgets/bounded_reorderable_list.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/category_editor.dart';
 
 void main() {
+  for (final useIcon in [false, true]) {
+    testWidgets(
+      'Android ${useIcon ? 'type' : 'subject'} handle drags immediately and name requires a hold',
+      (tester) async {
+        var items = const [
+          CategoryDraft(id: 'alpha', name: 'Alpha'),
+          CategoryDraft(id: 'beta', name: 'Beta'),
+          CategoryDraft(id: 'gamma', name: 'Gamma'),
+        ];
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(platform: TargetPlatform.android),
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) => SingleChildScrollView(
+                  child: EditableCategoryList(
+                    title: useIcon ? 'Task types' : 'Subjects',
+                    label: useIcon ? 'task type' : 'subject',
+                    useIcon: useIcon,
+                    items: items,
+                    onChanged: (value) => setState(() => items = value),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final handle = find.descendant(
+          of: find.byKey(const ValueKey('beta')),
+          matching: find.byIcon(Icons.drag_indicator_rounded),
+        );
+        final immediate = await tester.startGesture(
+          tester.getCenter(handle) + const Offset(20, 0),
+        );
+        await immediate.moveBy(const Offset(0, 25));
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(
+          find.byKey(const ValueKey('reorder-drag-surface')),
+          findsOneWidget,
+        );
+        await immediate.moveTo(const Offset(500, 600));
+        await tester.pump(const Duration(milliseconds: 100));
+        await immediate.up();
+        await tester.pumpAndSettle();
+        expect(items.map((e) => e.id), ['alpha', 'gamma', 'beta']);
+        final name = find.text('Beta');
+        final quick = await tester.startGesture(tester.getCenter(name));
+        await quick.moveBy(const Offset(0, -30));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(
+          find.byKey(const ValueKey('reorder-drag-surface')),
+          findsNothing,
+        );
+        await quick.up();
+        await tester.pumpAndSettle();
+        expect(items.map((e) => e.id), ['alpha', 'gamma', 'beta']);
+        final held = await tester.startGesture(tester.getCenter(name));
+        await tester.pump(const Duration(milliseconds: 1200));
+        expect(
+          find.text('Edit ${useIcon ? 'task type' : 'subject'}'),
+          findsNothing,
+        );
+        await held.moveTo(const Offset(200, -300));
+        await tester.pump(const Duration(milliseconds: 300));
+        await held.up();
+        await tester.pumpAndSettle();
+        expect(items.map((e) => e.id), ['beta', 'alpha', 'gamma']);
+        await tester.tap(find.text('Beta'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(useIcon ? 'Edit task type' : 'Edit subject'),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
     for (final scrolled in [false, true]) {
       testWidgets(

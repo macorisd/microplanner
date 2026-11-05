@@ -89,7 +89,9 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
 - During a board's creation or save, show a moving neutral luminous sheen on its
   sidebar row and open heading until synchronization resolves. Preserve the
   board's colors without task-style color washes or destination holds. Reduced
-  motion keeps a stationary sheen. Source: user refinement, 2026-11-05.
+  motion keeps a stationary sheen. The reflection needs clearly visible neutral
+  contrast even on very pale surfaces and starts visibly without a long blank
+  lead-in. Source: user refinement, 2026-11-05.
 - Windows keeps the animated startup logo. Android starts with a centered static
   logo and a smooth reveal toward the saved column's logo color. Do not restore
   the Android shuffling startup animation that visibly froze during initialization.

@@ -568,13 +568,7 @@ class EditableCategoryList extends StatelessWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (touch)
-                        handle
-                      else
-                        ReorderableDragStartListener(
-                          index: index,
-                          child: handle,
-                        ),
+                      ReorderableDragStartListener(index: index, child: handle),
                       IconButton(
                         tooltip: 'Remove $label',
                         icon: const Icon(Icons.delete_outline, size: 18),

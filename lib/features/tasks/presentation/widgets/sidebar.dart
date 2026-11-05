@@ -628,23 +628,29 @@ class _BoardActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PressFeedback(
-      child: SizedBox(
-        width: compact
-            ? 44
-            : usesTouchControls(context)
-            ? 48
-            : 24,
-        height: usesTouchControls(context) ? 48 : 24,
-        child: IconButton(
-          tooltip: tooltip,
-          onPressed: onTap,
-          padding: compact
-              ? const EdgeInsets.symmetric(horizontal: 4)
-              : EdgeInsets.zero,
-          alignment: alignment,
-          hoverColor: AppColors.surfaceVariant,
-          icon: Icon(icon, size: 16, color: color ?? AppColors.textSecondary),
+    return GestureDetector(
+      // A disabled nested button must consume its tap instead of selecting the row.
+      excludeFromSemantics: true,
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap == null ? () {} : null,
+      child: PressFeedback(
+        child: SizedBox(
+          width: compact
+              ? 44
+              : usesTouchControls(context)
+              ? 48
+              : 24,
+          height: usesTouchControls(context) ? 48 : 24,
+          child: IconButton(
+            tooltip: tooltip,
+            onPressed: onTap,
+            padding: compact
+                ? const EdgeInsets.symmetric(horizontal: 4)
+                : EdgeInsets.zero,
+            alignment: alignment,
+            hoverColor: AppColors.surfaceVariant,
+            icon: Icon(icon, size: 16, color: color ?? AppColors.textSecondary),
+          ),
         ),
       ),
     );

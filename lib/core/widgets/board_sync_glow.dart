@@ -14,7 +14,8 @@ class _BoardSyncGlowState extends State<BoardSyncGlow>
     with SingleTickerProviderStateMixin {
   late final _motion = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1800),
+    duration: const Duration(milliseconds: 1400),
+    value: .28,
   );
 
   void _sync() {
@@ -36,6 +37,7 @@ class _BoardSyncGlowState extends State<BoardSyncGlow>
   @override
   void didUpdateWidget(BoardSyncGlow oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) _motion.value = .28;
     _sync();
   }
 
@@ -68,7 +70,7 @@ class _Sheen extends CustomPainter {
     canvas.clipRRect(
       RRect.fromRectAndRadius(bounds, const Radius.circular(12)),
     );
-    final width = size.width * .75;
+    final width = size.width * .65;
     final x = reduced
         ? size.width / 2
         : -width + (size.width + width * 2) * motion.value;
@@ -77,15 +79,27 @@ class _Sheen extends CustomPainter {
       width: width,
       height: size.height * 3,
     );
-    canvas.drawRect(
-      bounds,
+    // Achromatic shoulders give the light contrast on very pale board surfaces.
+    // Only the reflection moves; the saved board hue and its content stay intact.
+    final shader = const LinearGradient(
+      colors: [
+        Color(0x00000000),
+        Color(0x24000000),
+        Color(0xfaffffff),
+        Color(0x18000000),
+        Color(0x00000000),
+      ],
+      stops: [0, .28, .5, .72, 1],
+      begin: Alignment(-1, -.2),
+      end: Alignment(1, .2),
+    ).createShader(sheen);
+    canvas.drawRect(bounds, Paint()..shader = shader);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(bounds.deflate(1), const Radius.circular(11)),
       Paint()
-        ..shader = const LinearGradient(
-          colors: [Color(0x00ffffff), Color(0xb3ffffff), Color(0x00ffffff)],
-          stops: [0, .5, 1],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ).createShader(sheen),
+        ..shader = shader
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
     );
     canvas.restore();
   }

@@ -30,6 +30,84 @@ class _JournalCache extends MemoryCache implements WorkspaceJournal {
 }
 
 void main() {
+  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+    testWidgets(
+      '$platform pending action buttons never select their board, but its name does',
+      (tester) async {
+        final h = Harness(cache: _JournalCache());
+        h.server.states['A'] = h.server.states['A']!.copyWith(
+          boards: [
+            ...h.server.states['A']!.boards,
+            Board(
+              id: 'other',
+              name: 'Other',
+              createdAt: DateTime(2027),
+              sortOrder: 1,
+            ),
+          ],
+        );
+        await tester.runAsync(() async {
+          await h.initialize();
+          await h.login('A');
+        });
+        final boards = BoardsProvider(h.workspace)..selectBoard('other');
+        final gate = Completer<http.Response>();
+        h.server.nextWrite = gate;
+        late Future<bool> save;
+        await tester.runAsync(() async {
+          save = boards.updateBoard(
+            boards.boards.first.copyWith(name: 'Pending'),
+          );
+          await settleAsync();
+        });
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<AuthService>.value(value: h.auth),
+              ChangeNotifierProvider<WorkspaceController>.value(
+                value: h.workspace,
+              ),
+              ChangeNotifierProvider<BoardsProvider>.value(value: boards),
+            ],
+            child: MaterialApp(
+              theme: ThemeData(platform: platform),
+              home: const Scaffold(
+                body: SizedBox(width: 400, child: Sidebar(inDrawer: true)),
+              ),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 400));
+        final row = find.byKey(const ValueKey('default-board'));
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(
+          location: tester.getCenter(find.text('A private')),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        for (final label in ['Edit board', 'Delete board']) {
+          await tester.tap(
+            find.descendant(of: row, matching: find.byTooltip(label)),
+          );
+          await tester.pump(const Duration(milliseconds: 100));
+          expect(boards.currentBoardId, 'other');
+          expect(find.text('Edit Board'), findsNothing);
+          expect(find.text('Delete Board'), findsNothing);
+        }
+        await tester.tap(find.text('A private'));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(boards.currentBoardId, 'default-board');
+        await tester.runAsync(() async {
+          gate.complete(jsonResponse(h.server.states['A']!.toJson()));
+          await save;
+          await settleAsync();
+        });
+        await mouse.removePointer();
+        await tester.pumpWidget(const SizedBox());
+        boards.dispose();
+        h.dispose();
+      },
+    );
+  }
   testWidgets(
     'default list editor closes after durable acceptance while cloud save waits',
     (tester) async {
@@ -182,6 +260,8 @@ void main() {
             .onPressed,
         isNull,
       );
+      boards.selectBoard('other-board');
+      await tester.pump();
       await tester.tap(
         find.descendant(
           of: find.byType(Sidebar),
@@ -190,6 +270,19 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Edit Board'), findsNothing);
+      expect(boards.currentBoardId, 'other-board');
+      await tester.tap(
+        find.descendant(
+          of: find.byType(Sidebar),
+          matching: find.byTooltip('Delete board'),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Delete Board'), findsNothing);
+      expect(boards.currentBoardId, 'other-board');
+      await tester.tap(row);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(boards.currentBoardId, 'default-board');
       await mouse.moveTo(
         tester.getCenter(
           find.descendant(
