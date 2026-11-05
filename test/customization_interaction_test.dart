@@ -124,16 +124,29 @@ void main() {
               tester.getRect(find.byTooltip('Color $i')),
           ];
           expect(swatches.map((r) => r.top).toSet().length, 3);
-          final iconPanel = find.byTooltip('Choose board icon');
-          final panelRect = tester.getRect(iconPanel);
+          final iconButton = find.byTooltip('Choose board icon');
+          final panelRect = tester.getRect(
+            find
+                .ancestor(of: iconButton, matching: find.byType(DecoratedBox))
+                .first,
+          );
           expect(panelRect.top, swatches.first.top);
           expect(panelRect.bottom, swatches.last.bottom);
           expect(
             tester.getCenter(
-              find.descendant(of: iconPanel, matching: find.byType(Icon)),
+              find.descendant(of: iconButton, matching: find.byType(Icon)),
             ),
             panelRect.center,
           );
+          expect(tester.getSize(iconButton), const Size.square(48));
+          await tester.tapAt(panelRect.topLeft + const Offset(4, 4));
+          await tester.pumpAndSettle();
+          expect(find.text('Choose an icon'), findsNothing);
+          await tester.tap(iconButton);
+          await tester.pumpAndSettle();
+          expect(find.text('Choose an icon'), findsOneWidget);
+          await tester.tap(find.text('Cancel').last);
+          await tester.pumpAndSettle();
 
           for (var row = 0; row < 3; row++) {
             expect(

@@ -114,12 +114,8 @@ class IconChoice extends StatelessWidget {
       onPressed: onPressed,
       style: IconButton.styleFrom(
         foregroundColor: color,
-        backgroundColor: filledPanel
-            ? AppColors.surfaceVariant
-            : boardRowBackground(color),
-        side: filledPanel
-            ? BorderSide.none
-            : BorderSide(color: color.withValues(alpha: .45)),
+        backgroundColor: boardRowBackground(color),
+        side: BorderSide(color: color.withValues(alpha: .45)),
         minimumSize: const Size.square(48),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -127,7 +123,19 @@ class IconChoice extends StatelessWidget {
       ),
       icon: Icon(icon, size: 24),
     );
-    if (!showLabel) return button;
+    final selector = filledPanel
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppTheme.spacingSmall),
+              child: Center(child: button),
+            ),
+          )
+        : button;
+    if (!showLabel) return selector;
     return Column(
       crossAxisAlignment: filledPanel
           ? CrossAxisAlignment.stretch
@@ -135,7 +143,7 @@ class IconChoice extends StatelessWidget {
       children: [
         Text(label, style: labelStyle),
         const SizedBox(height: AppTheme.spacingSmall),
-        button,
+        selector,
       ],
     );
   }
