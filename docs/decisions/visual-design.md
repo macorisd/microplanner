@@ -159,7 +159,8 @@ Desktop layout refinement, 2026-11-03: Edit Board places Board color on the left
 (three rows of seven 40-pixel swatches) and Board icon on the right within the
 normal form width. Task type forms place Icon left and Name right on Windows and
 Android, aligned with the input surface rather than its validation row. On
-Android the icon button also matches the Name surface's full height. Stack
+Android the icon button is square, with both sides matching the Name surface's
+full height, including enlarged text. Stack
 only when the available width cannot fit both controls. This supersedes Android's
 previous vertical layout. Source: user refinement, 2026-11-05.
 The desktop Choose an icon grid uses eight compact cells per row (five on

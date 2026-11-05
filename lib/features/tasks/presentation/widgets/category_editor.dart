@@ -330,7 +330,10 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                                 context,
                               ),
                             ),
-                            child: _iconChoice(showLabel: false),
+                            child: AspectRatio(
+                              aspectRatio: 1,
+                              child: _iconChoice(showLabel: false),
+                            ),
                           ),
                           const SizedBox(width: AppTheme.spacingMedium),
                           Expanded(child: _nameField()),

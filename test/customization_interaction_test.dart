@@ -153,6 +153,7 @@ void main() {
         if (platform == TargetPlatform.android) {
           expect(icon.top, closeTo(name.top, .1));
           expect(icon.height, closeTo(name.height, .1));
+          expect(icon.width, closeTo(icon.height, .1));
           tester.platformDispatcher.textScaleFactorTestValue = 1.5;
           addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
           await tester.pumpAndSettle();
@@ -164,6 +165,7 @@ void main() {
           final scaledIcon = tester.getRect(find.byTooltip('Choose icon'));
           expect(scaledIcon.top, closeTo(scaledName.top, .1));
           expect(scaledIcon.height, closeTo(scaledName.height, .1));
+          expect(scaledIcon.width, closeTo(scaledIcon.height, .1));
         }
         expect(tester.takeException(), isNull);
         await tester.tap(find.text('Cancel'));
