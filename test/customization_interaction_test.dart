@@ -124,6 +124,17 @@ void main() {
               tester.getRect(find.byTooltip('Color $i')),
           ];
           expect(swatches.map((r) => r.top).toSet().length, 3);
+          final iconPanel = find.byTooltip('Choose board icon');
+          final panelRect = tester.getRect(iconPanel);
+          expect(panelRect.top, swatches.first.top);
+          expect(panelRect.bottom, swatches.last.bottom);
+          expect(
+            tester.getCenter(
+              find.descendant(of: iconPanel, matching: find.byType(Icon)),
+            ),
+            panelRect.center,
+          );
+
           for (var row = 0; row < 3; row++) {
             expect(
               swatches.skip(row * 7).take(7).map((r) => r.top).toSet().length,

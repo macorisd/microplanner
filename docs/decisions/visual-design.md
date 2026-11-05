@@ -160,7 +160,11 @@ all existing board colors and legacy deserialization defaults.
 
 Desktop layout refinement, 2026-11-03: Edit Board places Board color on the left
 (three rows of seven 40-pixel swatches) and Board icon on the right within the
-normal form width. Task type forms place Icon left and Name right on Windows and
+normal form width. The Windows board icon sits centered in a light-gray rounded
+panel aligned with the color grid's top and bottom; the whole panel opens the
+icon picker. Keep both headings aligned, including wrapped labels. Narrow
+Windows layouts stack the sections and retain the centered gray selector.
+Source: user refinement, 2026-11-05. Task type forms place Icon left and Name right on Windows and
 Android, aligned with the input surface rather than its validation row. On
 Android the icon button is square, with both sides matching the Name surface's
 full height, including enlarged text. Stack

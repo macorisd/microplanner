@@ -360,9 +360,14 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
           ),
           LayoutBuilder(
             builder: (context, constraints) {
+              final desktop =
+                  Theme.of(context).platform == TargetPlatform.windows;
+              final sideBySide = desktop && constraints.maxWidth >= 432;
               final icon = IconChoice(
                 label: 'Board icon',
                 labelStyle: Theme.of(context).textTheme.titleMedium,
+                showLabel: !sideBySide,
+                filledPanel: desktop,
                 color: Color(_color),
                 icon: boardIcons[_icon] ?? Icons.dashboard_rounded,
                 onPressed: _saving
@@ -390,14 +395,47 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
                   ),
                 ],
               );
-              if (Theme.of(context).platform == TargetPlatform.windows &&
-                  constraints.maxWidth >= 432) {
-                return Row(
+              if (sideBySide) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(width: 328, child: colors),
-                    const SizedBox(width: AppTheme.spacingMedium),
-                    Expanded(child: icon),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 328,
+                          child: Text(
+                            'Board color',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        const SizedBox(width: AppTheme.spacingMedium),
+                        Expanded(
+                          child: Text(
+                            'Board icon',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTheme.spacingSmall),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(
+                            width: 328,
+                            child: ColorChoices(
+                              color: _color,
+                              onChanged: (value) =>
+                                  setState(() => _color = value),
+                            ),
+                          ),
+                          const SizedBox(width: AppTheme.spacingMedium),
+                          Expanded(child: icon),
+                        ],
+                      ),
+                    ),
                   ],
                 );
               }

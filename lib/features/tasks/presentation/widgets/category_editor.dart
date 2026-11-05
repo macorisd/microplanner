@@ -96,6 +96,7 @@ class IconChoice extends StatelessWidget {
     required this.onPressed,
     this.labelStyle,
     this.showLabel = true,
+    this.filledPanel = false,
   });
 
   final String label;
@@ -104,6 +105,7 @@ class IconChoice extends StatelessWidget {
   final VoidCallback? onPressed;
   final TextStyle? labelStyle;
   final bool showLabel;
+  final bool filledPanel;
 
   @override
   Widget build(BuildContext context) {
@@ -112,8 +114,12 @@ class IconChoice extends StatelessWidget {
       onPressed: onPressed,
       style: IconButton.styleFrom(
         foregroundColor: color,
-        backgroundColor: boardRowBackground(color),
-        side: BorderSide(color: color.withValues(alpha: .45)),
+        backgroundColor: filledPanel
+            ? AppColors.surfaceVariant
+            : boardRowBackground(color),
+        side: filledPanel
+            ? BorderSide.none
+            : BorderSide(color: color.withValues(alpha: .45)),
         minimumSize: const Size.square(48),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -123,7 +129,9 @@ class IconChoice extends StatelessWidget {
     );
     if (!showLabel) return button;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: filledPanel
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.start,
       children: [
         Text(label, style: labelStyle),
         const SizedBox(height: AppTheme.spacingSmall),
