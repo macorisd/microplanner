@@ -3,9 +3,15 @@ import 'dart:math' as math;
 
 /// A neutral light travelling around the edge while a board save is pending.
 class BoardSyncGlow extends StatefulWidget {
-  const BoardSyncGlow({super.key, required this.active, required this.child});
+  const BoardSyncGlow({
+    super.key,
+    required this.active,
+    required this.child,
+    this.foreground = false,
+  });
   final bool active;
   final Widget child;
+  final bool foreground;
 
   @override
   State<BoardSyncGlow> createState() => _BoardSyncGlowState();
@@ -51,7 +57,10 @@ class _BoardSyncGlowState extends State<BoardSyncGlow>
   @override
   Widget build(BuildContext context) => RepaintBoundary(
     child: CustomPaint(
-      painter: widget.active
+      painter: widget.active && !widget.foreground
+          ? _EdgeGlow(_motion, reduced: MediaQuery.disableAnimationsOf(context))
+          : null,
+      foregroundPainter: widget.active && widget.foreground
           ? _EdgeGlow(_motion, reduced: MediaQuery.disableAnimationsOf(context))
           : null,
       child: widget.child,

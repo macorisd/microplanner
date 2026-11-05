@@ -430,7 +430,8 @@ class _BoardCardState extends State<_BoardCard> {
                   Scaffold.of(context).closeDrawer();
                 }
               },
-              child: Ink(
+              child: _BoardSurface(
+                pending: pending,
                 decoration: BoxDecoration(
                   color: boardRowBackground(color),
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -442,71 +443,68 @@ class _BoardCardState extends State<_BoardCard> {
                         : Colors.transparent,
                   ),
                 ),
-                child: BoardSyncGlow(
-                  active: pending,
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      AppTheme.spacingMedium,
-                      touch ? 4 : 8,
-                      touch ? AppTheme.spacingSmall : AppTheme.spacingMedium,
-                      touch ? 4 : 8,
-                    ),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: touch ? 48 : 24),
-                      child: Row(
-                        children: [
-                          Icon(
-                            boardIcons[widget.board.icon] ??
-                                Icons.dashboard_rounded,
-                            size: 20,
-                            color: foreground,
-                          ),
-                          const SizedBox(width: AppTheme.spacingSmall),
-                          Expanded(
-                            child: Text(
-                              widget.board.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: foreground,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                            ),
-                          ),
-                          Visibility(
-                            visible: show,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _BoardActionButton(
-                                  compact: touch,
-                                  alignment: touch
-                                      ? Alignment.centerRight
-                                      : Alignment.center,
-                                  icon: Icons.edit_outlined,
-                                  tooltip: 'Edit board',
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppTheme.spacingMedium,
+                    touch ? 4 : 8,
+                    touch ? AppTheme.spacingSmall : AppTheme.spacingMedium,
+                    touch ? 4 : 8,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: touch ? 48 : 24),
+                    child: Row(
+                      children: [
+                        Icon(
+                          boardIcons[widget.board.icon] ??
+                              Icons.dashboard_rounded,
+                          size: 20,
+                          color: foreground,
+                        ),
+                        const SizedBox(width: AppTheme.spacingSmall),
+                        Expanded(
+                          child: Text(
+                            widget.board.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
                                   color: foreground,
-                                  onTap: pending ? null : _edit,
+                                  fontWeight: FontWeight.w700,
                                 ),
-                                Visibility(
-                                  visible: widget.canDelete,
-                                  maintainState: true,
-                                  maintainAnimation: true,
-                                  maintainSize: true,
-                                  child: _BoardActionButton(
-                                    compact: touch,
-                                    icon: Icons.delete_outline_rounded,
-                                    tooltip: 'Delete board',
-                                    color: foreground,
-                                    onTap: pending ? null : _delete,
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
-                        ],
-                      ),
+                        ),
+                        Visibility(
+                          visible: show,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _BoardActionButton(
+                                compact: touch,
+                                alignment: touch
+                                    ? Alignment.centerRight
+                                    : Alignment.center,
+                                icon: Icons.edit_outlined,
+                                tooltip: 'Edit board',
+                                color: foreground,
+                                onTap: pending ? null : _edit,
+                              ),
+                              Visibility(
+                                visible: widget.canDelete,
+                                maintainState: true,
+                                maintainAnimation: true,
+                                maintainSize: true,
+                                child: _BoardActionButton(
+                                  compact: touch,
+                                  icon: Icons.delete_outline_rounded,
+                                  tooltip: 'Delete board',
+                                  color: foreground,
+                                  onTap: pending ? null : _delete,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -517,6 +515,31 @@ class _BoardCardState extends State<_BoardCard> {
       ),
     );
   }
+}
+
+/// Desktop outlines and their light share the complete surface, before Ink's
+/// implicit border padding. Touch keeps its approved inset light placement.
+class _BoardSurface extends StatelessWidget {
+  const _BoardSurface({
+    required this.pending,
+    required this.decoration,
+    required this.child,
+  });
+  final bool pending;
+  final BoxDecoration decoration;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => usesTouchControls(context)
+      ? Ink(
+          decoration: decoration,
+          child: BoardSyncGlow(active: pending, child: child),
+        )
+      : BoardSyncGlow(
+          active: pending,
+          foreground: true,
+          child: Ink(decoration: decoration, child: child),
+        );
 }
 
 /// Individual sidebar navigation item

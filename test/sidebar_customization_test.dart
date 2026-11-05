@@ -79,6 +79,30 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 400));
         final row = find.byKey(const ValueKey('default-board'));
+        tester.view.physicalSize = const Size(1000, 800);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        for (final pixelRatio in [1.0, 1.25, 1.5]) {
+          tester.view.devicePixelRatio = pixelRatio;
+          await tester.pump(const Duration(milliseconds: 50));
+          final surface = tester.getRect(
+            find.descendant(of: row, matching: find.byType(Ink)),
+          );
+          final glow = find.descendant(
+            of: row,
+            matching: find.byType(BoardSyncGlow),
+          );
+          expect(
+            tester.getRect(glow),
+            platform == TargetPlatform.windows ? surface : surface.deflate(1),
+            reason:
+                'Desktop glow shares the whole border at $pixelRatio scale; Android retains its approved inset',
+          );
+          expect(
+            tester.widget<BoardSyncGlow>(glow).foreground,
+            platform == TargetPlatform.windows,
+          );
+        }
         final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
         await mouse.addPointer(
           location: tester.getCenter(find.text('A private')),
