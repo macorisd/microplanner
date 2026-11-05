@@ -35,8 +35,8 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
   Source: user correction, 2026-11-04.
 - Board forms keep compact vertical spacing: no extra gap after the name's
   reserved message row, no divider between Subjects and Task types, and a compact
-  fixed error slot before Edit Board's actions. New Board shares its name's
-  fixed message row with save failures instead of reserving a second status area.
+  stable save-error slot in Edit Board's scrolling content. New Board shares its
+  fixed name message row with save failures instead of reserving a second status area.
   Source: user spacing review, 2026-11-04.
 - Align adjacent icons and punctuation with the text input's filled surface,
   excluding its reserved validation area. Date/time mode switches, Cancel and
@@ -45,6 +45,8 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
   Source: user screenshot review, 2026-11-04.
 - Edit Board keeps Cancel and Save changes in a compact white footer outside its
   scrolling content, visible at every scroll position and above the keyboard.
+  Center the buttons vertically with equal compact top/bottom padding; keep the
+  stable save-error row in the scrolling content and reveal it when an error occurs.
   Subject forms omit extra spacing after Name's reserved validation row before
   Color. Source: user refinement, 2026-11-05.
 - Expanded description is a dialog with the **same size and shape** as its task
@@ -156,7 +158,8 @@ all existing board colors and legacy deserialization defaults.
 Desktop layout refinement, 2026-11-03: Edit Board places Board color on the left
 (three rows of seven 40-pixel swatches) and Board icon on the right within the
 normal form width. Task type forms place Icon left and Name right on Windows and
-Android, aligned with the input surface rather than its validation row. Stack
+Android, aligned with the input surface rather than its validation row. On
+Android the icon button also matches the Name surface's full height. Stack
 only when the available width cannot fit both controls. This supersedes Android's
 previous vertical layout. Source: user refinement, 2026-11-05.
 The desktop Choose an icon grid uses eight compact cells per row (five on

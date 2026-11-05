@@ -95,6 +95,7 @@ class IconChoice extends StatelessWidget {
     required this.color,
     required this.onPressed,
     this.labelStyle,
+    this.showLabel = true,
   });
 
   final String label;
@@ -102,29 +103,34 @@ class IconChoice extends StatelessWidget {
   final Color color;
   final VoidCallback? onPressed;
   final TextStyle? labelStyle;
+  final bool showLabel;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(label, style: labelStyle),
-      const SizedBox(height: AppTheme.spacingSmall),
-      IconButton.outlined(
-        tooltip: 'Choose ${label.toLowerCase()}',
-        onPressed: onPressed,
-        style: IconButton.styleFrom(
-          foregroundColor: color,
-          backgroundColor: boardRowBackground(color),
-          side: BorderSide(color: color.withValues(alpha: .45)),
-          minimumSize: const Size.square(48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-          ),
+  Widget build(BuildContext context) {
+    final button = IconButton.outlined(
+      tooltip: 'Choose ${label.toLowerCase()}',
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        foregroundColor: color,
+        backgroundColor: boardRowBackground(color),
+        side: BorderSide(color: color.withValues(alpha: .45)),
+        minimumSize: const Size.square(48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         ),
-        icon: Icon(icon, size: 24),
       ),
-    ],
-  );
+      icon: Icon(icon, size: 24),
+    );
+    if (!showLabel) return button;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: labelStyle),
+        const SizedBox(height: AppTheme.spacingSmall),
+        button,
+      ],
+    );
+  }
 }
 
 class ColorChoices extends StatelessWidget {
@@ -276,8 +282,9 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     decoration: const InputDecoration(labelText: 'Name'),
   );
 
-  Widget _iconChoice() => IconChoice(
+  Widget _iconChoice({bool showLabel = true}) => IconChoice(
     label: 'Icon',
+    showLabel: showLabel,
     color: AppColors.primary,
     onPressed: () async {
       final chosen = await chooseBoardIcon(context, _icon);
@@ -306,6 +313,33 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         if (widget.useIcon)
           LayoutBuilder(
             builder: (context, constraints) {
+              if (Theme.of(context).platform == TargetPlatform.android &&
+                  constraints.maxWidth >= 240) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Icon'),
+                    const SizedBox(height: AppTheme.spacingSmall),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(
+                              bottom: LimitedTextField.supportingHeightOf(
+                                context,
+                              ),
+                            ),
+                            child: _iconChoice(showLabel: false),
+                          ),
+                          const SizedBox(width: AppTheme.spacingMedium),
+                          Expanded(child: _nameField()),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
               if (constraints.maxWidth >= 320 ||
                   (Theme.of(context).platform != TargetPlatform.windows &&
                       constraints.maxWidth >= 240)) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +7,7 @@ import 'package:microplanner/core/data/workspace_controller.dart';
 import 'package:microplanner/core/data/workspace_limits.dart';
 import 'package:microplanner/core/data/workspace_delta.dart';
 import 'package:microplanner/core/theme/app_theme.dart';
+import 'package:microplanner/core/widgets/form_message.dart';
 import 'package:microplanner/features/boards/data/models/subject.dart';
 import 'package:microplanner/features/boards/providers/boards_provider.dart';
 import 'package:microplanner/features/tasks/data/models/task.dart';
@@ -239,6 +242,17 @@ void main() {
         await tester.pumpAndSettle();
         final save = find.widgetWithText(ElevatedButton, 'Save changes');
         final before = tester.getRect(save);
+        final footer = tester.getRect(
+          find.ancestor(of: save, matching: find.byType(Padding)).first,
+        );
+        final actions = tester.getRect(
+          find.ancestor(of: save, matching: find.byType(OverflowBar)).first,
+        );
+        expect(
+          actions.top - footer.top,
+          closeTo(footer.bottom - actions.bottom, .1),
+        );
+        expect(actions.top - footer.top, lessThanOrEqualTo(8));
         expect(save.hitTestable(), findsOneWidget);
         await tester.drag(
           find.byType(SingleChildScrollView).last,
@@ -256,6 +270,40 @@ void main() {
         expect(save.hitTestable(), findsOneWidget);
         expect(tester.takeException(), isNull);
         tester.view.resetViewInsets();
+        await tester.pumpAndSettle();
+        final name = find.byType(TextFormField).first;
+        await tester.ensureVisible(name);
+        await tester.enterText(name, 'Retained board draft');
+        await tester.pumpAndSettle();
+        final failed = Completer<http.Response>();
+        f.h.server.nextWrite = failed;
+        await tester.tap(save);
+        await tester.pump();
+        failed.complete(
+          jsonResponse({
+            'code': 'invalid_request',
+            'message': 'Could not save this board.',
+          }, 400),
+        );
+        await tester.runAsync(settleAsync);
+        await tester.pumpAndSettle();
+        expect(
+          find
+              .ancestor(
+                of: find.text(
+                  'The action could not be completed. Please try again.',
+                ),
+                matching: find.byType(FormMessage),
+              )
+              .hitTestable(),
+          findsOneWidget,
+        );
+        expect(tester.getRect(save), before);
+        expect(
+          tester.widget<TextFormField>(name).controller!.text,
+          'Retained board draft',
+        );
+        expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
         f.dispose();
       },

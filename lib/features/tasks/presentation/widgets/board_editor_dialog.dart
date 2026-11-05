@@ -41,6 +41,17 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
   late final List<CategoryDraft> _initialTypes;
   bool _saving = false;
   String? _error;
+  final _errorKey = GlobalKey();
+
+  void _showError(String message) {
+    setState(() => _error = message);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final errorContext = _errorKey.currentContext;
+      if (mounted && errorContext != null) {
+        Scrollable.ensureVisible(errorContext, alignment: 1);
+      }
+    });
+  }
 
   bool get _hasChanges =>
       _name.text.trim() != _originalBoard.name ||
@@ -143,9 +154,8 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
         .map((type) => WorkspaceLimits.nameKey(type.name))
         .toSet();
     if (names.length != selected.types.length) {
-      setState(
-        () => _error =
-            'This default list contains duplicate task type names. Edit the list before applying it.',
+      _showError(
+        'This default list contains duplicate task type names. Edit the list before applying it.',
       );
       return;
     }
@@ -233,10 +243,7 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
     if (workspace.ownerId != _owner ||
         workspace.auth.token != _token ||
         !workspace.canWrite) {
-      setState(
-        () => _error =
-            'Your account or connection changed. Refresh and try again.',
-      );
+      _showError('Your account or connection changed. Refresh and try again.');
       return;
     }
     final after = _base.copyWith(
@@ -293,13 +300,12 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
     if (saved) {
       closeForm();
     } else {
-      setState(() {
-        _saving = false;
-        _error =
-            submissionError ??
+      setState(() => _saving = false);
+      _showError(
+        submissionError ??
             workspace.error ??
-            'Could not save changes. Refresh and try again.';
-      });
+            'Could not save changes. Refresh and try again.',
+      );
     }
   }
 
@@ -314,7 +320,6 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          FormMessage(message: _error),
           OverflowBar(
             alignment: MainAxisAlignment.end,
             spacing: 8,
@@ -430,6 +435,7 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
               label: const Text('Apply default list'),
             ),
           ),
+          FormMessage(key: _errorKey, message: _error),
         ],
       ),
     ),

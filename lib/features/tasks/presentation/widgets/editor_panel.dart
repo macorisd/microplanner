@@ -58,7 +58,7 @@ class EditorPanel extends StatelessWidget {
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(
                           compact ? 16 : 24,
-                          0,
+                          8,
                           compact ? 16 : 24,
                           8,
                         ),
