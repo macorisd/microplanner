@@ -86,12 +86,13 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
 - Expanding/collapsing sidebar Boards uses a brief coordinated size, fade and
   slight vertical slide, with the disclosure rotating in sync. Reverse smoothly
   on repeated input; collapsed controls must not receive input or keep animating.
-- During a board's creation or save, show a moving neutral luminous sheen on its
-  sidebar row and open heading until synchronization resolves. Preserve the
-  board's colors without task-style color washes or destination holds. Reduced
-  motion keeps a stationary sheen. The reflection needs clearly visible neutral
-  contrast even on very pale surfaces and starts visibly without a long blank
-  lead-in. Source: user refinement, 2026-11-05.
+- During a board's creation or save, a small neutral light travels around its
+  rounded sidebar row and open heading until synchronization resolves. Keep a
+  soft luminous tail and visible contrast, without sweeping bands or shading
+  across the interior. Preserve board colors and content; omit task-style color
+  washes and destination holds. Reduced motion keeps the light stationary.
+  Source: user requested a different, minimal but noticeable approach after
+  rejecting the interior sheen, 2026-11-05.
 - Windows keeps the animated startup logo. Android starts with a centered static
   logo and a smooth reveal toward the saved column's logo color. Do not restore
   the Android shuffling startup animation that visibly froze during initialization.

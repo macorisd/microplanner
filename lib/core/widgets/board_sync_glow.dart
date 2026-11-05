@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
-/// A neutral, paint-only sheen that lasts exactly as long as the pending save.
+/// A neutral light travelling around the edge while a board save is pending.
 class BoardSyncGlow extends StatefulWidget {
   const BoardSyncGlow({super.key, required this.active, required this.child});
   final bool active;
@@ -14,7 +15,7 @@ class _BoardSyncGlowState extends State<BoardSyncGlow>
     with SingleTickerProviderStateMixin {
   late final _motion = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1400),
+    duration: const Duration(milliseconds: 1800),
     value: .28,
   );
 
@@ -51,15 +52,15 @@ class _BoardSyncGlowState extends State<BoardSyncGlow>
   Widget build(BuildContext context) => RepaintBoundary(
     child: CustomPaint(
       painter: widget.active
-          ? _Sheen(_motion, reduced: MediaQuery.disableAnimationsOf(context))
+          ? _EdgeGlow(_motion, reduced: MediaQuery.disableAnimationsOf(context))
           : null,
       child: widget.child,
     ),
   );
 }
 
-class _Sheen extends CustomPainter {
-  _Sheen(this.motion, {required this.reduced}) : super(repaint: motion);
+class _EdgeGlow extends CustomPainter {
+  _EdgeGlow(this.motion, {required this.reduced}) : super(repaint: motion);
   final Animation<double> motion;
   final bool reduced;
 
@@ -70,41 +71,73 @@ class _Sheen extends CustomPainter {
     canvas.clipRRect(
       RRect.fromRectAndRadius(bounds, const Radius.circular(12)),
     );
-    final width = size.width * .65;
-    final x = reduced
-        ? size.width / 2
-        : -width + (size.width + width * 2) * motion.value;
-    final sheen = Rect.fromCenter(
-      center: Offset(x, size.height / 2),
-      width: width,
-      height: size.height * 3,
+    final edge = RRect.fromRectAndRadius(
+      bounds.deflate(1.5),
+      const Radius.circular(10.5),
     );
-    // Achromatic shoulders give the light contrast on very pale board surfaces.
-    // Only the reflection moves; the saved board hue and its content stay intact.
-    final shader = const LinearGradient(
+    final rotation = GradientRotation(
+      (reduced ? .15 : motion.value) * math.pi * 2,
+    );
+    const stops = [0.0, .68, .8, .93, .98, 1.0];
+    // Separate constant-RGB layers avoid dark bands from alpha interpolation.
+    final shadow = SweepGradient(
       colors: [
         Color(0x00000000),
-        Color(0x24000000),
-        Color(0xfaffffff),
+        Color(0x00000000),
+        Color(0x05000000),
         Color(0x18000000),
+        Color(0x30000000),
         Color(0x00000000),
       ],
-      stops: [0, .28, .5, .72, 1],
-      begin: Alignment(-1, -.2),
-      end: Alignment(1, .2),
-    ).createShader(sheen);
-    canvas.drawRect(bounds, Paint()..shader = shader);
+      stops: stops,
+      transform: rotation,
+    ).createShader(bounds);
+    final light = SweepGradient(
+      colors: const [
+        Color(0x00ffffff),
+        Color(0x00ffffff),
+        Color(0x20ffffff),
+        Color(0xaaffffff),
+        Color(0xffffffff),
+        Color(0x00ffffff),
+      ],
+      stops: stops,
+      transform: rotation,
+    ).createShader(bounds);
     canvas.drawRRect(
-      RRect.fromRectAndRadius(bounds.deflate(1), const Radius.circular(11)),
+      edge,
       Paint()
-        ..shader = shader
+        ..color = const Color(0x10000000)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
+        ..strokeWidth = .8,
+    );
+    canvas.drawRRect(
+      edge,
+      Paint()
+        ..shader = shadow
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+    );
+    canvas.drawRRect(
+      edge,
+      Paint()
+        ..shader = light
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+    );
+    canvas.drawRRect(
+      edge,
+      Paint()
+        ..shader = light
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.8,
     );
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(_Sheen oldDelegate) =>
+  bool shouldRepaint(_EdgeGlow oldDelegate) =>
       oldDelegate.motion != motion || oldDelegate.reduced != reduced;
 }
