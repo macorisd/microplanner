@@ -49,11 +49,20 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
       !sameCategories(_subjects, _initialSubjects) ||
       !sameCategories(_types, _initialTypes);
   bool get _canSave =>
-      !_saving &&
-      _hasChanges &&
-      _name.text.trim().isNotEmpty &&
-      (_name.text.trim().length <= WorkspaceLimits.boardName ||
-          _name.text.trim() == _originalBoard.name);
+      !_saving && _hasChanges && _nameError(_name.text) == null;
+
+  String? _nameError(String? value) => WorkspaceLimits.namedItemError(
+    value,
+    limit: WorkspaceLimits.boardName,
+    originalName: _originalBoard.name,
+    otherNames:
+        (context.read<WorkspaceController>().outbox?.projected ??
+                context.read<WorkspaceController>().snapshot)
+            .boards
+            .where((board) => board.id != widget.board.id)
+            .map((board) => board.name),
+    kind: 'board',
+  );
 
   @override
   void initState() {
@@ -130,6 +139,16 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
       ),
     );
     if (selected == null || !mounted) return;
+    final names = selected.types
+        .map((type) => WorkspaceLimits.nameKey(type.name))
+        .toSet();
+    if (names.length != selected.types.length) {
+      setState(
+        () => _error =
+            'This default list contains duplicate task type names. Edit the list before applying it.',
+      );
+      return;
+    }
     final result = replaceTypeList(
       existing: [
         for (final type in _types)
@@ -291,6 +310,30 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
       dialog: true,
       canSubmit: _canSave,
       onSubmit: _save,
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FormMessage(message: _error),
+          OverflowBar(
+            alignment: MainAxisAlignment.end,
+            spacing: 8,
+            children: [
+              TextButton(
+                onPressed: _saving ? null : closeForm,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red.shade700,
+                ),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: _canSave ? _save : null,
+                child: const Text('Save changes'),
+              ),
+            ],
+          ),
+        ],
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -305,7 +348,8 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
             controller: _name,
             limit: WorkspaceLimits.boardName,
             enabled: !_saving,
-            validator: (_) => null,
+            validator: _nameError,
+            validateOnBlur: true,
             onSubmitted: (_) => _save(),
             decoration: const InputDecoration(labelText: 'Board name'),
           ),
@@ -385,24 +429,6 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
               icon: const Icon(Icons.library_add_outlined, size: 20),
               label: const Text('Apply default list'),
             ),
-          ),
-          FormMessage(message: _error),
-          OverflowBar(
-            alignment: MainAxisAlignment.end,
-            spacing: 8,
-            children: [
-              TextButton(
-                onPressed: _saving ? null : closeForm,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red.shade700,
-                ),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: _canSave ? _save : null,
-                child: const Text('Save changes'),
-              ),
-            ],
           ),
         ],
       ),

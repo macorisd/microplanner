@@ -30,6 +30,11 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Android text fields request sentence capitalization (including names and
   descriptions) without rewriting entered text; date/numeric keyboards keep their
   appropriate input modes. Apply this through the shared text-field component.
+- Every creation form with a name (tasks, boards, subjects, task types and default
+  lists, including reviewed failed creation drafts) focuses Name on opening.
+  A pristine empty field shows no error; leaving it empty after focus or clearing
+  its contents shows "Please enter a name." and keeps Save/Create disabled.
+  Edit forms do not focus Name automatically. Source: user refinement, 2026-11-05.
 - Back from expanded description returns to Edit Task with its draft intact.
   Android Back first dismisses the keyboard when appropriate; a later Back follows
   the current dialog/navigation level. Test Back, Escape and dismissal paths.
@@ -120,6 +125,13 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
   list region, including inside a scrolled form. They cannot cover form headings,
   other category sections or footer actions. Keep first/last drop positions
   reachable, preserve IDs and show complete rounded rows throughout the drag.
+- Board names are unique within an account. Subject and task type names are unique
+  within their board; task types are also unique within each default list.
+  Compare names ignoring case and outer whitespace, irrespective of color/icon.
+  Enforce creation and renaming in forms, queued/rebased writes and the API.
+  Preserve existing duplicates and assignments on unrelated edits; allow users
+  to resolve them without silently deleting or renaming their data.
+  Source: explicit user decision, 2026-11-05.
 - Subjects/task types are reordered by dragging their handles; omit redundant
   three-dot Move up/Move down menus, including in default-list editors.
 - Applying a default list makes an independent copy. Match existing type names

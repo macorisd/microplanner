@@ -109,6 +109,38 @@ export function assertBoardNames(data: WorkspaceData, previous?: Pick<WorkspaceD
   }
 }
 
+/** Name uniqueness is scoped to the account, board or reusable type list.
+ * Keep legacy collisions usable only for the same entries and normalized names. */
+export function assertUniqueNames(data: WorkspaceData, previous?: WorkspaceData) {
+  type Row = readonly [scope: string, id: string, name: string];
+  const counts = (rows: Row[]) => {
+    const result = new Map<string, number>();
+    for (const [scope, , name] of rows) {
+      const key = JSON.stringify([scope, name.trim().toLowerCase()]);
+      result.set(key, (result.get(key) ?? 0) + 1);
+    }
+    return result;
+  };
+  const check = (rows: Row[], oldRows: Row[], kind: string) => {
+    const old = counts(oldRows);
+    const oldEntries = new Set(oldRows.map(([scope, id, name]) => JSON.stringify([scope, id, name.trim().toLowerCase()])));
+    const introduced = new Set(rows.filter(([scope, id, name]) =>
+      !oldEntries.has(JSON.stringify([scope, id, name.trim().toLowerCase()])))
+      .map(([scope, , name]) => JSON.stringify([scope, name.trim().toLowerCase()])));
+    for (const [key, count] of counts(rows)) {
+      if (count > 1 && (count > (old.get(key) ?? 0) || introduced.has(key))) {
+        throw new ApiError(400, 'duplicate_name', `A ${kind} with this name already exists.`);
+      }
+    }
+  };
+  check(data.boards.map(b => ['', b.id, b.name]), previous?.boards.map(b => ['', b.id, b.name]) ?? [], 'board');
+  check(data.subjects.map(s => [s.boardId, s.id, s.name]), previous?.subjects.map(s => [s.boardId, s.id, s.name]) ?? [], 'subject');
+  check((data.boardTypes ?? []).map(t => [t.boardId, t.id, t.name]),
+    (previous?.boardTypes ?? []).map(t => [t.boardId, t.id, t.name]), 'task type');
+  check((data.typeLists ?? []).flatMap(l => l.types.map(t => [l.id, t.name.trim().toLowerCase(), t.name] as const)),
+    (previous?.typeLists ?? []).flatMap(l => l.types.map(t => [l.id, t.name.trim().toLowerCase(), t.name] as const)), 'task type');
+}
+
 /** Grandfather existing long names and over-limit subject lists without loss. */
 export function assertCustomizationChanges(data: WorkspaceData, previous: WorkspaceData, importing = false) {
   if (data.schemaVersion !== 2) return;

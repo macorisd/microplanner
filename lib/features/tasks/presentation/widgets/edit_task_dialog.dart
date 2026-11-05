@@ -242,6 +242,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                     // Task name
                     LimitedTextField(
                       controller: _nameController,
+                      validateOnBlur: true,
                       limit: WorkspaceLimits.name,
                       enabled: !_isLoading,
                       decoration: const InputDecoration(

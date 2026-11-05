@@ -175,12 +175,17 @@ Future<CategoryDraft?> editCategory(
   required String label,
   required bool useIcon,
   CategoryDraft? initial,
+  List<CategoryDraft> siblings = const [],
 }) async {
   FocusManager.instance.primaryFocus?.unfocus();
   final result = await showMotionDialog<CategoryDraft>(
     context: context,
-    builder: (_) =>
-        _CategoryDialog(label: label, useIcon: useIcon, initial: initial),
+    builder: (_) => _CategoryDialog(
+      label: label,
+      useIcon: useIcon,
+      initial: initial,
+      siblings: siblings,
+    ),
   );
   if (context.mounted) FocusScope.of(context).unfocus();
   return result;
@@ -191,10 +196,12 @@ class _CategoryDialog extends StatefulWidget {
     required this.label,
     required this.useIcon,
     this.initial,
+    this.siblings = const [],
   });
   final String label;
   final bool useIcon;
   final CategoryDraft? initial;
+  final List<CategoryDraft> siblings;
   @override
   State<_CategoryDialog> createState() => _CategoryDialogState();
 }
@@ -203,7 +210,6 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   late final TextEditingController _controller;
   late String _icon;
   late int _color;
-  String? _error;
   bool _closing = false;
   @override
   void initState() {
@@ -215,8 +221,17 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   }
 
   void _changed() {
-    setState(() => _error = null);
+    setState(() {});
   }
+
+  String? _nameError(String? value) => WorkspaceLimits.namedItemError(
+    value,
+    originalName: widget.initial?.name,
+    otherNames: widget.siblings
+        .where((item) => item.id != widget.initial?.id)
+        .map((item) => item.name),
+    kind: widget.label,
+  );
 
   bool get _hasChanges =>
       widget.initial == null ||
@@ -224,11 +239,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       _icon != widget.initial!.icon ||
       _color != widget.initial!.color;
   bool get _canSave =>
-      !_closing &&
-      _hasChanges &&
-      _controller.text.trim().isNotEmpty &&
-      (_controller.text.trim().length <= WorkspaceLimits.categoryName ||
-          _controller.text.trim() == widget.initial?.name);
+      !_closing && _hasChanges && _nameError(_controller.text) == null;
   void _save() {
     if (!_canSave) return;
     setState(() => _closing = true);
@@ -258,9 +269,10 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   Widget _nameField() => LimitedTextField(
     controller: _controller,
     limit: WorkspaceLimits.categoryName,
-    validator: (_) => _error,
+    validator: _nameError,
+    autofocus: widget.initial == null,
+    validateOnBlur: true,
     onSubmitted: (_) => _save(),
-    errorText: _error,
     decoration: const InputDecoration(labelText: 'Name'),
   );
 
@@ -294,8 +306,9 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         if (widget.useIcon)
           LayoutBuilder(
             builder: (context, constraints) {
-              if (Theme.of(context).platform == TargetPlatform.windows &&
-                  constraints.maxWidth >= 320) {
+              if (constraints.maxWidth >= 320 ||
+                  (Theme.of(context).platform != TargetPlatform.windows &&
+                      constraints.maxWidth >= 240)) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -312,19 +325,14 @@ class _CategoryDialogState extends State<_CategoryDialog> {
               }
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _nameField(),
-                  const SizedBox(height: 20),
-                  _iconChoice(),
-                ],
+                children: [_nameField(), _iconChoice()],
               );
             },
           )
         else ...[
           _nameField(),
-          const SizedBox(height: 20),
           const Text('Color'),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppTheme.spacingSmall),
           ColorChoices(
             color: _color,
             onChanged: (value) => setState(() => _color = value),
@@ -387,7 +395,12 @@ class EditableCategoryList extends StatelessWidget {
       );
       return;
     }
-    final value = await editCategory(context, label: label, useIcon: useIcon);
+    final value = await editCategory(
+      context,
+      label: label,
+      useIcon: useIcon,
+      siblings: items,
+    );
     if (value != null) onChanged([...items, value]);
   }
 
@@ -431,6 +444,7 @@ class EditableCategoryList extends StatelessWidget {
               label: label,
               useIcon: useIcon,
               initial: item,
+              siblings: items,
             );
             if (edited != null && context.mounted) {
               onChanged([

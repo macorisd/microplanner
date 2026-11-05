@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { MongoClient, type ClientSession, type Collection } from 'mongodb';
-import { ApiError, assertBoardNames, assertCustomizationChanges, assertWorkspaceSize, dataSchema, type Profile, type Workspace, type WorkspaceData } from './domain.js';
+import { ApiError, assertBoardNames, assertCustomizationChanges, assertUniqueNames, assertWorkspaceSize, dataSchema, type Profile, type Workspace, type WorkspaceData } from './domain.js';
 import { upgradeWorkspace } from './customization-migration.js';
 
 type User = Profile & { _id: string; googleSub: string; revision: number; operations: string[]; workspaceSchemaVersion?: number };
@@ -216,13 +216,13 @@ export class Repository {
           .insertOne({ _id: sourceId, ownerId }, { session });
       }
       dataSchema.parse(next);
-      const previousBoards = await this.collection('boards').find({ ownerId }, { session }).toArray();
-      assertBoardNames(next, { boards: previousBoards });
+      const previous = await this.read(ownerId, session);
+      assertBoardNames(next, previous);
+      assertWorkspaceSize({ ...next, revision: revision + 1 });
+      assertUniqueNames(next, previous);
       if (next.schemaVersion === 2) {
-        const previous = await this.read(ownerId, session);
         assertCustomizationChanges(next, previous, sourceId !== undefined);
       }
-      assertWorkspaceSize({ ...next, revision: revision + 1 });
       // The receipt and data are committed together, so a delayed retry remains
       // idempotent even after the legacy 50-operation history rolls over.
       await receipts.insertOne({

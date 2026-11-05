@@ -338,3 +338,26 @@ test('board title limits apply to writes without blocking unchanged legacy title
     payload: { revision: renamed.revision, operationId: randomUUID(), sourceId: randomUUID(), data: imported } })).statusCode, 400);
   assert.equal((await state(token)).boards.length, 1);
 });
+
+
+test('duplicate names are rejected atomically for both schema versions and after revision conflicts', async () => {
+  const { token } = await login();
+  let current = await state(token);
+  current.subjects.push({ id: 'math', name: 'Math', boardId: 'default-board', color: 1 });
+  assert.equal((await save(token, current)).statusCode, 200);
+  current = await state(token);
+  const duplicate = { ...current, subjects: [...current.subjects,
+    { ...current.subjects[0]!, id: 'duplicate', name: ' MATH ', color: 2 }] };
+  const rejected = await save(token, duplicate);
+  assert.equal(rejected.statusCode, 400);
+  assert.equal(rejected.json().code, 'duplicate_name');
+  assert.deepEqual(await state(token), current);
+  const next = { ...upgradeWorkspace(current), revision: current.revision };
+  next.subjects.push({ ...next.subjects[0]!, id: 'second', name: 'Physics' });
+  assert.equal((await save(token, next)).statusCode, 200);
+  next.subjects[0]!.name = 'physics';
+  assert.equal((await save(token, next)).statusCode, 409);
+  next.revision = (await state(token)).revision;
+  assert.equal((await save(token, next)).statusCode, 400);
+  assert.deepEqual((await state(token)).subjects.map(s => s.name).sort(), ['Math', 'Physics']);
+});

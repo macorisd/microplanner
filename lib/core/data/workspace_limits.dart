@@ -30,6 +30,63 @@ class WorkspaceLimits {
         : null;
   }
 
+  static String nameKey(String value) => value.trim().toLowerCase();
+
+  static String? namedItemError(
+    String? value, {
+    int limit = categoryName,
+    String? originalName,
+    Iterable<String> otherNames = const [],
+    String kind = 'item',
+  }) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Please enter a name.';
+    if (text.length > limit && text != originalName?.trim()) {
+      return 'Use at most $limit characters.';
+    }
+    if (nameKey(text) !=
+            (originalName == null ? null : nameKey(originalName)) &&
+        otherNames.any((name) => nameKey(name) == nameKey(text))) {
+      return 'A $kind with this name already exists.';
+    }
+    return null;
+  }
+
+  /// Preserve legacy collisions only for the same entries and normalized names.
+  static String? _duplicateError(
+    Iterable<(String, String, String)> rows,
+    Iterable<(String, String, String)> previous,
+    String kind,
+  ) {
+    Map<(String, String), int> counts(
+      Iterable<(String, String, String)> values,
+    ) {
+      final result = <(String, String), int>{};
+      for (final (scope, _, name) in values) {
+        final key = (scope, nameKey(name));
+        result[key] = (result[key] ?? 0) + 1;
+      }
+      return result;
+    }
+
+    final old = counts(previous);
+    final oldEntries = previous
+        .map((row) => (row.$1, row.$2, nameKey(row.$3)))
+        .toSet();
+    final introduced = rows
+        .where((row) => !oldEntries.contains((row.$1, row.$2, nameKey(row.$3))))
+        .map((row) => (row.$1, nameKey(row.$3)))
+        .toSet();
+    for (final entry in counts(rows).entries) {
+      if (entry.value > 1 &&
+          (entry.value > (old[entry.key] ?? 0) ||
+              introduced.contains(entry.key))) {
+        return 'A $kind with this name already exists.';
+      }
+    }
+    return null;
+  }
+
   static String? descriptionError(String? value) =>
       (value?.length ?? 0) > description
       ? 'Use at most $description characters.'
@@ -56,6 +113,43 @@ class WorkspaceLimits {
       return 'You can keep up to $subjects subjects.';
     }
     if (data.tasks.length > tasks) return 'You can keep up to $tasks tasks.';
+    final duplicate =
+        _duplicateError(
+          data.boards.map((item) => ('', item.id, item.name)),
+          previous?.boards.map((item) => ('', item.id, item.name)) ?? const [],
+          'board',
+        ) ??
+        _duplicateError(
+          data.subjects.map((item) => (item.boardId, item.id, item.name)),
+          previous?.subjects.map(
+                (item) => (item.boardId, item.id, item.name),
+              ) ??
+              const [],
+          'subject',
+        ) ??
+        _duplicateError(
+          data.boardTypes.map((item) => (item.boardId, item.id, item.name)),
+          previous?.boardTypes.map(
+                (item) => (item.boardId, item.id, item.name),
+              ) ??
+              const [],
+          'task type',
+        ) ??
+        _duplicateError(
+          data.typeLists.expand(
+            (list) => list.types.map(
+              (item) => (list.id, nameKey(item.name), item.name),
+            ),
+          ),
+          previous?.typeLists.expand(
+                (list) => list.types.map(
+                  (item) => (list.id, nameKey(item.name), item.name),
+                ),
+              ) ??
+              const [],
+          'task type',
+        );
+    if (duplicate != null) return duplicate;
     final boardIds = <String>{};
     final subjectBoards = <String, String>{};
     final typeBoards = <String, String>{};

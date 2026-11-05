@@ -215,10 +215,20 @@ class FailedActionsDialog extends StatelessWidget {
       context: context,
       builder: (_) => item.kind == 'boards'
           ? NewBoardDialog(
+              creating: item.before == null,
+              originalBoardId: item.id,
               initialName: draft['name'] as String,
               onSave: (name) => save(name ?? draft['name'] as String),
             )
           : SubjectDialog(
+              creating: item.before == null,
+              otherNames: queue.projected.subjects
+                  .where(
+                    (subject) =>
+                        subject.boardId == draft['boardId'] &&
+                        subject.id != item.id,
+                  )
+                  .map((subject) => subject.name),
               title: 'Review Subject',
               initialName: draft['name'] as String,
               initialColor: draft['color'] as int,

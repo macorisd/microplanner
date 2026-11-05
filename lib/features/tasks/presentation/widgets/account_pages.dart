@@ -404,7 +404,9 @@ class _TypeListDialogState extends State<_TypeListDialog>
           LimitedTextField(
             controller: _name,
             limit: WorkspaceLimits.categoryName,
-            validator: (_) => _error,
+            validator: (value) => WorkspaceLimits.namedItemError(value),
+            validateOnBlur: true,
+            autofocus: widget.original == null,
             enabled: !actionBlocked,
             onSubmitted: (_) => _save(),
             errorText: _error,

@@ -148,12 +148,8 @@ void main() {
         final name =
             inputContainer.localToGlobal(Offset.zero) & inputContainer.size;
         final icon = tester.getRect(find.byTooltip('Choose icon'));
-        if (platform == TargetPlatform.windows) {
-          expect(icon.right, lessThan(name.left));
-          expect(icon.bottom, closeTo(name.bottom, .1));
-        } else {
-          expect(icon.top, greaterThan(name.bottom));
-        }
+        expect(icon.right, lessThan(name.left));
+        expect(icon.bottom, closeTo(name.bottom, .1));
         expect(tester.takeException(), isNull);
         await tester.tap(find.text('Cancel'));
         await tester.pumpAndSettle();

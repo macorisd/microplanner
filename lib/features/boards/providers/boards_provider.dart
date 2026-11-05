@@ -298,13 +298,24 @@ class BoardsProvider extends ChangeNotifier {
     final id = const Uuid().v4();
     final owner = workspace.ownerId;
     final selectionVersion = _selectionVersion;
+    String unusedName(WorkspaceSnapshot snapshot) {
+      var number = snapshot.boards.length + 1;
+      final names = snapshot.boards
+          .map((board) => board.name.trim().toLowerCase())
+          .toSet();
+      while (names.contains('board $number')) {
+        number++;
+      }
+      return 'Board $number';
+    }
+
     final success = await workspace.mutate(
       (s) => s.copyWith(
         boards: [
           ...s.boards,
           Board.create(
             id: id,
-            name: name ?? 'Board ${s.boards.length + 1}',
+            name: name?.trim() ?? unusedName(s),
             sortOrder:
                 s.boards.fold<int>(
                   -1,
