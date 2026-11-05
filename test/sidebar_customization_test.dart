@@ -94,14 +94,11 @@ void main() {
           );
           expect(
             tester.getRect(glow),
-            platform == TargetPlatform.windows ? surface : surface.deflate(1),
+            surface,
             reason:
-                'Desktop glow shares the whole border at $pixelRatio scale; Android retains its approved inset',
+                'The glow traces the same card perimeter at $pixelRatio scale on both platforms',
           );
-          expect(
-            tester.widget<BoardSyncGlow>(glow).foreground,
-            platform == TargetPlatform.windows,
-          );
+          expect(tester.widget<BoardSyncGlow>(glow).foreground, isTrue);
         }
         final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
         await mouse.addPointer(

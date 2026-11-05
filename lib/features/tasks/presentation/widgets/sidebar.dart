@@ -517,8 +517,7 @@ class _BoardCardState extends State<_BoardCard> {
   }
 }
 
-/// Desktop outlines and their light share the complete surface, before Ink's
-/// implicit border padding. Touch keeps its approved inset light placement.
+/// The outline and its travelling light share the complete card surface.
 class _BoardSurface extends StatelessWidget {
   const _BoardSurface({
     required this.pending,
@@ -530,16 +529,11 @@ class _BoardSurface extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => usesTouchControls(context)
-      ? Ink(
-          decoration: decoration,
-          child: BoardSyncGlow(active: pending, child: child),
-        )
-      : BoardSyncGlow(
-          active: pending,
-          foreground: true,
-          child: Ink(decoration: decoration, child: child),
-        );
+  Widget build(BuildContext context) => BoardSyncGlow(
+    active: pending,
+    foreground: true,
+    child: Ink(decoration: decoration, child: child),
+  );
 }
 
 /// Individual sidebar navigation item

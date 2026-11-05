@@ -91,8 +91,9 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
   soft luminous tail and visible contrast, without sweeping bands or shading
   across the interior. Preserve board colors and content; omit task-style color
   washes and destination holds. Reduced motion keeps the light stationary.
-  Keep its top and bottom aligned evenly with the card surface on Windows,
-  including display scaling; preserve Android's approved appearance.
+  On Windows and Android, draw the moving light over the card's perimeter using
+  the complete surface bounds, aligned evenly at the top and bottom, including
+  display scaling. Android shares the approved Windows placement.
   Source: user requested a different, minimal but noticeable approach after
   rejecting the interior sheen, 2026-11-05.
 - Windows keeps the animated startup logo. Android starts with a centered static
