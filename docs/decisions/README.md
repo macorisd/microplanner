@@ -36,6 +36,9 @@ Initial consolidation: 2026-11-02, from the user's instructions and approved pla
 through 0.10.0, plus the validated 0.10.2 refinements. The approved
 [0.11.0 customization decisions](../plans/plan-20261102T143728008Z-version0.11.0.md)
 are included in the relevant topics. Verification evidence belongs in the plan.
+The 2026-11-05 audit covers [PR #13](https://github.com/macorisd/microplanner/pull/13)
+through [PR #19](https://github.com/macorisd/microplanner/pull/19); current topic
+rules incorporate later refinements and replace superseded timing requirements.
 After updating an older worktree, align its ignored local `plansPath` with
 `docs/plans`; do not recreate a root-level plans directory or modify another
 active worktree's private configuration.

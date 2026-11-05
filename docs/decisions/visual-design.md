@@ -5,7 +5,9 @@ Applies to visible UI on Windows and Android. Source: user-approved plans
 [0.4.0](../plans/plan-20261025T191235062Z-version0.4.0.md),
 [0.5.0](../plans/plan-20261027T085951733Z-version0.5.0.md),
 [0.10.0](../plans/plan-20261030T185610007Z-version0.10.0.md), and subsequent explicit
-user refinements validated through 0.10.2 (consolidated 2026-11-02).
+user refinements (initial consolidation 2026-11-02; audited against
+[PR #13](https://github.com/macorisd/microplanner/pull/13) through
+[PR #19](https://github.com/macorisd/microplanner/pull/19) on 2026-11-05).
 
 ## Palette and components
 
@@ -53,6 +55,9 @@ user refinements validated through 0.10.2 (consolidated 2026-11-02).
   form, a back button, the noneditable task title and description field. Keep
   unsaved content. Its expand control is compact, uses matching colors and aligns
   with adjacent fields such as Subject; it is not an oversized separate action.
+- Description scrollbars must remain clear of the entered text and its selection,
+  including in the expanded editor; reserve space instead of painting the thumb
+  over text. Source: [PR #14](https://github.com/macorisd/microplanner/pull/14).
 - Preserve compact task cards on Android: bottom spacing comparable to side
   spacing, no blank subject row or extra title/date gap when Subject is absent.
   Align the checkbox with the date's left edge. Priority has breathing room after
