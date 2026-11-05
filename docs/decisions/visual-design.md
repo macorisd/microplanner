@@ -152,6 +152,9 @@ icon-only selector tinted with the current board color. Type editors show an
 as its compact button. Use matching rounded surfaces and accessible tooltips.
 Windows subject/type rows center 20-pixel markers vertically with names and use
 an 8-pixel gap, matching Android's compact separation.
+Subject/type list Remove glyphs use 18 pixels on both platforms, centered with
+the row and adjacent drag handle; preserve the existing button hit area.
+Source: user refinement, 2026-11-05.
 Newly created boards default to the final blue-gray preset (#90A4AE), preserving
 all existing board colors and legacy deserialization defaults.
 

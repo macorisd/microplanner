@@ -548,7 +548,7 @@ class EditableCategoryList extends StatelessWidget {
                       ),
                       IconButton(
                         tooltip: 'Remove $label',
-                        icon: const Icon(Icons.delete_outline),
+                        icon: const Icon(Icons.delete_outline, size: 18),
                         onPressed: () => onChanged(
                           items.where((value) => value.id != item.id).toList(),
                         ),
