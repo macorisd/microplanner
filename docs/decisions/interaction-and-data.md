@@ -152,7 +152,15 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
   beyond it, rather than showing a permanent warning. Source: the approved
   0.11.0 plan, B02, and [PR #15](https://github.com/macorisd/microplanner/pull/15).
 - Preserve board order through subsequent queued edits, refresh and cache restore;
-  reordering retains board IDs. Windows board rows can be dragged immediately;
+  reordering retains board IDs. Show the accepted order immediately after a drop,
+  throughout synchronization and on confirmation, without reverting to the old
+  order while waiting. A definite failure restores the confirmed order.
+  While any board creation/editor save shows pending synchronization, disable
+  reordering all sidebar boards; keep board navigation available. Re-enable
+  dragging when those saves resolve, including definite failure. This includes
+  category-only saves, but task writes alone do not block board reordering.
+  Source: user correction, 2026-11-06.
+  Windows board rows can be dragged immediately;
   Android rows require a long press, while ordinary swipes scroll without
   reordering. Source: PR #15's ordering and touch refinements.
 - Dragged boards, subjects and task types stay visually inside their own visible

@@ -379,7 +379,9 @@ class BoardsProvider extends ChangeNotifier {
   }
 
   Future<bool> reorderBoards(int oldIndex, int newIndex) {
-    if (oldIndex < 0 ||
+    if (!workspace.canWrite ||
+        workspace.pendingBoardIds.isNotEmpty ||
+        oldIndex < 0 ||
         oldIndex >= boards.length ||
         newIndex < 0 ||
         newIndex > boards.length) {

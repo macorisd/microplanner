@@ -63,14 +63,35 @@ class WorkspaceController extends ChangeNotifier {
     final newBoards = projected.boards
         .where((board) => !existingBoards.contains(board.id))
         .toList();
-    if (pendingNew.isEmpty && newBoards.isEmpty) return _snapshot;
+    final boardOrder = {
+      for (final board in projected.boards) board.id: board.sortOrder,
+    };
+    final orderChanged = _snapshot.boards.any(
+      (board) =>
+          boardOrder[board.id] != null &&
+          boardOrder[board.id] != board.sortOrder,
+    );
+    if (pendingNew.isEmpty && newBoards.isEmpty && !orderChanged) {
+      return _snapshot;
+    }
     final newBoardIds = newBoards.map((board) => board.id).toSet();
     final additions = projected.tasks.where(
       (task) => pendingNew.contains(task.id) && !existing.contains(task.id),
     );
     return _snapshot.copyWith(
       tasks: [..._snapshot.tasks, ...additions],
-      boards: [..._snapshot.boards, ...newBoards],
+      // Project ordering without exposing unrelated pending board edits/deletions.
+      boards:
+          [
+            for (final board in _snapshot.boards)
+              board.copyWith(
+                sortOrder: boardOrder[board.id] ?? board.sortOrder,
+              ),
+            ...newBoards,
+          ]..sort((a, b) {
+            final order = a.sortOrder.compareTo(b.sortOrder);
+            return order != 0 ? order : a.createdAt.compareTo(b.createdAt);
+          }),
       subjects: [
         ..._snapshot.subjects,
         ...projected.subjects.where(
