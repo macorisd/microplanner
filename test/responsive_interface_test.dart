@@ -368,9 +368,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       }
-      await tester.ensureVisible(find.text('Create Task'));
+      await tester.ensureVisible(find.text('Create task'));
       await tester.pumpAndSettle();
-      expect(find.text('Create Task').hitTestable(), findsOneWidget);
+      expect(find.text('Create task').hitTestable(), findsOneWidget);
       expect(find.text('Cancel').hitTestable(), findsOneWidget);
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();

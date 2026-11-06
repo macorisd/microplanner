@@ -159,47 +159,56 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 360),
             child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Select date',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    if (_input)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: LimitedTextField(
-                          controller: _controller,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: const [DateDigitsFormatter()],
-                          limit: 10,
-                          validationLines: 3,
-                          validator: _error,
-                          autofocus: true,
-                          decoration: InputDecoration(
-                            labelText: 'Date',
-                            hintText: MaterialLocalizations.of(
-                              context,
-                            ).dateHelpText,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Select date',
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
-                          onSubmitted: (_) => _accept(),
                         ),
-                      )
-                    else
-                      CalendarDatePicker(
-                        key: _calendarKey,
-                        initialDate: _selected,
-                        firstDate: widget.firstDate,
-                        lastDate: widget.lastDate,
-                        onDateChanged: _dateChanged,
-                      ),
-                    PickerActions(
+                        if (_input)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: LimitedTextField(
+                              controller: _controller,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: const [DateDigitsFormatter()],
+                              limit: 10,
+                              validationLines: 2,
+                              validator: _error,
+                              autofocus: true,
+                              decoration: InputDecoration(
+                                labelText: 'Date',
+                                hintText: MaterialLocalizations.of(
+                                  context,
+                                ).dateHelpText,
+                              ),
+                              onSubmitted: (_) => _accept(),
+                            ),
+                          )
+                        else
+                          CalendarDatePicker(
+                            key: _calendarKey,
+                            initialDate: _selected,
+                            firstDate: widget.firstDate,
+                            lastDate: widget.lastDate,
+                            onDateChanged: _dateChanged,
+                          ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: pickerActionInsets(context, androidInset: 16),
+                    child: PickerActions(
                       modeTooltip: _input
                           ? 'Switch to calendar'
                           : 'Switch to input',
@@ -211,8 +220,8 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
                       showApply: _input,
                       onApply: !_closing && _valid ? _accept : null,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

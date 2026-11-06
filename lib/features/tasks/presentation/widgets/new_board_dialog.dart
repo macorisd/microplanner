@@ -1,3 +1,4 @@
+import 'form_dialog.dart';
 import 'task_form_keyboard.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -73,10 +74,8 @@ class _NewBoardDialogState extends State<NewBoardDialog>
     child: TaskFormKeyboard(
       canSubmit: !_saving && _nameError(_controller.text) == null,
       onSubmit: _save,
-      child: AlertDialog(
-        scrollable: true,
-        title: const Text('New Board'),
-        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+      child: FormDialog(
+        title: Text(widget.creating ? 'New Board' : 'Edit Board'),
         content: LimitedTextField(
           limit: WorkspaceLimits.boardName,
           validator: _nameError,
@@ -102,7 +101,7 @@ class _NewBoardDialogState extends State<NewBoardDialog>
             onPressed: _saving || _nameError(_controller.text) != null
                 ? null
                 : _save,
-            child: const Text('Create'),
+            child: Text(widget.creating ? 'Create board' : 'Save changes'),
           ),
         ],
       ),

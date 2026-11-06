@@ -339,10 +339,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await showMotionDialog(
       context: context,
       builder: (_) => ActionConfirmationDialog(
-        title: 'Clear Completed Tasks',
+        title: 'Delete Completed tasks',
         message:
             'Delete $count completed ${count == 1 ? 'task' : 'tasks'} from "${board.name}"?',
-        actionLabel: 'Clear',
+        actionLabel: 'Delete',
         pendingLabel: 'Clearing…',
         destructive: true,
         onConfirm: () {

@@ -45,7 +45,7 @@ WorkspaceSnapshot data() => WorkspaceSnapshot(
   ],
 );
 final _clear = find.byWidgetPredicate(
-  (w) => w is IconButton && w.tooltip == 'Clear Completed Tasks',
+  (w) => w is IconButton && w.tooltip == 'Delete Completed tasks',
 );
 
 void main() {
@@ -385,7 +385,7 @@ void main() {
         f.h.server.nextWrite = pending;
         await tester.tap(_clear);
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Clear'));
+        await tester.tap(find.text('Delete'));
         await tester.pump();
         await tester.runAsync(settleAsync);
         await tester.pump();

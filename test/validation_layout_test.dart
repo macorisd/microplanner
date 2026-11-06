@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:microplanner/core/data/workspace_controller.dart';
 import 'package:microplanner/core/theme/app_theme.dart';
 import 'package:microplanner/core/widgets/limited_text_field.dart';
+import 'package:microplanner/core/widgets/form_actions.dart';
 import 'package:microplanner/features/boards/providers/boards_provider.dart';
 import 'package:microplanner/features/tasks/data/models/task.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/add_task_dialog.dart';
@@ -95,6 +96,26 @@ void main() {
           final field = find.byType(TextFormField).first;
           final fieldRect = tester.getRect(field);
           final cancelRect = tester.getRect(find.text('Cancel'));
+          final footer = tester.getRect(find.byType(FormFooter));
+          final proceed = find.byWidgetPredicate(
+            (widget) => widget is ElevatedButton || widget is FilledButton,
+          );
+          final surface = tester.getRect(
+            find.descendant(of: proceed, matching: find.byType(Material)),
+          );
+          final inset = platform == TargetPlatform.windows ? 12 : 16;
+          expect(footer.right - surface.right, inset);
+          expect(footer.bottom - surface.bottom, inset);
+          if (kind == 'create task' || kind == 'edit task') {
+            final priority = find
+                .ancestor(of: find.text('Low'), matching: find.byType(InkWell))
+                .first;
+            expect(
+              tester.getTopLeft(find.widgetWithText(TextButton, 'Cancel')).dy -
+                  tester.getBottomRight(priority).dy,
+              inInclusiveRange(0, 48),
+            );
+          }
           if (kind == 'new board') {
             final container = InputDecorator.containerOf(
               tester.element(find.byType(EditableText)),
@@ -102,9 +123,13 @@ void main() {
             final bottom =
                 container.localToGlobal(Offset.zero).dy + container.size.height;
             final buttonTop = tester
-                .getTopLeft(find.widgetWithText(FilledButton, 'Create'))
+                .getTopLeft(find.widgetWithText(TextButton, 'Cancel'))
                 .dy;
-            expect(buttonTop - bottom, lessThanOrEqualTo(40));
+            // Reserved name message row + body spacing + balanced footer inset.
+            expect(
+              buttonTop - bottom,
+              platform == TargetPlatform.windows ? 40 : 44,
+            );
           }
           await tester.enterText(field, 'A valid name');
           await tester.pumpAndSettle();
@@ -118,12 +143,12 @@ void main() {
           await tester.pumpAndSettle();
           expect(tester.getRect(find.byType(Dialog)), dialog);
           final action = kind == 'subject'
-              ? 'Save'
+              ? 'Save changes'
               : kind == 'new board'
-              ? 'Create'
+              ? 'Create board'
               : kind == 'edit task'
-              ? 'Save Changes'
-              : 'Create Task';
+              ? 'Save changes'
+              : 'Create task';
           await tester.ensureVisible(find.text(action));
           await tester.tap(find.text(action));
           await tester.pumpAndSettle();

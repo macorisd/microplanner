@@ -36,12 +36,16 @@ Future<bool> expandDescription(
   TextEditingController controller, {
   required String taskName,
   required GlobalKey panelKey,
+  GlobalKey? footerKey,
   required bool Function() canSubmit,
 }) async {
   // Measure the full form content, not its keyboard-constrained scroll viewport.
   // Dialog applies the live available height while Android dismisses the IME.
   final panel = panelKey.currentContext?.findRenderObject() as RenderBox?;
-  final panelSize = panel?.size ?? const Size(480, 600);
+  final footer = footerKey?.currentContext?.findRenderObject() as RenderBox?;
+  final panelSize = panel == null
+      ? const Size(480, 600)
+      : Size(panel.size.width, panel.size.height + (footer?.size.height ?? 0));
   FocusManager.instance.primaryFocus?.unfocus();
   final submit = await showDialog<bool>(
     context: context,

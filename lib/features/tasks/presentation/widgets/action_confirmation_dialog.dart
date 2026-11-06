@@ -1,3 +1,4 @@
+import 'form_dialog.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/widgets/pending_action.dart';
 import 'save_status.dart';
@@ -35,8 +36,7 @@ class _ActionConfirmationDialogState extends State<ActionConfirmationDialog>
   @override
   Widget build(BuildContext context) => PendingForm(
     pending: actionBlocked,
-    child: AlertDialog(
-      scrollable: true,
+    child: FormDialog(
       title: Text(widget.title),
       content: Column(
         mainAxisSize: MainAxisSize.min,

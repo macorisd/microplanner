@@ -180,150 +180,169 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 360),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      localizations.timePickerDialHelpText,
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    const SizedBox(height: 20),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final hour = _input
-                            ? _inputField(
-                                _hour,
-                                localizations.timePickerHourLabel,
-                                _hourError,
-                              )
-                            : _header(
-                                _displayHour.toString().padLeft(2, '0'),
-                                localizations.timePickerHourLabel,
-                                !_minutes,
-                                () {
-                                  if (!_settling) {
-                                    setState(() => _minutes = false);
-                                  }
-                                },
-                              );
-                        final minute = _input
-                            ? _inputField(
-                                _minute,
-                                localizations.timePickerMinuteLabel,
-                                _minuteError,
-                              )
-                            : _header(
-                                _time.minute.toString().padLeft(2, '0'),
-                                localizations.timePickerMinuteLabel,
-                                _minutes,
-                                () {
-                                  if (!_settling) {
-                                    setState(() => _minutes = true);
-                                  }
-                                },
-                              );
-                        return Column(
-                          children: [
-                            if (_input && constraints.maxWidth < 280) ...[
-                              hour,
-                              const SizedBox(height: 16),
-                              minute,
-                            ] else
-                              Row(
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            localizations.timePickerDialHelpText,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          const SizedBox(height: 20),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final hour = _input
+                                  ? _inputField(
+                                      _hour,
+                                      localizations.timePickerHourLabel,
+                                      _hourError,
+                                    )
+                                  : _header(
+                                      _displayHour.toString().padLeft(2, '0'),
+                                      localizations.timePickerHourLabel,
+                                      !_minutes,
+                                      () {
+                                        if (!_settling) {
+                                          setState(() => _minutes = false);
+                                        }
+                                      },
+                                    );
+                              final minute = _input
+                                  ? _inputField(
+                                      _minute,
+                                      localizations.timePickerMinuteLabel,
+                                      _minuteError,
+                                    )
+                                  : _header(
+                                      _time.minute.toString().padLeft(2, '0'),
+                                      localizations.timePickerMinuteLabel,
+                                      _minutes,
+                                      () {
+                                        if (!_settling) {
+                                          setState(() => _minutes = true);
+                                        }
+                                      },
+                                    );
+                              return Column(
                                 children: [
-                                  Expanded(child: hour),
-                                  Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                        ).copyWith(
-                                          bottom: _input
-                                              ? LimitedTextField.supportingHeightOf(
-                                                  context,
-                                                )
-                                              : 0,
-                                        ),
-                                    child: Text(
-                                      ':',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.headlineLarge,
-                                    ),
-                                  ),
-                                  Expanded(child: minute),
-                                ],
-                              ),
-                            if (!_use24)
-                              Wrap(
-                                spacing: 8,
-                                children: [
-                                  for (final period in DayPeriod.values)
-                                    ChoiceChip(
-                                      label: Text(
-                                        period == DayPeriod.am
-                                            ? localizations
-                                                  .anteMeridiemAbbreviation
-                                            : localizations
-                                                  .postMeridiemAbbreviation,
-                                      ),
-                                      selected: _time.period == period,
-                                      onSelected: _settling
-                                          ? null
-                                          : (_) => setState(
-                                              () => _time = _time.replacing(
-                                                hour:
-                                                    _time.hour % 12 +
-                                                    (period == DayPeriod.pm
-                                                        ? 12
-                                                        : 0),
+                                  if (_input && constraints.maxWidth < 280) ...[
+                                    hour,
+                                    const SizedBox(height: 16),
+                                    minute,
+                                  ] else
+                                    Row(
+                                      children: [
+                                        Expanded(child: hour),
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                              ).copyWith(
+                                                bottom: _input
+                                                    ? LimitedTextField.supportingHeightOf(
+                                                        context,
+                                                      )
+                                                    : 0,
                                               ),
+                                          child: Text(
+                                            ':',
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.headlineLarge,
+                                          ),
+                                        ),
+                                        Expanded(child: minute),
+                                      ],
+                                    ),
+                                  if (!_use24)
+                                    Wrap(
+                                      spacing: 8,
+                                      children: [
+                                        for (final period in DayPeriod.values)
+                                          ChoiceChip(
+                                            label: Text(
+                                              period == DayPeriod.am
+                                                  ? localizations
+                                                        .anteMeridiemAbbreviation
+                                                  : localizations
+                                                        .postMeridiemAbbreviation,
                                             ),
+                                            selected: _time.period == period,
+                                            onSelected: _settling
+                                                ? null
+                                                : (_) => setState(
+                                                    () =>
+                                                        _time = _time.replacing(
+                                                          hour:
+                                                              _time.hour % 12 +
+                                                              (period ==
+                                                                      DayPeriod
+                                                                          .pm
+                                                                  ? 12
+                                                                  : 0),
+                                                        ),
+                                                  ),
+                                          ),
+                                      ],
                                     ),
                                 ],
-                              ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    if (!_input)
-                      Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 256),
-                          child: AspectRatio(
-                            aspectRatio: 1,
-                            child: LayoutBuilder(
-                              builder: (context, constraints) => IgnorePointer(
-                                ignoring: _settling,
-                                child: _TimeDial(
-                                  size: constraints.maxWidth,
-                                  minutes: _minutes,
-                                  use24: _use24,
-                                  settling: _settling,
-                                  value: _minutes ? _time.minute : _time.hour,
-                                  onChanged: _select,
+                              );
+                            },
+                          ),
+                          if (!_input) const SizedBox(height: 24),
+                          if (!_input)
+                            Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 256,
+                                ),
+                                child: AspectRatio(
+                                  aspectRatio: 1,
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) =>
+                                        IgnorePointer(
+                                          ignoring: _settling,
+                                          child: _TimeDial(
+                                            size: constraints.maxWidth,
+                                            minutes: _minutes,
+                                            use24: _use24,
+                                            settling: _settling,
+                                            value: _minutes
+                                                ? _time.minute
+                                                : _time.hour,
+                                            onChanged: _select,
+                                          ),
+                                        ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
+                          SizedBox(height: _input ? 8 : 16),
+                        ],
                       ),
-                    const SizedBox(height: 16),
-                    PickerActions(
-                      modeTooltip: _input
-                          ? 'Switch to dial'
-                          : 'Switch to input',
-                      modeIcon: _input
-                          ? Icons.access_time
-                          : Icons.keyboard_outlined,
-                      onModeChanged: _closing || _settling
-                          ? null
-                          : _toggleInput,
-                      onCancel: _closing ? null : () => _close(null),
-                      showApply: _input,
-                      onApply: !_closing && _valid ? _accept : null,
+                    ),
+                    Padding(
+                      padding: pickerActionInsets(context, androidInset: 16),
+                      child: PickerActions(
+                        modeTooltip: _input
+                            ? 'Switch to dial'
+                            : 'Switch to input',
+                        modeIcon: _input
+                            ? Icons.access_time
+                            : Icons.keyboard_outlined,
+                        onModeChanged: _closing || _settling
+                            ? null
+                            : _toggleInput,
+                        onCancel: _closing ? null : () => _close(null),
+                        showApply: _input,
+                        onApply: !_closing && _valid ? _accept : null,
+                      ),
                     ),
                   ],
                 ),

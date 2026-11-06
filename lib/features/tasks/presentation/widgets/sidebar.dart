@@ -346,8 +346,8 @@ class _BoardsSectionState extends State<_BoardsSection>
                   ),
                 ),
               ),
-        child: Consumer<BoardsProvider>(
-          builder: (context, provider, _) => BoundedReorderableList(
+        child: Consumer2<BoardsProvider, WorkspaceController>(
+          builder: (context, provider, workspace, _) => BoundedReorderableList(
             proxyColor: AppColors.sidebarBackground,
             onReorder: provider.reorderBoards,
             itemCount: provider.boards.length,
@@ -364,11 +364,17 @@ class _BoardsSectionState extends State<_BoardsSection>
                   ? ReorderableDelayedDragStartListener(
                       key: ValueKey(board.id),
                       index: index,
+                      enabled:
+                          workspace.canWrite &&
+                          workspace.pendingBoardIds.isEmpty,
                       child: card,
                     )
                   : ReorderableDragStartListener(
                       key: ValueKey(board.id),
                       index: index,
+                      enabled:
+                          workspace.canWrite &&
+                          workspace.pendingBoardIds.isEmpty,
                       child: card,
                     );
             },

@@ -224,7 +224,7 @@ void main() {
     await tester.enterText(find.byType(TextFormField).first, 'Keep this draft');
     await tester.pump();
     cache.fail = true;
-    await tester.tap(find.text('Create Task'));
+    await tester.tap(find.text('Create task'));
     await tester.runAsync(settleAsync);
     await tester.pump();
     expect(find.byType(AddTaskDialog), findsOneWidget);
@@ -286,7 +286,7 @@ void main() {
     await tester.enterText(find.byType(TextFormField).first, 'Durable draft');
     await tester.pump();
     cache.block = true;
-    await tester.tap(find.text('Create Task'));
+    await tester.tap(find.text('Create task'));
     await tester.pump();
     expect(find.byType(AddTaskDialog), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -484,7 +484,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).first, 'Saved draft');
       await tester.pump();
-      await tester.tap(find.text('Create Task'));
+      await tester.tap(find.text('Create task'));
       await tester.pump();
       expect(find.byType(CircularProgressIndicator), findsNothing);
       await tester.pump(const Duration(milliseconds: 400));
@@ -513,7 +513,7 @@ void main() {
       );
       await tester.enterText(find.byType(TextFormField).first, 'Revised draft');
       await tester.pump();
-      await tester.tap(find.text('Create Task'));
+      await tester.tap(find.text('Create task'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       await tester.runAsync(settleAsync);
@@ -572,7 +572,7 @@ void main() {
         'Background task',
       );
       await tester.pump();
-      await tester.tap(find.text('Create Task'));
+      await tester.tap(find.text('Create task'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
       expect(find.byType(AddTaskDialog), findsNothing);

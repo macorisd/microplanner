@@ -89,7 +89,7 @@ void main() {
     f.h.server.nextRead = read;
     final refreshing = f.h.workspace.refresh();
     await tester.runAsync(settleAsync);
-    await tester.tap(find.text('Create Task'));
+    await tester.tap(find.text('Create task'));
     await tester.pump();
     expect(
       tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
@@ -134,7 +134,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Pending board');
     await tester.pump();
-    await tester.tap(find.text('Create'));
+    await tester.tap(find.text('Create board'));
     await tester.pump();
     await tester.testTextInput.receiveAction(TextInputAction.done);
     expect(calls, 1);

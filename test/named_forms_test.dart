@@ -8,6 +8,7 @@ import 'package:microplanner/core/data/workspace_limits.dart';
 import 'package:microplanner/core/data/workspace_delta.dart';
 import 'package:microplanner/core/theme/app_theme.dart';
 import 'package:microplanner/core/widgets/form_message.dart';
+import 'package:microplanner/core/widgets/form_actions.dart';
 import 'package:microplanner/features/boards/data/models/subject.dart';
 import 'package:microplanner/features/boards/providers/boards_provider.dart';
 import 'package:microplanner/features/tasks/data/models/task.dart';
@@ -167,6 +168,87 @@ void main() {
             await tester.pumpAndSettle();
             expect(find.text('Please enter a name.'), findsOneWidget);
             expect(tester.getRect(field), before);
+            // The same form must retain its actions when the viewport and IME
+            // leave only a small scrolling body, including on creation routes.
+            tester.view.physicalSize = const Size(360, 700);
+            await tester.pumpAndSettle();
+            final footer = find.byType(FormFooter);
+            expect(footer, findsOneWidget);
+            final footerBefore = tester.getRect(footer);
+            final cancel = find.text('Cancel');
+            final proceed = find.text(
+              editing
+                  ? 'Save changes'
+                  : 'Create ${kind == 'legacy subject' ? 'subject' : kind}',
+            );
+            expect(cancel.hitTestable(), findsOneWidget);
+            expect(proceed.hitTestable(), findsOneWidget);
+            await tester.drag(
+              find.byType(SingleChildScrollView).last,
+              const Offset(0, -500),
+            );
+            await tester.pumpAndSettle();
+            expect(tester.getRect(footer), footerBefore);
+            tester.view.viewInsets = const FakeViewPadding(bottom: 220);
+            await tester.pumpAndSettle();
+            expect(tester.getRect(footer).bottom, lessThanOrEqualTo(480));
+            expect(cancel.hitTestable(), findsOneWidget);
+            expect(proceed.hitTestable(), findsOneWidget);
+            tester.view.resetViewInsets();
+            await tester.pumpAndSettle();
+            final Finder lastControl;
+            if (kind == 'task') {
+              lastControl = find
+                  .ancestor(
+                    of: find.text('Low'),
+                    matching: find.byType(InkWell),
+                  )
+                  .first;
+            } else if (kind == 'subject' || kind == 'legacy subject') {
+              lastControl = find.byType(ColorChoices);
+            } else if (kind == 'board' && editing) {
+              lastControl = find
+                  .ancestor(
+                    of: find.text('Apply default list'),
+                    matching: find.byWidgetPredicate(
+                      (widget) => widget is TextButton,
+                    ),
+                  )
+                  .first;
+            } else if (kind == 'task type') {
+              lastControl = find.byType(IconChoice);
+            } else if (kind == 'default list') {
+              lastControl = find.byType(EditableCategoryList).last;
+            } else {
+              lastControl = field;
+            }
+            await tester.ensureVisible(lastControl);
+            await tester.pumpAndSettle();
+            final actionTop = tester
+                .getTopLeft(find.widgetWithText(TextButton, 'Cancel'))
+                .dy;
+            final gap = actionTop - tester.getBottomRight(lastControl).dy;
+            expect(
+              gap,
+              inInclusiveRange(0, 48),
+              reason:
+                  'The complete content-to-action gap must stay modest for $kind, including hidden status rows.',
+            );
+            final action = find
+                .ancestor(
+                  of: proceed,
+                  matching: find.byWidgetPredicate(
+                    (widget) => widget is ButtonStyleButton,
+                  ),
+                )
+                .first;
+            final actionSurface = tester.getRect(
+              find.descendant(of: action, matching: find.byType(Material)),
+            );
+            final footerRect = tester.getRect(footer);
+            final inset = platform == TargetPlatform.windows ? 8 : 16;
+            expect(footerRect.right - actionSurface.right, inset);
+            expect(footerRect.bottom - actionSurface.bottom, inset);
             expect(tester.takeException(), isNull);
             await tester.pumpWidget(const SizedBox());
             f.dispose();
@@ -203,7 +285,10 @@ void main() {
           expect(
             tester
                 .widget<ElevatedButton>(
-                  find.widgetWithText(ElevatedButton, 'Save'),
+                  find.widgetWithText(
+                    ElevatedButton,
+                    editing ? 'Save changes' : 'Create subject',
+                  ),
                 )
                 .onPressed,
             isNull,
@@ -213,7 +298,10 @@ void main() {
           expect(
             tester
                 .widget<ElevatedButton>(
-                  find.widgetWithText(ElevatedButton, 'Save'),
+                  find.widgetWithText(
+                    ElevatedButton,
+                    editing ? 'Save changes' : 'Create subject',
+                  ),
                 )
                 .onPressed,
             isNotNull,
@@ -252,7 +340,10 @@ void main() {
           actions.top - footer.top,
           closeTo(footer.bottom - actions.bottom, .1),
         );
-        expect(actions.top - footer.top, lessThanOrEqualTo(8));
+        expect(
+          actions.top - footer.top,
+          platform == TargetPlatform.windows ? 12 : 16,
+        );
         expect(save.hitTestable(), findsOneWidget);
         await tester.drag(
           find.byType(SingleChildScrollView).last,

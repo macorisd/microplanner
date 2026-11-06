@@ -94,8 +94,8 @@ void main() {
         tester.getTopLeft(find.byTooltip('Choose icon')).dy,
         greaterThan(tester.getBottomLeft(find.byType(TextField)).dy),
       );
-      await tester.ensureVisible(find.text('Save'));
-      expect(find.text('Save').hitTestable(), findsOneWidget);
+      await tester.ensureVisible(find.text('Save changes'));
+      expect(find.text('Save changes').hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();

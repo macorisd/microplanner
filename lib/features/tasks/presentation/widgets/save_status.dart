@@ -10,9 +10,6 @@ class SaveStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     final workspace = context.watch<WorkspaceController>();
     final message = workspace.error ?? error;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: FormMessage(message: message, lines: 2),
-    );
+    return FormMessage(message: message);
   }
 }

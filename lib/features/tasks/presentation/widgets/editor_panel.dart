@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/widgets/disclosure_icon.dart';
+import '../../../../core/widgets/form_actions.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -53,18 +54,7 @@ class EditorPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Flexible(child: contents),
-                    Material(
-                      color: AppColors.surface,
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          compact ? 16 : 24,
-                          8,
-                          compact ? 16 : 24,
-                          8,
-                        ),
-                        child: footer,
-                      ),
-                    ),
+                    FormFooter(child: footer!),
                   ],
                 ),
         ),
