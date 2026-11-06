@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:microplanner/core/theme/app_theme.dart';
+import 'package:microplanner/core/data/workspace_controller.dart';
 import 'package:microplanner/core/widgets/form_actions.dart';
 import 'package:microplanner/features/auth/data/auth_service.dart';
 import 'package:microplanner/features/auth/presentation/login_screen.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/form_dialog.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/picker_actions.dart';
+import 'package:microplanner/features/tasks/presentation/widgets/action_confirmation_dialog.dart';
 
 import 'support/fakes.dart';
 
@@ -179,6 +181,57 @@ void main() {
             ),
           );
           expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
+  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+    for (final action in ['Delete', 'Import']) {
+      testWidgets(
+        '$platform $action confirmation keeps a compact stable error slot',
+        (tester) async {
+          final h = Harness();
+          await tester.runAsync(h.initialize);
+          await tester.pumpWidget(
+            ChangeNotifierProvider<WorkspaceController>.value(
+              value: h.workspace,
+              child: MaterialApp(
+                theme: AppTheme.lightTheme.copyWith(platform: platform),
+                home: Scaffold(
+                  body: ActionConfirmationDialog(
+                    title: '$action?',
+                    message: 'Sample confirmation message.',
+                    onConfirm: () async => false,
+                    actionLabel: action,
+                    pendingLabel: 'Working',
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final footer = tester.getRect(find.byType(FormFooter));
+          final button = find.widgetWithText(FilledButton, action);
+          final before = tester.getRect(button);
+          expect(
+            before.top -
+                tester
+                    .getBottomRight(find.text('Sample confirmation message.'))
+                    .dy,
+            inInclusiveRange(0, 48),
+          );
+          await tester.tap(button);
+          await tester.pumpAndSettle();
+          expect(
+            find.text('The action could not be completed. Please try again.'),
+            findsOneWidget,
+          );
+          expect(tester.getRect(find.byType(FormFooter)), footer);
+          expect(tester.getRect(button), before);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+          h.dispose();
         },
       );
     }

@@ -80,7 +80,7 @@ void main() {
             final mode = tester.getCenter(find.byTooltip('Switch to input'));
             final inset = platform == TargetPlatform.windows
                 ? (width < 600 ? 8 : 12)
-                : (time ? 24 : 16);
+                : 16;
             if (!time) {
               final calendar = tester.getRect(find.byType(CalendarDatePicker));
               final actions = tester.getRect(find.byType(PickerActions));
@@ -132,6 +132,20 @@ void main() {
                   .first,
             );
             expect(dialogSurface.bottom - applyRect.bottom, closeTo(inset, .1));
+            final lastInput = InputDecorator.containerOf(
+              tester.element(find.byType(EditableText).last),
+            )!;
+            final inputBottom =
+                lastInput.localToGlobal(Offset.zero).dy + lastInput.size.height;
+            final firstActionTop = tester
+                .getTopLeft(find.widgetWithText(TextButton, 'Cancel'))
+                .dy;
+            expect(
+              firstActionTop - inputBottom,
+              inInclusiveRange(0, 48),
+              reason:
+                  'Manual input must not leave a large empty band before actions.',
+            );
             if (width == 320) {
               // The test font has unusually wide glyphs: wrapping is permitted
               // when all controls cannot fit, with every action still reachable.

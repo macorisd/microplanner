@@ -23,6 +23,11 @@ practices, not optional examples.
   early when needed, using an asynchronous interactive question while continuing
   independent work. Perform the available checks yourself; request manual testing
   only for a real tool limitation, personal preference or requested user validation.
+- For form layout changes, inventory every affected form and measure the complete
+  gap from its last visible content to its buttons, including hidden message
+  reservations and accumulated padding. Check compact/large layouts, keyboard
+  and error states, plus actual installations on both platforms. Passing margin
+  assertions or inspecting isolated footers does not establish visual quality.
 
 ## Windows
 

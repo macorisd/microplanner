@@ -40,7 +40,7 @@ user refinements (initial consolidation 2026-11-02; audited against
   distinguishable and retain the existing red Cancel text.
 - These forms always have a white footer outside the scrolling content, including
   short forms and small screens. Windows uses balanced footer padding of 12
-  (8 in compact windows); Android retains 16, except Edit Task's approved 8.
+  (8 in compact windows); Android uses 16 consistently, matching Edit Board.
   Increase footer height when needed. Measure the visible button
   surface: the bottom gap below the rightmost proceed button must equal its right
   gap to the dialog edge, not merely the padding of an invisible touch box.
@@ -54,16 +54,25 @@ user refinements (initial consolidation 2026-11-02; audited against
   app and prioritize balanced, aligned layouts over preserving an old footer
   height. Source: user explicitly replaced capsules and required equal visible
   bottom/right margins on 2026-11-06.
-- Extend Edit Task's compact margins to all remaining forms on Windows only,
-  including picker actions, keeping body padding and button geometry unchanged.
-  Android keeps its previous margins: 8 for Edit Task, 16 for other standard
-  footers and the existing 16/24 for date/time pickers respectively. Source: user
-  approved the Windows extension and explicitly excluded Android, 2026-11-06.
-- Preserve all current date/time picker modes and expanded description. The only
-  date/time changes are the shared rounded action shape, compact Cancel and
-  balanced visible margins, matching Apply's height/alignment when present.
-  Do not otherwise change picker layout, footer
-  placement, acceptance or behavior. Expanded description stays unchanged. Reduce
+- Use each platform's shared footer margins in every form and picker. Android's
+  Edit Board is the approved reference; remove the Edit Task-only exception and
+  inconsistent picker margins. Source: user consistency correction, 2026-11-06.
+- Judge spacing across the complete form, from the final visible control to the
+  action surfaces, including reserved validation/save-error rows and nested
+  padding. Do not stack blank status rows, spacers or expanded areas into a large
+  empty band. Keep a modest separation, typically no more than 48 logical pixels
+  at normal text size including one necessary message slot; enlarged text may
+  grow as needed. Reserve only the message space actually needed and keep errors
+  readable without resizing the form or moving its controls. Review healthy and
+  error states across all affected forms and both platforms; checking a footer's
+  padding or a few representative screenshots alone is insufficient. Source:
+  user screenshot review and requested general lesson, 2026-11-06.
+- Preserve all current date/time picker modes and expanded description. Date/time
+  actions use the shared shape, compact Cancel and balanced margins, matching
+  Apply's height/alignment when present. Manual entry also follows the compact
+  content-to-action spacing rule above, with only necessary validation space.
+  Preserve calendar/dial geometry, footer placement, acceptance and behavior.
+  Expanded description stays unchanged. Reduce
   the excess footer margin in Choose an icon. Apply a default list gets a standard
   right-aligned Cancel button in its footer instead of a full-width list option.
   Source: user exceptions, 2026-11-06.

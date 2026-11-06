@@ -177,13 +177,13 @@ class _TaskDatePickerDialogState extends State<TaskDatePickerDialog> {
                         ),
                         if (_input)
                           Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.only(top: 16),
                             child: LimitedTextField(
                               controller: _controller,
                               keyboardType: TextInputType.number,
                               inputFormatters: const [DateDigitsFormatter()],
                               limit: 10,
-                              validationLines: 3,
+                              validationLines: 2,
                               validator: _error,
                               autofocus: true,
                               decoration: InputDecoration(

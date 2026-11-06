@@ -348,7 +348,6 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                 ),
                 FormFooter(
                   key: _footerKey,
-                  compactAndroid: true,
                   child: FormActions(
                     children: [
                       TextButton(

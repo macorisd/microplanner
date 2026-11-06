@@ -295,7 +295,7 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
                               );
                             },
                           ),
-                          const SizedBox(height: 24),
+                          if (!_input) const SizedBox(height: 24),
                           if (!_input)
                             Center(
                               child: ConstrainedBox(
@@ -323,12 +323,12 @@ class _TaskTimePickerDialogState extends State<TaskTimePickerDialog> {
                                 ),
                               ),
                             ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: _input ? 8 : 16),
                         ],
                       ),
                     ),
                     Padding(
-                      padding: pickerActionInsets(context, androidInset: 24),
+                      padding: pickerActionInsets(context, androidInset: 16),
                       child: PickerActions(
                         modeTooltip: _input
                             ? 'Switch to dial'

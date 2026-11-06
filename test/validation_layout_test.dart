@@ -103,11 +103,19 @@ void main() {
           final surface = tester.getRect(
             find.descendant(of: proceed, matching: find.byType(Material)),
           );
-          final inset = platform == TargetPlatform.windows
-              ? 12
-              : (kind == 'edit task' ? 8 : 16);
+          final inset = platform == TargetPlatform.windows ? 12 : 16;
           expect(footer.right - surface.right, inset);
           expect(footer.bottom - surface.bottom, inset);
+          if (kind == 'create task' || kind == 'edit task') {
+            final priority = find
+                .ancestor(of: find.text('Low'), matching: find.byType(InkWell))
+                .first;
+            expect(
+              tester.getTopLeft(find.widgetWithText(TextButton, 'Cancel')).dy -
+                  tester.getBottomRight(priority).dy,
+              inInclusiveRange(0, 48),
+            );
+          }
           if (kind == 'new board') {
             final container = InputDecorator.containerOf(
               tester.element(find.byType(EditableText)),

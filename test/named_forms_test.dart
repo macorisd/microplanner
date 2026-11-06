@@ -195,6 +195,60 @@ void main() {
             expect(cancel.hitTestable(), findsOneWidget);
             expect(proceed.hitTestable(), findsOneWidget);
             tester.view.resetViewInsets();
+            await tester.pumpAndSettle();
+            final Finder lastControl;
+            if (kind == 'task') {
+              lastControl = find
+                  .ancestor(
+                    of: find.text('Low'),
+                    matching: find.byType(InkWell),
+                  )
+                  .first;
+            } else if (kind == 'subject' || kind == 'legacy subject') {
+              lastControl = find.byType(ColorChoices);
+            } else if (kind == 'board' && editing) {
+              lastControl = find
+                  .ancestor(
+                    of: find.text('Apply default list'),
+                    matching: find.byWidgetPredicate(
+                      (widget) => widget is TextButton,
+                    ),
+                  )
+                  .first;
+            } else if (kind == 'task type') {
+              lastControl = find.byType(IconChoice);
+            } else if (kind == 'default list') {
+              lastControl = find.byType(EditableCategoryList).last;
+            } else {
+              lastControl = field;
+            }
+            await tester.ensureVisible(lastControl);
+            await tester.pumpAndSettle();
+            final actionTop = tester
+                .getTopLeft(find.widgetWithText(TextButton, 'Cancel'))
+                .dy;
+            final gap = actionTop - tester.getBottomRight(lastControl).dy;
+            expect(
+              gap,
+              inInclusiveRange(0, 48),
+              reason:
+                  'The complete content-to-action gap must stay modest for $kind, including hidden status rows.',
+            );
+            final action = find
+                .ancestor(
+                  of: proceed,
+                  matching: find.byWidgetPredicate(
+                    (widget) => widget is ButtonStyleButton,
+                  ),
+                )
+                .first;
+            final actionSurface = tester.getRect(
+              find.descendant(of: action, matching: find.byType(Material)),
+            );
+            final footerRect = tester.getRect(footer);
+            final inset = platform == TargetPlatform.windows ? 8 : 16;
+            expect(footerRect.right - actionSurface.right, inset);
+            expect(footerRect.bottom - actionSurface.bottom, inset);
             expect(tester.takeException(), isNull);
             await tester.pumpWidget(const SizedBox());
             f.dispose();
