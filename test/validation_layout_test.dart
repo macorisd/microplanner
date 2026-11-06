@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:microplanner/core/data/workspace_controller.dart';
 import 'package:microplanner/core/theme/app_theme.dart';
 import 'package:microplanner/core/widgets/limited_text_field.dart';
+import 'package:microplanner/core/widgets/form_actions.dart';
 import 'package:microplanner/features/boards/providers/boards_provider.dart';
 import 'package:microplanner/features/tasks/data/models/task.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/add_task_dialog.dart';
@@ -95,6 +96,18 @@ void main() {
           final field = find.byType(TextFormField).first;
           final fieldRect = tester.getRect(field);
           final cancelRect = tester.getRect(find.text('Cancel'));
+          final footer = tester.getRect(find.byType(FormFooter));
+          final proceed = find.byWidgetPredicate(
+            (widget) => widget is ElevatedButton || widget is FilledButton,
+          );
+          final surface = tester.getRect(
+            find.descendant(of: proceed, matching: find.byType(Material)),
+          );
+          final inset =
+              (platform == TargetPlatform.windows ? 24 : 16) *
+              (kind == 'edit task' ? .5 : 1);
+          expect(footer.right - surface.right, inset);
+          expect(footer.bottom - surface.bottom, inset);
           if (kind == 'new board') {
             final container = InputDecorator.containerOf(
               tester.element(find.byType(EditableText)),

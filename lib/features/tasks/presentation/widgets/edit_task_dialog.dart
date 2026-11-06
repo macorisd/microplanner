@@ -348,6 +348,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                 ),
                 FormFooter(
                   key: _footerKey,
+                  paddingScale: .5,
                   child: FormActions(
                     children: [
                       TextButton(

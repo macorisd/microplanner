@@ -53,6 +53,10 @@ user refinements (initial consolidation 2026-11-02; audited against
   app and prioritize balanced, aligned layouts over preserving an old footer
   height. Source: user explicitly replaced capsules and required equal visible
   bottom/right margins on 2026-11-06.
+- Edit Task alone trials half the standard footer margins: 8 compact and 12
+  desktop on every side, preserving equal visible bottom/right gaps, fixed
+  actions and existing button geometry. Other forms keep 16/24 until the user
+  explicitly approves extending the trial. Source: user refinement, 2026-11-06.
 - Preserve all current date/time picker modes and expanded description. The only
   date/time changes are the shared rounded action shape, compact Cancel and
   balanced visible margins, matching Apply's height/alignment when present.

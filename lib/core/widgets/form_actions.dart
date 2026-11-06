@@ -101,8 +101,9 @@ class FormActions extends StatelessWidget {
 
 /// A compact, stationary action strip outside a dialog's scrolling content.
 class FormFooter extends StatelessWidget {
-  const FormFooter({super.key, required this.child});
+  const FormFooter({super.key, required this.child, this.paddingScale = 1});
   final Widget child;
+  final double paddingScale;
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +111,10 @@ class FormFooter extends StatelessWidget {
         usesTouchControls(context) || MediaQuery.sizeOf(context).width < 600;
     return Material(
       color: AppColors.surface,
-      child: Padding(padding: EdgeInsets.all(compact ? 16 : 24), child: child),
+      child: Padding(
+        padding: EdgeInsets.all((compact ? 16 : 24) * paddingScale),
+        child: child,
+      ),
     );
   }
 }
