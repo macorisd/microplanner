@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
+import '../../../core/widgets/form_actions.dart';
 import '../data/auth_service.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -34,6 +35,7 @@ class LoginScreen extends StatelessWidget {
                   const SizedBox(height: 40),
                   PressFeedback(
                     child: FilledButton.icon(
+                      style: formActionStyle(context),
                       onPressed: auth.isLoading ? null : auth.signInWithGoogle,
                       icon: auth.isLoading
                           ? const SizedBox(
@@ -52,13 +54,6 @@ class LoginScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (auth.canCancelSignIn)
-                    TextButton(
-                      onPressed: auth.canCancelSignIn
-                          ? auth.cancelSignIn
-                          : null,
-                      child: const Text('Cancel'),
-                    ),
                   if (auth.error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 20),

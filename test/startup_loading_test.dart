@@ -295,7 +295,7 @@ void main() {
   }
 
   _windowsTest(
-    'signed-out startup keeps interactive Google sign-in and cancellation',
+    'signed-out startup keeps provider dismissal and sign-in recovery without in-app Cancel',
     (tester) async {
       final f = _Startup();
       f.storage.block = false;
@@ -313,8 +313,7 @@ void main() {
       await tester.pump();
       expect(find.byType(StartupLoadingScreen), findsNothing);
       expect(find.text('Connecting…'), findsOneWidget);
-      expect(find.text('Cancel'), findsOneWidget);
-      await tester.tap(find.text('Cancel'));
+      expect(find.text('Cancel'), findsNothing);
       await tester.runAsync(() async {
         f.google.pending!.complete(null);
         await signingIn;

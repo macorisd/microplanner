@@ -1,3 +1,4 @@
+import 'package:microplanner/features/tasks/presentation/widgets/form_dialog.dart';
 import 'dart:ui' show PointerDeviceKind;
 import 'dart:async';
 
@@ -164,7 +165,7 @@ void main() {
       await tester.pump();
       final gate = Completer<http.Response>();
       harness.server.nextWrite = gate;
-      await tester.tap(find.text('Save'));
+      await tester.tap(find.text('Create default list'));
       await tester.pump();
       await tester.runAsync(settleAsync);
       await tester.pumpAndSettle();
@@ -558,7 +559,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('task type from 1 task'), findsOneWidget);
       final confirm = find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(FormDialog),
         matching: find.text('Save changes'),
       );
       await tester.runAsync(() async {

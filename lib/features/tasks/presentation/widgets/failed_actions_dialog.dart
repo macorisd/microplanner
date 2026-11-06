@@ -1,3 +1,5 @@
+import '../../../../core/widgets/form_actions.dart';
+import 'form_dialog.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -245,7 +247,7 @@ class FailedActionsDialog extends StatelessWidget {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => FormDialog(
         title: const Text('Discard saved draft?'),
         content: const Text(
           'This removes the saved action and its draft from this device.',
@@ -279,7 +281,7 @@ class FailedActionsDialog extends StatelessWidget {
     final queue = workspace.ownerId == owner ? workspace.outbox : null;
     final failed =
         queue?.operations.where((item) => item.failure != null).toList() ?? [];
-    return AlertDialog(
+    return FormDialog(
       title: const Text('Actions needing attention'),
       content: SizedBox(
         width: 520,
@@ -349,8 +351,8 @@ class FailedActionsDialog extends StatelessWidget {
                         SelectableText(
                           'Saved draft: ${draft.name}\n${draft.description ?? ''}',
                         ),
-                      Wrap(
-                        spacing: 8,
+                      FormActions(
+                        alignment: MainAxisAlignment.start,
                         children: [
                           if (editable)
                             TextButton(

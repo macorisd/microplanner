@@ -31,6 +31,45 @@ user refinements (initial consolidation 2026-11-02; audited against
 
 ## Forms and cards
 
+- Form action standardization, user decision 2026-11-06, applies on Windows and
+  Android and to future forms. Creation forms use "Cancel" and "Create X";
+  editing forms use "Cancel" and "Save changes"; deletion confirmations use
+  "Cancel" and "Delete". All form buttons use rounded rectangles with radius 12,
+  replacing the previously approved capsules, including date/time actions.
+  Keep destructive actions
+  distinguishable and retain the existing red Cancel text.
+- These forms always have a white footer outside the scrolling content, including
+  short forms and small screens. Use balanced footer padding (16 compact,
+  24 desktop) and increase footer height when needed. Measure the visible button
+  surface: the bottom gap below the rightmost proceed button must equal its right
+  gap to the dialog edge, not merely the padding of an invisible touch box.
+  Keep actions visible above the keyboard. Cancel's
+  pressed/hover/focus surface must match the proceed button's rounded shape,
+  height and vertical alignment; without a proceed action, use a standard-sized
+  rounded button. Keep Cancel compact, with less horizontal padding than the
+  proceed action and a consistent 8-pixel gap between button surfaces. Standard
+  visual minimum height is 40 logical pixels, growing with enlarged text; touch
+  controls retain at least a 48-pixel target. Apply coherent spacing across the
+  app and prioritize balanced, aligned layouts over preserving an old footer
+  height. Source: user explicitly replaced capsules and required equal visible
+  bottom/right margins on 2026-11-06.
+- Preserve all current date/time picker modes and expanded description. The only
+  date/time changes are the shared rounded action shape, compact Cancel and
+  balanced visible margins, matching Apply's height/alignment when present.
+  Do not otherwise change picker layout, footer
+  placement, acceptance or behavior. Expanded description stays unchanged. Reduce
+  the excess footer margin in Choose an icon. Apply a default list gets a standard
+  right-aligned Cancel button in its footer instead of a full-width list option.
+  Source: user exceptions, 2026-11-06.
+- Recovery drafts follow their original create/edit operation and use the same
+  labels, rounded actions and fixed footer as the corresponding form. Save list
+  changes uses "Cancel" / "Save changes"; discarding a saved draft uses "Cancel"
+  / red "Discard"; importing local data uses "Cancel" / "Import". Actions needing
+  attention retains per-operation "Review draft", "Retry" and "Discard" buttons
+  beside each operation, with "Close" in the fixed footer and local-storage repair
+  only when relevant. Limit messages use a single right-aligned "OK" button.
+  All these dialogs share the balanced fixed-footer margins. Source: user approved
+  the exceptional-dialog proposal, 2026-11-06.
 - Task creation and editing forms place Task type immediately after Subject and
   before Deadline and Time on Windows and Android. Source: user refinement,
   2026-11-05.
@@ -48,9 +87,9 @@ user refinements (initial consolidation 2026-11-02; audited against
   Apply share a vertically centered footer row aligned to the right edge; wrap
   only when space requires it.
   Source: user screenshot review, 2026-11-04.
-- Edit Board keeps Cancel and Save changes in a compact white footer outside its
+- Edit Board keeps Cancel and Save changes in a white footer outside its
   scrolling content, visible at every scroll position and above the keyboard.
-  Center the buttons vertically with equal compact top/bottom padding; keep the
+  Center the buttons vertically with the balanced shared footer padding; keep the
   stable save-error row in the scrolling content and reveal it when an error occurs.
   Subject forms omit extra spacing after Name's reserved validation row before
   Color. Source: user refinement, 2026-11-05.

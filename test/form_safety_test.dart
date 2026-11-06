@@ -105,7 +105,7 @@ void main() {
           .length,
       50,
     );
-    await tester.tap(find.text('Create'));
+    await tester.tap(find.text('Create board'));
     await tester.pumpAndSettle();
     expect(saved?.length, 50);
     await tester.pumpWidget(const SizedBox());
@@ -262,13 +262,16 @@ void main() {
                     description,
                   }) => save(),
             ),
-            'Create Task',
+            'Create task',
           ),
           'edit task' => (
             EditTaskDialog(task: f.task, onSave: (_) => save()),
-            'Save Changes',
+            'Save changes',
           ),
-          'new board' => (NewBoardDialog(onSave: (_) => save()), 'Create'),
+          'new board' => (
+            NewBoardDialog(onSave: (_) => save()),
+            'Create board',
+          ),
           'new subject' => (
             SubjectDialog(
               title: 'New Subject',
@@ -276,7 +279,7 @@ void main() {
               initialColor: 0xffe57373,
               onSave: (_, _) => save(),
             ),
-            'Save',
+            'Create subject',
           ),
           'edit subject' => (
             SubjectDialog(
@@ -285,7 +288,7 @@ void main() {
               initialColor: 0xffe57373,
               onSave: (_, _) => save(),
             ),
-            'Save',
+            'Save changes',
           ),
           _ => (
             ActionConfirmationDialog(
@@ -381,7 +384,7 @@ void main() {
         ),
       );
       ElevatedButton button() =>
-          tester.widget(find.widgetWithText(ElevatedButton, 'Save Changes'));
+          tester.widget(find.widgetWithText(ElevatedButton, 'Save changes'));
       expect(button().onPressed, isNull);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       expect(calls, 0);
@@ -425,7 +428,7 @@ void main() {
       ),
     );
     FilledButton button() =>
-        tester.widget(find.widgetWithText(FilledButton, 'Save'));
+        tester.widget(find.widgetWithText(FilledButton, 'Save changes'));
     expect(button().onPressed, isNull);
     await tester.enterText(find.byType(TextFormField), '  Original  ');
     await tester.pump();

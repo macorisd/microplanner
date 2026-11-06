@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/input_mode.dart';
+import '../../../../core/widgets/form_actions.dart';
 
 /// Keep mode switches and text actions centered on the same footer row.
 class PickerActions extends StatelessWidget {
@@ -28,25 +30,27 @@ class PickerActions extends StatelessWidget {
       runSpacing: 8,
       children: [
         IconButton(
+          style: IconButton.styleFrom(
+            minimumSize: Size.square(usesTouchControls(context) ? 48 : 40),
+            padding: const EdgeInsets.all(8),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.standard,
+          ),
           tooltip: modeTooltip,
           icon: Icon(modeIcon),
           onPressed: onModeChanged,
         ),
         TextButton(
           onPressed: onCancel,
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.red.shade700,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            minimumSize: const Size(64, 40),
-          ),
+          style: formActionStyle(
+            context,
+            secondary: true,
+          ).merge(TextButton.styleFrom(foregroundColor: Colors.red.shade700)),
           child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
         ),
         if (showApply)
           FilledButton(
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              minimumSize: const Size(64, 40),
-            ),
+            style: formActionStyle(context),
             onPressed: onApply,
             child: const Text('Apply'),
           ),

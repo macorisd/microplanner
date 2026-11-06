@@ -54,6 +54,10 @@ plan choices (for example, restoring each board's column instead of Upcoming).
   Preserve description newlines; Ctrl+Enter submits descriptions on Windows.
   Disabled, unchanged, invalid or pending forms never submit; nested dialogs
   handle their own keys without submitting an underlying form.
+- Sign-in has no in-app Cancel button. A failed attempt returns to the sign-in
+  screen with "Sign in with Google" available again. Preserve the existing
+  account/session safety and the provider's own dismissal behavior. Source:
+  explicit user refinement, 2026-11-06.
 - Selecting a calendar day immediately accepts it and returns to the task draft;
   selecting clock minutes does the same for time. Hour selection advances to
   minutes; dial dragging accepts only on release. Omit OK in both selectors.
@@ -102,7 +106,10 @@ plan choices (for example, restoring each board's column instead of Upcoming).
 - Validate text and extreme values consistently in UI and API, using shared
   limits. Board names have a 50-character maximum. Preserve drafts on errors and
   keep valid actions enabled; refresh/resume must never consume a user's click.
-- Clear Completed Tasks deletes only completed tasks on the current board, after
+- "Delete Completed tasks" replaces the former "Clear Completed Tasks" label.
+  Its confirmation uses "Cancel" and "Delete" with the shared rounded/fixed-footer
+  conventions. Source: user refinement, 2026-11-06.
+  It deletes only completed tasks on the current board, after
   confirming the count and board name. Its discreet bin is left of the counter;
   on Windows show it only while hovering that green header.
 

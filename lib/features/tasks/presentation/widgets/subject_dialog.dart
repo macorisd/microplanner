@@ -1,3 +1,4 @@
+import 'form_dialog.dart';
 import 'task_form_keyboard.dart';
 import 'category_editor.dart';
 import 'package:flutter/material.dart';
@@ -82,8 +83,7 @@ class _SubjectDialogState extends State<SubjectDialog>
       child: TaskFormKeyboard(
         canSubmit: _canSave,
         onSubmit: _save,
-        child: AlertDialog(
-          scrollable: true,
+        child: FormDialog(
           title: Text(widget.title),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -127,7 +127,7 @@ class _SubjectDialogState extends State<SubjectDialog>
             ),
             FilledButton(
               onPressed: _canSave ? _save : null,
-              child: const Text('Save'),
+              child: Text(_creating ? 'Create subject' : 'Save changes'),
             ),
           ],
         ),

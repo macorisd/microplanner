@@ -1,3 +1,5 @@
+import '../../../../core/widgets/form_actions.dart';
+import 'form_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -125,25 +127,29 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
     final selected = await pickOnce(
       () => showMotionDialog<TaskTypeList>(
         context: context,
-        builder: (context) => SimpleDialog(
+        builder: (context) => FormDialog(
           title: const Text('Apply a default list'),
-          children: [
-            if (lists.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(20),
-                child: Text('No default lists yet.'),
-              ),
-            for (final list in lists)
-              SimpleDialogOption(
-                onPressed: () => Navigator.pop(context, list),
-                child: Text(list.name),
-              ),
-            SimpleDialogOption(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (lists.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Text('No default lists yet.'),
+                ),
+              for (final list in lists)
+                SimpleDialogOption(
+                  onPressed: () => Navigator.pop(context, list),
+                  child: Text(list.name),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.red.shade700),
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+              child: const Text('Cancel'),
             ),
           ],
         ),
@@ -216,7 +222,7 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
       final confirm = await pickOnce(
         () => showDialog<bool>(
           context: context,
-          builder: (context) => AlertDialog(
+          builder: (context) => FormDialog(
             title: const Text('Save list changes?'),
             content: Text(
               'Removing these entries will clear the subject from $subjectCount ${subjectCount == 1 ? 'task' : 'tasks'} and the task type from $typeCount ${typeCount == 1 ? 'task' : 'tasks'}.',
@@ -320,9 +326,7 @@ class _BoardEditorDialogState extends State<BoardEditorDialog>
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          OverflowBar(
-            alignment: MainAxisAlignment.end,
-            spacing: 8,
+          FormActions(
             children: [
               TextButton(
                 onPressed: _saving ? null : closeForm,

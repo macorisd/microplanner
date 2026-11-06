@@ -102,9 +102,13 @@ void main() {
             final bottom =
                 container.localToGlobal(Offset.zero).dy + container.size.height;
             final buttonTop = tester
-                .getTopLeft(find.widgetWithText(FilledButton, 'Create'))
+                .getTopLeft(find.widgetWithText(TextButton, 'Cancel'))
                 .dy;
-            expect(buttonTop - bottom, lessThanOrEqualTo(40));
+            // Reserved name message row + body spacing + balanced footer inset.
+            expect(
+              buttonTop - bottom,
+              platform == TargetPlatform.windows ? 52 : 44,
+            );
           }
           await tester.enterText(field, 'A valid name');
           await tester.pumpAndSettle();
@@ -118,12 +122,12 @@ void main() {
           await tester.pumpAndSettle();
           expect(tester.getRect(find.byType(Dialog)), dialog);
           final action = kind == 'subject'
-              ? 'Save'
+              ? 'Save changes'
               : kind == 'new board'
-              ? 'Create'
+              ? 'Create board'
               : kind == 'edit task'
-              ? 'Save Changes'
-              : 'Create Task';
+              ? 'Save changes'
+              : 'Create task';
           await tester.ensureVisible(find.text(action));
           await tester.tap(find.text(action));
           await tester.pumpAndSettle();

@@ -219,7 +219,7 @@ class _ClearCompletedButtonState extends State<_ClearCompletedButton> {
     return SizedBox.square(
       dimension: usesTouchControls(context) ? 48 : 30,
       child: IconButton(
-        tooltip: 'Clear Completed Tasks',
+        tooltip: 'Delete Completed tasks',
         onPressed: widget.hasTasks && writable && !_opening ? _open : null,
         padding: EdgeInsets.zero,
         color: AppColors.textSecondary,

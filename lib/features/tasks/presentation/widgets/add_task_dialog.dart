@@ -1,3 +1,4 @@
+import '../../../../core/widgets/form_actions.dart';
 import 'task_time_picker.dart';
 import 'expanded_description.dart';
 import 'task_form_keyboard.dart';
@@ -62,6 +63,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
     with PendingActionState<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final _panelKey = GlobalKey();
+  final _footerKey = GlobalKey();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _descriptionFocusNode = FocusNode();
@@ -187,6 +189,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
     return PendingForm(
       pending: _isLoading,
       child: Dialog(
+        clipBehavior: Clip.antiAlias,
         insetPadding: EdgeInsets.symmetric(
           horizontal: compact ? 16 : 40,
           vertical: short ? 12 : 24,
@@ -195,162 +198,187 @@ class _AddTaskDialogState extends State<AddTaskDialog>
           descriptionFocus: _descriptionFocusNode,
           canSubmit: _canSubmit,
           onSubmit: _submit,
-          child: SingleChildScrollView(
-            child: Container(
-              key: _panelKey,
-              width: 480,
-              padding: EdgeInsets.all(compact ? 16 : AppTheme.spacingLarge),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Header
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.add_task_rounded,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: AppTheme.spacingMedium),
-                        Expanded(
-                          child: Text(
-                            'New Task',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _isLoading ? null : closeForm,
-                          icon: const Icon(Icons.close_rounded),
-                          style: IconButton.styleFrom(
-                            foregroundColor: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppTheme.spacingLarge),
-
-                    // Task name
-                    LimitedTextField(
-                      controller: _nameController,
-                      validateOnBlur: true,
-                      limit: WorkspaceLimits.name,
-                      enabled: !_isLoading,
-                      decoration: const InputDecoration(
-                        labelText: 'Task name',
-                        hintText: 'e.g., Math homework chapter 5',
+          child: SizedBox(
+            key: const ValueKey('task-form-panel'),
+            width: 480,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      key: _panelKey,
+                      padding: EdgeInsets.fromLTRB(
+                        compact ? 16 : 24,
+                        compact ? 16 : 24,
+                        compact ? 16 : 24,
+                        8,
                       ),
-                      validator: WorkspaceLimits.nameError,
-                      autofocus: true,
-                      onSubmitted: (_) => _submit(),
-                    ),
-                    // The reserved validation line provides field separation.
-
-                    // Description
-                    ScrollbarTheme(
-                      data: const ScrollbarThemeData(crossAxisMargin: -4),
-                      child: LimitedTextField(
-                        controller: _descriptionController,
-                        limit: WorkspaceLimits.description,
-                        validator: WorkspaceLimits.descriptionError,
-                        enabled: !_isLoading,
-                        focusNode: _descriptionFocusNode,
-                        decoration: InputDecoration(
-                          suffixIcon: DescriptionExpandButton(
-                            onPressed: _isLoading
-                                ? null
-                                : () async {
-                                    final submit = await pickOnce<bool>(
-                                      () => expandDescription(
-                                        context,
-                                        _descriptionController,
-                                        taskName: _nameController.text,
-                                        panelKey: _panelKey,
-                                        canSubmit: () => _canSubmit,
-                                      ),
-                                    );
-                                    if (submit == true && mounted) _submit();
-                                  },
-                          ),
-                          labelText: 'Description (optional)',
-                          hintText: 'Add details about this task...',
-                        ),
-                        maxLines: 3,
-                        minLines: 2,
-                      ),
-                    ),
-
-                    // Subject dropdown
-                    _buildSubjectDropdown(subjects),
-                    const SizedBox(height: AppTheme.spacingMedium),
-
-                    // Type dropdown
-                    _buildTypeDropdown(typeOptions, customized),
-                    const SizedBox(height: AppTheme.spacingMedium),
-
-                    // Deadline date and time
-                    if (MediaQuery.sizeOf(context).width < 600) ...[
-                      _buildDeadlinePicker(context),
-                      const SizedBox(height: AppTheme.spacingSmall),
-                      _buildTimePicker(context),
-                    ] else
-                      Row(
-                        children: [
-                          Expanded(child: _buildDeadlinePicker(context)),
-                          const SizedBox(width: AppTheme.spacingSmall),
-                          _buildTimePicker(context),
-                        ],
-                      ),
-                    const SizedBox(height: AppTheme.spacingMedium),
-
-                    // Priority selector
-                    _buildPrioritySelector(),
-
-                    // The stable status area also provides footer spacing.
-                    // Actions
-                    SaveStatus(error: submissionError),
-                    OverflowBar(
-                      alignment: MainAxisAlignment.end,
-                      spacing: AppTheme.spacingSmall,
-                      children: [
-                        TextButton(
-                          onPressed: _isLoading ? null : closeForm,
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.red.shade700,
-                          ),
-                          child: const Text('Cancel'),
-                        ),
-                        ElevatedButton(
-                          onPressed: _canSubmit ? _submit : null,
-                          child: isSubmitting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(
-                                      Colors.white,
-                                    ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Header
+                            Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryLight,
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                )
-                              : const Text('Create Task'),
+                                  child: const Icon(
+                                    Icons.add_task_rounded,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: AppTheme.spacingMedium),
+                                Expanded(
+                                  child: Text(
+                                    'New Task',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.headlineSmall,
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: _isLoading ? null : closeForm,
+                                  icon: const Icon(Icons.close_rounded),
+                                  style: IconButton.styleFrom(
+                                    foregroundColor: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppTheme.spacingLarge),
+
+                            // Task name
+                            LimitedTextField(
+                              controller: _nameController,
+                              validateOnBlur: true,
+                              limit: WorkspaceLimits.name,
+                              enabled: !_isLoading,
+                              decoration: const InputDecoration(
+                                labelText: 'Task name',
+                                hintText: 'e.g., Math homework chapter 5',
+                              ),
+                              validator: WorkspaceLimits.nameError,
+                              autofocus: true,
+                              onSubmitted: (_) => _submit(),
+                            ),
+                            // The reserved validation line provides field separation.
+
+                            // Description
+                            ScrollbarTheme(
+                              data: const ScrollbarThemeData(
+                                crossAxisMargin: -4,
+                              ),
+                              child: LimitedTextField(
+                                controller: _descriptionController,
+                                limit: WorkspaceLimits.description,
+                                validator: WorkspaceLimits.descriptionError,
+                                enabled: !_isLoading,
+                                focusNode: _descriptionFocusNode,
+                                decoration: InputDecoration(
+                                  suffixIcon: DescriptionExpandButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () async {
+                                            final submit = await pickOnce<bool>(
+                                              () => expandDescription(
+                                                context,
+                                                _descriptionController,
+                                                taskName: _nameController.text,
+                                                panelKey: _panelKey,
+                                                footerKey: _footerKey,
+                                                canSubmit: () => _canSubmit,
+                                              ),
+                                            );
+                                            if (submit == true && mounted) {
+                                              _submit();
+                                            }
+                                          },
+                                  ),
+                                  labelText: 'Description (optional)',
+                                  hintText: 'Add details about this task...',
+                                ),
+                                maxLines: 3,
+                                minLines: 2,
+                              ),
+                            ),
+
+                            // Subject dropdown
+                            _buildSubjectDropdown(subjects),
+                            const SizedBox(height: AppTheme.spacingMedium),
+
+                            // Type dropdown
+                            _buildTypeDropdown(typeOptions, customized),
+                            const SizedBox(height: AppTheme.spacingMedium),
+
+                            // Deadline date and time
+                            if (MediaQuery.sizeOf(context).width < 600) ...[
+                              _buildDeadlinePicker(context),
+                              const SizedBox(height: AppTheme.spacingSmall),
+                              _buildTimePicker(context),
+                            ] else
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildDeadlinePicker(context),
+                                  ),
+                                  const SizedBox(width: AppTheme.spacingSmall),
+                                  _buildTimePicker(context),
+                                ],
+                              ),
+                            const SizedBox(height: AppTheme.spacingMedium),
+
+                            // Priority selector
+                            _buildPrioritySelector(),
+
+                            // The stable status area also provides footer spacing.
+                            // Actions
+                            SaveStatus(error: submissionError),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                FormFooter(
+                  key: _footerKey,
+                  child: FormActions(
+                    children: [
+                      TextButton(
+                        onPressed: _isLoading ? null : closeForm,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red.shade700,
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: _canSubmit ? _submit : null,
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text('Create task'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),

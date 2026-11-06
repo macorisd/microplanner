@@ -106,7 +106,7 @@ void main() {
             'Original draft',
           );
           final originalSize = tester.getSize(
-            find.byType(SingleChildScrollView).first,
+            find.byKey(const ValueKey('task-form-panel')),
           );
           await tester.tap(find.byTooltip('Expand description'));
           await tester.pumpAndSettle();
@@ -238,7 +238,7 @@ void main() {
             );
             await tester.pumpAndSettle();
             final fullFrame = tester.getRect(
-              find.byType(SingleChildScrollView).first,
+              find.byKey(const ValueKey('task-form-panel')),
             );
             await tester.showKeyboard(
               find.byType(TextFormField).at(focusedField),
@@ -247,7 +247,9 @@ void main() {
             await tester.pumpAndSettle();
             expect(tester.testTextInput.isVisible, isTrue);
             expect(
-              tester.getSize(find.byType(SingleChildScrollView).first).height,
+              tester
+                  .getSize(find.byKey(const ValueKey('task-form-panel')))
+                  .height,
               lessThan(fullFrame.height),
             );
             await tester.tap(find.byTooltip('Expand description'));

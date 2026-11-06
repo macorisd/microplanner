@@ -1,3 +1,5 @@
+import '../../../../core/widgets/form_actions.dart';
+import 'form_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -178,7 +180,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final base = (workspace.outbox?.projected ?? workspace.snapshot).clone();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => FormDialog(
         title: const Text('Delete default list?'),
         content: Text(
           'Delete "${list.name}"? Boards that used this list will keep their own types.',
@@ -389,6 +391,21 @@ class _TypeListDialogState extends State<_TypeListDialog>
       dialog: true,
       canSubmit: _canSave,
       onSubmit: _save,
+      footer: FormActions(
+        children: [
+          TextButton(
+            onPressed: actionBlocked ? null : closeForm,
+            style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: _canSave ? _save : null,
+            child: Text(
+              widget.original == null ? 'Create default list' : 'Save changes',
+            ),
+          ),
+        ],
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -420,24 +437,6 @@ class _TypeListDialogState extends State<_TypeListDialog>
             isTemplate: true,
             items: _types,
             onChanged: (value) => setState(() => _types = value),
-          ),
-          const SizedBox(height: AppTheme.spacingLarge),
-          OverflowBar(
-            alignment: MainAxisAlignment.end,
-            spacing: 8,
-            children: [
-              TextButton(
-                onPressed: actionBlocked ? null : closeForm,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red.shade700,
-                ),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: _canSave ? _save : null,
-                child: const Text('Save'),
-              ),
-            ],
           ),
         ],
       ),

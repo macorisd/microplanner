@@ -1,3 +1,5 @@
+import '../../../../core/widgets/form_actions.dart';
+import 'form_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -46,32 +48,35 @@ Future<String?> chooseBoardIcon(BuildContext context, String selected) async {
   FocusManager.instance.primaryFocus?.unfocus();
   final result = await showMotionDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+    builder: (context) => FormDialog(
       title: const Text('Choose an icon'),
-      content: SizedBox(
-        width: 400,
-        height: (MediaQuery.sizeOf(context).height * .55).clamp(
-          160,
-          Theme.of(context).platform == TargetPlatform.windows ? 256 : 420,
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) => GridView.count(
-            shrinkWrap: true,
-            crossAxisCount: Theme.of(context).platform == TargetPlatform.windows
-                ? (constraints.maxWidth >= 320 ? 8 : 5)
-                : 5,
-            mainAxisSpacing: 4,
-            crossAxisSpacing: 4,
-            children: [
-              for (final entry in boardIcons.entries)
-                IconButton.filledTonal(
-                  tooltip: entry.key,
-                  isSelected: entry.key == selected,
-                  icon: Icon(entry.value),
-                  onPressed: () => Navigator.pop(context, entry.key),
-                ),
-            ],
+      content: Align(
+        alignment: Alignment.center,
+        child: SizedBox(
+          width: 400,
+          height: (MediaQuery.sizeOf(context).height * .55).clamp(
+            160,
+            Theme.of(context).platform == TargetPlatform.windows ? 256 : 420,
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) => GridView.count(
+              shrinkWrap: true,
+              crossAxisCount:
+                  Theme.of(context).platform == TargetPlatform.windows
+                  ? (constraints.maxWidth >= 320 ? 8 : 5)
+                  : 5,
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+              children: [
+                for (final entry in boardIcons.entries)
+                  IconButton.filledTonal(
+                    tooltip: entry.key,
+                    isSelected: entry.key == selected,
+                    icon: Icon(entry.value),
+                    onPressed: () => Navigator.pop(context, entry.key),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -315,6 +320,21 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     dialog: true,
     canSubmit: _canSave,
     onSubmit: _save,
+    footer: FormActions(
+      children: [
+        TextButton(
+          onPressed: _closing ? null : _close,
+          style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _canSave ? _save : null,
+          child: Text(
+            widget.initial == null ? 'Create ${widget.label}' : 'Save changes',
+          ),
+        ),
+      ],
+    ),
     child: Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,22 +412,6 @@ class _CategoryDialogState extends State<_CategoryDialog> {
             onChanged: (value) => setState(() => _color = value),
           ),
         ],
-        const SizedBox(height: AppTheme.spacingLarge),
-        OverflowBar(
-          alignment: MainAxisAlignment.end,
-          spacing: 8,
-          children: [
-            TextButton(
-              onPressed: _closing ? null : _close,
-              style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: _canSave ? _save : null,
-              child: const Text('Save'),
-            ),
-          ],
-        ),
       ],
     ),
   );
@@ -434,7 +438,7 @@ class EditableCategoryList extends StatelessWidget {
     if (items.length >= 25) {
       await showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => FormDialog(
           title: Text('Cannot add $label'),
           content: Text(
             '${isTemplate ? 'A list' : 'A board'} can have up to 25 ${useIcon ? 'task types' : 'subjects'}.',
