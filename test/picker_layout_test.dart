@@ -6,6 +6,7 @@ import 'package:microplanner/core/theme/app_theme.dart';
 import 'package:microplanner/core/utils/task_date_range.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_date_picker.dart';
 import 'package:microplanner/features/tasks/presentation/widgets/task_time_picker.dart';
+import 'package:microplanner/features/tasks/presentation/widgets/picker_actions.dart';
 
 Future<void> open(
   WidgetTester tester,
@@ -77,6 +78,17 @@ void main() {
             );
             await tester.ensureVisible(find.byTooltip('Switch to input'));
             final mode = tester.getCenter(find.byTooltip('Switch to input'));
+            final inset = platform == TargetPlatform.windows
+                ? (width < 600 ? 8 : 12)
+                : (time ? 24 : 16);
+            if (!time) {
+              final calendar = tester.getRect(find.byType(CalendarDatePicker));
+              final actions = tester.getRect(find.byType(PickerActions));
+              expect(
+                actions.top - calendar.bottom,
+                platform == TargetPlatform.windows ? inset : 0,
+              );
+            }
             final footerRight =
                 tester
                     .getRect(
@@ -88,7 +100,7 @@ void main() {
                           .first,
                     )
                     .right -
-                (time ? 24 : 16);
+                inset;
             expect(
               tester.getRect(find.widgetWithText(TextButton, 'Cancel')).right,
               closeTo(footerRight, .1),
@@ -111,6 +123,15 @@ void main() {
             final apply = find.widgetWithText(FilledButton, 'Apply');
             final applyRect = tester.getRect(apply);
             expect(applyRect.right, closeTo(footerRight, .1));
+            final dialogSurface = tester.getRect(
+              find
+                  .descendant(
+                    of: find.byType(Dialog),
+                    matching: find.byType(Material),
+                  )
+                  .first,
+            );
+            expect(dialogSurface.bottom - applyRect.bottom, closeTo(inset, .1));
             if (width == 320) {
               // The test font has unusually wide glyphs: wrapping is permitted
               // when all controls cannot fit, with every action still reachable.

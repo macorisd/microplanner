@@ -39,8 +39,9 @@ user refinements (initial consolidation 2026-11-02; audited against
   Keep destructive actions
   distinguishable and retain the existing red Cancel text.
 - These forms always have a white footer outside the scrolling content, including
-  short forms and small screens. Use balanced footer padding (16 compact,
-  24 desktop) and increase footer height when needed. Measure the visible button
+  short forms and small screens. Windows uses balanced footer padding of 12
+  (8 in compact windows); Android retains 16, except Edit Task's approved 8.
+  Increase footer height when needed. Measure the visible button
   surface: the bottom gap below the rightmost proceed button must equal its right
   gap to the dialog edge, not merely the padding of an invisible touch box.
   Keep actions visible above the keyboard. Cancel's
@@ -53,10 +54,11 @@ user refinements (initial consolidation 2026-11-02; audited against
   app and prioritize balanced, aligned layouts over preserving an old footer
   height. Source: user explicitly replaced capsules and required equal visible
   bottom/right margins on 2026-11-06.
-- Edit Task alone trials half the standard footer margins: 8 compact and 12
-  desktop on every side, preserving equal visible bottom/right gaps, fixed
-  actions and existing button geometry. Other forms keep 16/24 until the user
-  explicitly approves extending the trial. Source: user refinement, 2026-11-06.
+- Extend Edit Task's compact margins to all remaining forms on Windows only,
+  including picker actions, keeping body padding and button geometry unchanged.
+  Android keeps its previous margins: 8 for Edit Task, 16 for other standard
+  footers and the existing 16/24 for date/time pickers respectively. Source: user
+  approved the Windows extension and explicitly excluded Android, 2026-11-06.
 - Preserve all current date/time picker modes and expanded description. The only
   date/time changes are the shared rounded action shape, compact Cancel and
   balanced visible margins, matching Apply's height/alignment when present.

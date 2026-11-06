@@ -103,9 +103,9 @@ void main() {
           final surface = tester.getRect(
             find.descendant(of: proceed, matching: find.byType(Material)),
           );
-          final inset =
-              (platform == TargetPlatform.windows ? 24 : 16) *
-              (kind == 'edit task' ? .5 : 1);
+          final inset = platform == TargetPlatform.windows
+              ? 12
+              : (kind == 'edit task' ? 8 : 16);
           expect(footer.right - surface.right, inset);
           expect(footer.bottom - surface.bottom, inset);
           if (kind == 'new board') {
@@ -120,7 +120,7 @@ void main() {
             // Reserved name message row + body spacing + balanced footer inset.
             expect(
               buttonTop - bottom,
-              platform == TargetPlatform.windows ? 52 : 44,
+              platform == TargetPlatform.windows ? 40 : 44,
             );
           }
           await tester.enterText(field, 'A valid name');

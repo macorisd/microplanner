@@ -2,6 +2,16 @@ import 'package:flutter/material.dart';
 import '../../../../core/utils/input_mode.dart';
 import '../../../../core/widgets/form_actions.dart';
 
+EdgeInsets pickerActionInsets(
+  BuildContext context, {
+  required double androidInset,
+}) {
+  if (Theme.of(context).platform != TargetPlatform.windows) {
+    return EdgeInsets.fromLTRB(androidInset, 0, androidInset, androidInset);
+  }
+  return EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 8 : 12);
+}
+
 /// Keep mode switches and text actions centered on the same footer row.
 class PickerActions extends StatelessWidget {
   const PickerActions({

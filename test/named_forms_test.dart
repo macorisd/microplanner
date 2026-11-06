@@ -288,7 +288,7 @@ void main() {
         );
         expect(
           actions.top - footer.top,
-          platform == TargetPlatform.windows ? 24 : 16,
+          platform == TargetPlatform.windows ? 12 : 16,
         );
         expect(save.hitTestable(), findsOneWidget);
         await tester.drag(

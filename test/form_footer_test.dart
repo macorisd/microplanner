@@ -91,7 +91,7 @@ void main() {
             );
             expect(
               before.bottom - actionRect.bottom,
-              platform == TargetPlatform.windows && width >= 600 ? 24 : 16,
+              platform == TargetPlatform.windows ? (width >= 600 ? 12 : 8) : 16,
             );
             final cancelRect = tester.getRect(cancelSurface);
             if (cancelRect.top == actionRect.top) {
