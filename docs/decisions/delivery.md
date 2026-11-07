@@ -51,6 +51,11 @@ consolidated 2026-11-02. Detailed setup lives in
   **do not keep the chat open only to wait for GitHub's APK build**. Deliver the
   PR/action link and say generation continues. Inspect later if the user asks or
   reports a failure; do not add a background polling loop.
+- Before pushing a pull request branch or updating an open pull request with a
+  runnable-app change, install that PR version on both Windows and the physical
+  Android device, preserving the user's account, session and data. The user
+  tests these normal installations before approving the merge; neither platform
+  may be left on an older build.
 
 README remains user-oriented: icon banner, a brief natural explanation, Windows/
 Android installation, a version table with change lists, and minimal developer

@@ -70,6 +70,53 @@ void main() {
         },
       );
     }
+
+    testWidgets('$platform task forms use the Board Subject order', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(520, 1100);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final f = _Fixture();
+      await tester.runAsync(f.initialize);
+      await tester.runAsync(
+        () => f.h.workspace.mutate(
+          (snapshot) => snapshot.copyWith(
+            subjects: [
+              _subject.copyWith(sortOrder: 2),
+              const Subject(
+                id: 'subject-first',
+                name: 'First',
+                boardId: 'default-board',
+                sortOrder: 0,
+              ),
+              const Subject(
+                id: 'subject-second',
+                name: 'Second',
+                boardId: 'default-board',
+                sortOrder: 1,
+              ),
+            ],
+          ),
+        ),
+      );
+      const expected = ['subject-first', 'subject-second', 'subject'];
+
+      for (final form in [f.add, f.edit]) {
+        await tester.pumpWidget(f.app(platform, form));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<SubjectDropdown>(find.byType(SubjectDropdown))
+              .subjects
+              .map((subject) => subject.id),
+          expected,
+        );
+        await tester.pumpWidget(const SizedBox());
+      }
+      f.dispose();
+    });
   }
 
   testWidgets('submitting while refreshing waits once and preserves the form', (
