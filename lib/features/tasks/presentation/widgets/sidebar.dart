@@ -364,17 +364,13 @@ class _BoardsSectionState extends State<_BoardsSection>
                   ? ReorderableDelayedDragStartListener(
                       key: ValueKey(board.id),
                       index: index,
-                      enabled:
-                          workspace.canWrite &&
-                          workspace.pendingBoardIds.isEmpty,
+                      enabled: provider.canReorderBoards,
                       child: card,
                     )
                   : ReorderableDragStartListener(
                       key: ValueKey(board.id),
                       index: index,
-                      enabled:
-                          workspace.canWrite &&
-                          workspace.pendingBoardIds.isEmpty,
+                      enabled: provider.canReorderBoards,
                       child: card,
                     );
             },

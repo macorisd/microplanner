@@ -97,6 +97,9 @@ class WorkspaceOutbox extends ChangeNotifier {
       _operations.any((operation) => operation.failure == null);
   bool get hasFailures =>
       _operations.any((operation) => operation.failure != null);
+  bool get hasPendingBoardReorder => _operations.any(
+    (operation) => operation.failure == null && operation.delta.reordersBoards,
+  );
   bool get waitingForConnection => hasPending && !_online;
   bool get _valid => _alive && active();
 

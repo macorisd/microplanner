@@ -162,6 +162,10 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
   reordering retains board IDs. Show the accepted order immediately after a drop,
   throughout synchronization and on confirmation, without reverting to the old
   order while waiting. A definite failure restores the confirmed order.
+  After any board reorder is accepted, disable every board drag until that order
+  write resolves. A second reorder must not enqueue, alter the visible order or
+  wait behind the first; confirmation or definite failure unlocks dragging.
+  This does not disable board Edit/Delete controls or navigation.
   While any board creation/editor save shows pending synchronization, disable
   reordering all sidebar boards; keep board navigation available. Re-enable
   dragging when those saves resolve, including definite failure. This includes

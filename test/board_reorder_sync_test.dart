@@ -138,11 +138,20 @@ void main() {
             'default-board',
           ]);
           expect(h.workspace.pendingBoardIds, isEmpty);
+          expect(h.workspace.hasPendingBoardReorder, isTrue);
+          expect(boards.canReorderBoards, isFalse);
           final dropped = tester.getTopLeft(find.text('A private'));
           expect(
             dropped.dy,
             greaterThan(tester.getTopLeft(find.text('Gamma')).dy),
           );
+          expect(await boards.reorderBoards(0, 3), isFalse);
+          await _dragFirstLast(tester, platform, 'Gamma');
+          expect(boards.boards.map((b) => b.id), [
+            'beta',
+            'gamma',
+            'default-board',
+          ]);
           await tester.pump(const Duration(seconds: 3));
           expect(tester.getTopLeft(find.text('A private')), dropped);
           await tester.runAsync(() async {
@@ -246,7 +255,7 @@ void main() {
   }
 
   test(
-    'queued drops use visible order and an older confirmation cannot revert a newer drop',
+    'a pending reorder blocks another reorder until synchronization resolves',
     () async {
       final h = Harness(cache: _Journal());
       final boards = await _initialize(h);
@@ -260,30 +269,21 @@ void main() {
         'gamma',
         'default-board',
       ]);
-      final second = boards.reorderBoards(0, 3);
-      await settleAsync();
+      expect(h.workspace.hasPendingBoardReorder, isTrue);
+      expect(await boards.reorderBoards(0, 3), isFalse);
       expect(boards.boards.map((b) => b.id), [
+        'beta',
         'gamma',
         'default-board',
-        'beta',
       ]);
-      final secondGate = Completer<http.Response>();
-      h.server.nextWrite = secondGate;
       firstGate.complete(jsonResponse(firstResponse.toJson()));
       expect(await first, isTrue);
-      await settleAsync();
-      expect(boards.boards.map((b) => b.id), [
-        'gamma',
-        'default-board',
-        'beta',
-      ]);
-      secondGate.complete(jsonResponse(h.server.states['A']!.toJson()));
-      expect(await second, isTrue);
       await h.workspace.outbox!.idle;
-      expect(h.cache.values['A']!.boards.map((b) => b.id), [
+      expect(h.workspace.hasPendingBoardReorder, isFalse);
+      expect(boards.boards.map((b) => b.id), [
+        'beta',
         'gamma',
         'default-board',
-        'beta',
       ]);
       boards.dispose();
       h.dispose();
