@@ -194,22 +194,15 @@ class _TaskCardState extends State<TaskCard> {
                 child: Stack(
                   children: [
                     Padding(
-                      padding: EdgeInsets.all(
-                        touch ? 12 : AppTheme.spacingMedium,
-                      ),
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            crossAxisAlignment: touch
-                                ? CrossAxisAlignment.start
-                                : CrossAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (touch)
-                                _CompletionMark(completed: task.isCompleted)
-                              else
-                                completion,
+                              _CompletionMark(completed: task.isCompleted),
                               SizedBox(
                                 width: touch ? 12 : AppTheme.spacingMedium,
                               ),
@@ -380,7 +373,11 @@ class _TaskCardState extends State<TaskCard> {
                         ],
                       ),
                     ),
-                    if (touch) Positioned(top: 0, left: 0, child: completion),
+                    Positioned(
+                      top: touch ? 0 : 12,
+                      left: touch ? 0 : 12,
+                      child: completion,
+                    ),
                     if (touch && hasActions)
                       Positioned(bottom: 0, right: 0, child: actions),
                   ],

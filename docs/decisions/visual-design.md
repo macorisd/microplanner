@@ -115,10 +115,15 @@ user refinements (initial consolidation 2026-11-02; audited against
 - Description scrollbars must remain clear of the entered text and its selection,
   including in the expanded editor; reserve space instead of painting the thumb
   over text. Source: [PR #14](https://github.com/macorisd/microplanner/pull/14).
-- Preserve compact task cards on Android: bottom spacing comparable to side
-  spacing, no blank subject row or extra title/date gap when Subject is absent.
-  Align the checkbox with the date's left edge. Priority has breathing room after
-  the title and aligns vertically with the delete icon.
+- Keep task cards compact on Windows and Android: use an 8 logical-pixel inset
+  between the column's inner edge and its cards, and 12 logical-pixel padding
+  inside each card around the title, date and priority controls. Preserve the
+  8-pixel vertical gap between cards, bottom spacing comparable to side spacing,
+  no blank subject row and no extra title/date gap when Subject is absent. Align
+  the checkbox with the date's left edge. Priority has breathing room after the
+  title and aligns vertically with the delete icon. Android is the reference;
+  Windows matches its tighter margins so more card content fits. Source: user
+  preference and implementation authorization, 2026-11-07.
 - Subject chips hug their text, including on Windows. Show the subject color in
   the task form selector. Hover/focus effects must not create oversized checkbox
   circles or leave highlights on multiple sidebar boards.
