@@ -152,10 +152,7 @@ class _TaskCardState extends State<TaskCard> {
         highlightShape: BoxShape.rectangle,
         borderRadius: BorderRadius.circular(6),
         radius: touch ? 24 : 16,
-        child: SizedBox.square(
-          dimension: touch ? 48 : 24,
-          child: touch ? null : _CompletionMark(completed: task.isCompleted),
-        ),
+        child: SizedBox.square(dimension: touch ? 48 : 24),
       ),
     );
     // Touch targets occupy the card's padding instead of stretching content rows.
@@ -167,7 +164,7 @@ class _TaskCardState extends State<TaskCard> {
       onEnter: (_) => _hovered.value = true,
       onExit: (_) => _hovered.value = false,
       child: Padding(
-        padding: EdgeInsets.only(bottom: touch ? 8 : 10),
+        padding: EdgeInsets.only(bottom: touch ? 8 : 9),
         child: ValueListenableBuilder<bool>(
           valueListenable: _hovered,
           builder: (context, hovered, child) => AnimatedContainer(

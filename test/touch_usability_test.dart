@@ -243,7 +243,7 @@ void main() {
       final columnRect = tester.getRect(column);
       final cardRect = tester.getRect(cardSurface);
       final headerRect = tester.getRect(header);
-      final outerInset = platform == TargetPlatform.windows ? 10.0 : 8.0;
+      final outerInset = platform == TargetPlatform.windows ? 9.0 : 8.0;
       final contentInset = platform == TargetPlatform.windows ? 14.0 : 12.0;
 
       expect(cardRect.left - columnRect.left, closeTo(outerInset, .1));
@@ -266,6 +266,7 @@ void main() {
             ),
           )
           .first;
+      expect(mark, findsOneWidget);
       final date = find.descendant(
         of: card,
         matching: find.byIcon(Icons.calendar_today_rounded),
