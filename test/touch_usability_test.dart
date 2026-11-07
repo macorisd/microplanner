@@ -158,9 +158,7 @@ void main() {
   }
 
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
-    testWidgets('$platform task cards use compact matching margins', (
-      tester,
-    ) async {
+    testWidgets('$platform task cards use compact margins', (tester) async {
       tester.view.physicalSize = const Size(400, 600);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -245,13 +243,14 @@ void main() {
       final columnRect = tester.getRect(column);
       final cardRect = tester.getRect(cardSurface);
       final headerRect = tester.getRect(header);
+      final outerInset = platform == TargetPlatform.windows ? 10.0 : 8.0;
 
-      expect(cardRect.left - columnRect.left, closeTo(8, .1));
-      expect(columnRect.right - cardRect.right, closeTo(8, .1));
-      expect(cardRect.top - headerRect.bottom, closeTo(8, .1));
+      expect(cardRect.left - columnRect.left, closeTo(outerInset, .1));
+      expect(columnRect.right - cardRect.right, closeTo(outerInset, .1));
+      expect(cardRect.top - headerRect.bottom, closeTo(outerInset, .1));
       expect(
         tester.getTopLeft(secondCardSurface).dy - cardRect.bottom,
-        closeTo(8, .1),
+        closeTo(outerInset, .1),
       );
 
       final mark = find

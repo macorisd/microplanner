@@ -167,7 +167,7 @@ class _TaskCardState extends State<TaskCard> {
       onEnter: (_) => _hovered.value = true,
       onExit: (_) => _hovered.value = false,
       child: Padding(
-        padding: const EdgeInsets.only(bottom: AppTheme.spacingSmall),
+        padding: EdgeInsets.only(bottom: touch ? 8 : 10),
         child: ValueListenableBuilder<bool>(
           valueListenable: _hovered,
           builder: (context, hovered, child) => AnimatedContainer(

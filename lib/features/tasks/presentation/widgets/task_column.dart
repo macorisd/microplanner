@@ -509,10 +509,12 @@ class _TaskListState extends State<_TaskList>
             controller: _scroll,
             initialItemCount: _items.length,
             padding: EdgeInsets.fromLTRB(
-              8,
-              8,
-              8,
-              MediaQuery.sizeOf(context).height < 360 ? 64 : 8,
+              usesTouchControls(context) ? 8 : 10,
+              usesTouchControls(context) ? 8 : 10,
+              usesTouchControls(context) ? 8 : 10,
+              MediaQuery.sizeOf(context).height < 360
+                  ? 64
+                  : (usesTouchControls(context) ? 8 : 10),
             ),
             itemBuilder: (_, index, animation) =>
                 _transition(_items[index], animation),
