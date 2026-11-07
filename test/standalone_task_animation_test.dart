@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:microplanner/core/constants/app_constants.dart';
 import 'package:microplanner/core/data/workspace_delta.dart';
 import 'package:microplanner/core/data/workspace_operation.dart';
+import 'package:microplanner/core/data/workspace_snapshot.dart';
+import 'package:microplanner/features/boards/data/models/board_task_type.dart';
 import 'package:microplanner/features/tasks/data/models/task.dart';
 import 'package:microplanner/features/tasks/providers/task_transitions.dart';
 import 'support/fakes.dart';
@@ -27,6 +29,37 @@ void main() {
       ),
     );
   }
+
+  test('pending creation preserves its board-specific task type', () {
+    const typeId = 'type-reading';
+    final typedTask = task.copyWith(typeId: typeId);
+    final base = WorkspaceSnapshot(
+      boards: snapshot('Board').boards,
+      schemaVersion: 2,
+      boardTypes: const [
+        BoardTaskType(
+          id: typeId,
+          boardId: 'default-board',
+          name: 'Reading',
+          icon: 'book',
+          sortOrder: 0,
+        ),
+      ],
+    );
+    final op = WorkspaceOperation(
+      id: 'create-typed',
+      createdAt: start,
+      delta: WorkspaceDelta.between(base, base.copyWith(tasks: [typedTask])),
+    );
+    final tracker = TaskTransitions(now: () => start, changed: () {});
+
+    tracker.update('A', [], [op], syncing: true);
+
+    expect(tracker['one']!.phase, TaskTransitionPhase.creating);
+    expect(tracker['one']!.after!.typeId, typeId);
+    expect(tracker.present([]).single.typeId, typeId);
+    tracker.dispose();
+  });
 
   for (final creating in [true, false]) {
     for (final networkMs in [100, 2000, 5000]) {

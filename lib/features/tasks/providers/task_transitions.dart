@@ -119,7 +119,11 @@ class TaskTransitions {
   static Task? _read(Map<String, dynamic>? row) {
     if (row == null) return null;
     try {
+      // Delta rows do not carry the workspace schema. A task row with typeId
+      // is already current; decoding it as legacy would overwrite that ID from
+      // typeIndex, which is intentionally unassigned for board-specific types.
       return WorkspaceSnapshot.fromJson({
+        'schemaVersion': row.containsKey('typeId') ? 2 : 1,
         'boards': [],
         'subjects': [],
         'tasks': [row],

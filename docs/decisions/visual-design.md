@@ -128,6 +128,9 @@ user refinements (initial consolidation 2026-11-02; audited against
 - Loading/sync notices float above content as rounded cards without shifting the
   board. Reuse the animated logo rather than a generic spinner; do not also show
   a spinner next to Refresh. Initial synchronization belongs to startup instead.
+- While a newly accepted task is pending synchronization, its card and transition
+  keep showing the selected subject, task type, deadline, time and priority.
+  Synchronization feedback must not replace or hide task metadata.
 
 ## Platform appearance and motion
 
