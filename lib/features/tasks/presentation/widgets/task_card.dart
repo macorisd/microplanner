@@ -152,10 +152,7 @@ class _TaskCardState extends State<TaskCard> {
         highlightShape: BoxShape.rectangle,
         borderRadius: BorderRadius.circular(6),
         radius: touch ? 24 : 16,
-        child: SizedBox.square(
-          dimension: touch ? 48 : 24,
-          child: touch ? null : _CompletionMark(completed: task.isCompleted),
-        ),
+        child: SizedBox.square(dimension: touch ? 48 : 24),
       ),
     );
     // Touch targets occupy the card's padding instead of stretching content rows.
@@ -167,7 +164,7 @@ class _TaskCardState extends State<TaskCard> {
       onEnter: (_) => _hovered.value = true,
       onExit: (_) => _hovered.value = false,
       child: Padding(
-        padding: const EdgeInsets.only(bottom: AppTheme.spacingSmall),
+        padding: EdgeInsets.only(bottom: touch ? 8 : 9),
         child: ValueListenableBuilder<bool>(
           valueListenable: _hovered,
           builder: (context, hovered, child) => AnimatedContainer(
@@ -194,22 +191,15 @@ class _TaskCardState extends State<TaskCard> {
                 child: Stack(
                   children: [
                     Padding(
-                      padding: EdgeInsets.all(
-                        touch ? 12 : AppTheme.spacingMedium,
-                      ),
+                      padding: EdgeInsets.all(touch ? 12 : 14),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            crossAxisAlignment: touch
-                                ? CrossAxisAlignment.start
-                                : CrossAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (touch)
-                                _CompletionMark(completed: task.isCompleted)
-                              else
-                                completion,
+                              _CompletionMark(completed: task.isCompleted),
                               SizedBox(
                                 width: touch ? 12 : AppTheme.spacingMedium,
                               ),
@@ -380,7 +370,11 @@ class _TaskCardState extends State<TaskCard> {
                         ],
                       ),
                     ),
-                    if (touch) Positioned(top: 0, left: 0, child: completion),
+                    Positioned(
+                      top: touch ? 0 : 12,
+                      left: touch ? 0 : 12,
+                      child: completion,
+                    ),
                     if (touch && hasActions)
                       Positioned(bottom: 0, right: 0, child: actions),
                   ],

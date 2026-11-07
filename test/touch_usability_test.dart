@@ -158,6 +158,147 @@ void main() {
   }
 
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    testWidgets('$platform task cards use compact margins', (tester) async {
+      tester.view.physicalSize = const Size(400, 600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final fixture = _Fixture();
+      await tester.runAsync(fixture.initialize);
+      var toggles = 0;
+      final task = Task.create(
+        id: 'margins',
+        name: 'A compact task',
+        deadline: DateTime(2030, 6, 15),
+        type: TaskType.unassigned,
+        priority: TaskPriority.high,
+      );
+      final secondTask = Task.create(
+        id: 'margins-2',
+        name: 'Another compact task',
+        deadline: DateTime(2030, 6, 16),
+        type: TaskType.unassigned,
+        priority: TaskPriority.low,
+      );
+      await tester.pumpWidget(
+        fixture.app(
+          platform,
+          Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 320,
+              height: 520,
+              child: TaskColumn(
+                title: 'Upcoming',
+                tasks: [task, secondTask],
+                headerColor: const Color(0xff8bb8e8),
+                headerBackgroundColor: const Color(0xffe8f1fb),
+                icon: Icons.schedule_rounded,
+                onToggleComplete: (_) => toggles++,
+                onEditTask: (_) {},
+                onDeleteTask: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final column = find.byType(TaskColumn);
+      final card = find.byType(TaskCard).first;
+      final cardSurface = find
+          .descendant(
+            of: card,
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is AnimatedContainer &&
+                  widget.decoration is BoxDecoration &&
+                  ((widget.decoration! as BoxDecoration)
+                          .boxShadow
+                          ?.isNotEmpty ??
+                      false),
+            ),
+          )
+          .first;
+      final secondCardSurface = find
+          .descendant(
+            of: find.byType(TaskCard).at(1),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is AnimatedContainer &&
+                  widget.decoration is BoxDecoration &&
+                  ((widget.decoration! as BoxDecoration)
+                          .boxShadow
+                          ?.isNotEmpty ??
+                      false),
+            ),
+          )
+          .first;
+      final header = find
+          .ancestor(
+            of: find.text('Upcoming'),
+            matching: find.byType(AnimatedContainer),
+          )
+          .first;
+      final columnRect = tester.getRect(column);
+      final cardRect = tester.getRect(cardSurface);
+      final headerRect = tester.getRect(header);
+      final outerInset = platform == TargetPlatform.windows ? 9.0 : 8.0;
+      final contentInset = platform == TargetPlatform.windows ? 14.0 : 12.0;
+
+      expect(cardRect.left - columnRect.left, closeTo(outerInset, .1));
+      expect(columnRect.right - cardRect.right, closeTo(outerInset, .1));
+      expect(cardRect.top - headerRect.bottom, closeTo(outerInset, .1));
+      expect(
+        tester.getTopLeft(secondCardSurface).dy - cardRect.bottom,
+        closeTo(outerInset, .1),
+      );
+
+      final mark = find
+          .descendant(
+            of: card,
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is AnimatedContainer &&
+                  widget.decoration is BoxDecoration &&
+                  (widget.decoration! as BoxDecoration).borderRadius ==
+                      BorderRadius.circular(6),
+            ),
+          )
+          .first;
+      expect(mark, findsOneWidget);
+      final date = find.descendant(
+        of: card,
+        matching: find.byIcon(Icons.calendar_today_rounded),
+      );
+      final markRect = tester.getRect(mark);
+      final dateRect = tester.getRect(date);
+      // The visible card perimeter includes its one-pixel border.
+      expect(markRect.left - cardRect.left, closeTo(contentInset + 1, .1));
+      expect(markRect.top - cardRect.top, closeTo(contentInset + 1, .1));
+      expect(dateRect.left, closeTo(markRect.left, .1));
+      expect(
+        cardRect.right - tester.getTopRight(find.text('!!!')).dx,
+        greaterThanOrEqualTo(contentInset),
+      );
+      final completionTarget = find
+          .descendant(
+            of: card,
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is Semantics && widget.properties.checked != null,
+            ),
+          )
+          .first;
+      await tester.tap(completionTarget);
+      expect(toggles, 1);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      fixture.dispose();
+    });
+  }
+
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
     testWidgets(
       '$platform edit dialog waits for a tap before focusing the name',
       (tester) async {
