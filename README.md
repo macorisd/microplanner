@@ -15,9 +15,9 @@ saved copy; editing resumes when you reconnect.
 ### Android
 
 <!-- android-download:start -->
-[Download Android APK (0.11.4)](https://github.com/macorisd/microplanner/releases/download/v0.11.4/microplanner-0.11.4-android.apk)
+[Download Android APK (0.11.5)](https://github.com/macorisd/microplanner/releases/download/v0.11.5/microplanner-0.11.5-android.apk)
 
-[Release notes](https://github.com/macorisd/microplanner/releases/tag/v0.11.4)
+[Release notes](https://github.com/macorisd/microplanner/releases/tag/v0.11.5)
 <!-- android-download:end -->
 
 1. Open [GitHub Releases](https://github.com/macorisd/microplanner/releases)
@@ -61,7 +61,7 @@ Android downloads appear in Releases after publication.
 <!-- release-history:start -->
 | Version | Changes |
 | --- | --- |
-| 0.11.5 (unreleased) | <ul><li>Keep the selected task type visible while a newly created task is synchronizing.</li><li>Use the Board's configured Subject order in Create Task and Edit Task.</li><li>Prevent another sidebar board reorder until the previous reorder finishes synchronizing.</li></ul> |
+| [0.11.5](https://github.com/macorisd/microplanner/releases/tag/v0.11.5) | <ul><li>Keep the selected task type visible while a newly created task is synchronizing.</li><li>Use the Board's configured Subject order in Create Task and Edit Task.</li><li>Prevent another sidebar board reorder until the previous reorder finishes synchronizing.</li></ul> |
 | [0.11.4](https://github.com/macorisd/microplanner/releases/tag/v0.11.4) | <ul><li>Standardize rounded form actions with balanced fixed footers on Windows and Android, including small screens and keyboards.</li><li>Use consistent Create, Save changes and Delete labels, including Delete Completed tasks.</li><li>Keep Cancel compact and aligned with the proceed action, with equal visible bottom and right margins throughout forms and date/time pickers.</li><li>Use consistent footer margins throughout Windows and Android forms, with Android matching Edit Board.</li><li>Reduce icon-picker footer spacing and give default-list selection a right-aligned Cancel button.</li><li>Remove excessive blank space before form actions, including task editors and manual date/time entry; keep validation stable.</li><li>Remove in-app sign-in cancellation and retain retry after failure.</li><li>Apply the same action conventions to saved drafts, confirmations and limit messages.</li><li>Keep dropped boards in their new order throughout synchronization.</li><li>Disable sidebar board reordering while board changes are syncing.</li></ul> |
 | [0.11.3](https://github.com/macorisd/microplanner/releases/tag/v0.11.3) | <ul><li>Place Task type after Subject and before Deadline in task creation and editing forms.</li><li>Focus Name in creation forms and show required-name feedback after leaving or clearing the field.</li><li>Prevent duplicate board, subject and task type names.</li><li>Keep subject spacing compact and square task type icons aligned beside names at matching heights on Android.</li><li>Keep Edit Board actions centered in a compact fixed footer.</li><li>Use smaller, aligned remove icons in subject and task type lists.</li><li>Center the original pastel Windows board icon button in a passive gray panel aligned with the color palette.</li><li>Animate sidebar Boards expansion and collapse.</li><li>Show a soft travelling edge light during board saves, tracing the same card perimeter on Windows and Android; pending edit/delete clicks do nothing while names still open boards.</li><li>Enlarge category reorder handles; on Android drag handles immediately and hold names to reorder, without edit tooltips.</li></ul> |
 | [0.11.2](https://github.com/macorisd/microplanner/releases/tag/v0.11.2) | <ul><li>Use consistent rounded selector arrows, including the time field on Android.</li><li>Align the Boards and Weekly Plan navigation icons.</li><li>Open Edit Board from the board title and reveal its delete action on hover or keyboard focus.</li><li>Keep New Board and Edit Board compact with tighter spacing and stable validation.</li></ul> |
