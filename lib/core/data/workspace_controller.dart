@@ -21,6 +21,7 @@ class WorkspaceController extends ChangeNotifier {
   bool _loading = false;
   bool _saving = false;
   Set<String> _savingBoardIds = const {};
+  bool _savingBoardOrder = false;
   bool _online = false;
   bool _hasCache = false;
   bool _canImport = false;
@@ -36,6 +37,8 @@ class WorkspaceController extends ChangeNotifier {
   WorkspaceOutbox? get outbox => _outbox;
   Set<String> get pendingBoardIds =>
       _outbox?.pendingBoardIds ?? _savingBoardIds;
+  bool get hasPendingBoardReorder =>
+      _outbox?.hasPendingBoardReorder ?? _savingBoardOrder;
   WorkspaceController({
     required this.auth,
     required this.api,
@@ -152,6 +155,7 @@ class WorkspaceController extends ChangeNotifier {
     _dismissingImport = false;
     _saving = false;
     _savingBoardIds = const {};
+    _savingBoardOrder = false;
     _loading = owner != null;
     _error = null;
     notifyListeners();
@@ -446,7 +450,9 @@ class WorkspaceController extends ChangeNotifier {
     final token = auth.token!;
     final generation = _generation;
     _saving = true;
-    _savingBoardIds = WorkspaceDelta.between(_snapshot, data).savingBoardIds;
+    final delta = WorkspaceDelta.between(_snapshot, data);
+    _savingBoardIds = delta.savingBoardIds;
+    _savingBoardOrder = delta.reordersBoards;
     _error = null;
     notifyListeners();
     try {
@@ -483,6 +489,7 @@ class WorkspaceController extends ChangeNotifier {
       if (e.code == 'revision_conflict') {
         _saving = false;
         _savingBoardIds = const {};
+        _savingBoardOrder = false;
         await refresh();
         if (_current(generation, owner)) _error = e.message;
       }
@@ -498,6 +505,7 @@ class WorkspaceController extends ChangeNotifier {
       if (_current(generation, owner)) {
         _saving = false;
         _savingBoardIds = const {};
+        _savingBoardOrder = false;
         notifyListeners();
       }
     }

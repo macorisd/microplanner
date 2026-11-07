@@ -176,11 +176,9 @@ class _AddTaskDialogState extends State<AddTaskDialog>
         !typeOptions.any((type) => type.id == _selectedTypeId)) {
       _selectedTypeId = null;
     }
-    final subjects = widget.draft == null
-        ? boardsProvider.currentBoardSubjects
-        : boardsProvider.subjects
-              .where((subject) => subject.boardId == widget.draft!.boardId)
-              .toList();
+    final subjects = boardsProvider.subjectsForBoard(
+      widget.draft?.boardId ?? boardsProvider.currentBoardId,
+    );
     if (_selectedSubjectId != null &&
         !subjects.any((s) => s.id == _selectedSubjectId)) {
       _selectedSubjectId = null;

@@ -176,9 +176,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
         !typeOptions.any((type) => type.id == _selectedTypeId)) {
       _selectedTypeId = null;
     }
-    final subjects = boardsProvider.subjects
-        .where((s) => s.boardId == widget.task.boardId)
-        .toList();
+    final subjects = boardsProvider.subjectsForBoard(widget.task.boardId);
     if (_selectedSubjectId != null &&
         !subjects.any((s) => s.id == _selectedSubjectId)) {
       _selectedSubjectId = null;

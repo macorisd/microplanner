@@ -14,6 +14,14 @@ class WorkspaceDelta {
   final List<WorkspaceDeltaItem> items;
   const WorkspaceDelta(this.items);
 
+  bool get reordersBoards => items.any(
+    (item) =>
+        item.kind == 'boards' &&
+        item.before != null &&
+        item.after != null &&
+        item.before!['sortOrder'] != item.after!['sortOrder'],
+  );
+
   /// Board editor saves can change only a board-local category list.
   Set<String> get savingBoardIds => {
     for (final item in items)

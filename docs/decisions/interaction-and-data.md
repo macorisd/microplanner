@@ -162,6 +162,10 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
   reordering retains board IDs. Show the accepted order immediately after a drop,
   throughout synchronization and on confirmation, without reverting to the old
   order while waiting. A definite failure restores the confirmed order.
+  After any board reorder is accepted, disable every board drag until that order
+  write resolves. A second reorder must not enqueue, alter the visible order or
+  wait behind the first; confirmation or definite failure unlocks dragging.
+  This does not disable board Edit/Delete controls or navigation.
   While any board creation/editor save shows pending synchronization, disable
   reordering all sidebar boards; keep board navigation available. Re-enable
   dragging when those saves resolve, including definite failure. This includes
@@ -183,6 +187,9 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
   Source: explicit user decision, 2026-11-05.
 - Subjects/task types are reordered by dragging their handles; omit redundant
   three-dot Move up/Move down menus, including in default-list editors.
+- The Board's configured Subject order is authoritative in every task form.
+  Create Task, Edit Task and recovered task drafts show the same Subject order
+  as Edit Board and the task card.
 - Subject/type drag handles have a full 48-pixel square hit area. On Android,
   dragging the handle starts immediately; the name area requires a long press,
   as with sidebar boards. Neither gesture shows an Edit/name tooltip or opens

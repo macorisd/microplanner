@@ -46,9 +46,15 @@ class BoardsProvider extends ChangeNotifier {
   }
   List<Board> get boards => _boards;
   List<Subject> get subjects => _subjects;
+  List<Subject> subjectsForBoard(String? boardId) =>
+      _subjectsByBoard[boardId] ?? const [];
   List<BoardTaskType> typesForBoard(String? boardId) =>
       _types.where((type) => type.boardId == boardId).toList()
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  bool get canReorderBoards =>
+      workspace.canWrite &&
+      workspace.pendingBoardIds.isEmpty &&
+      !workspace.hasPendingBoardReorder;
   BoardTaskType? getTypeById(String? id) =>
       _types.where((type) => type.id == id).firstOrNull;
   bool get isLoading => workspace.isLoading;
@@ -68,7 +74,7 @@ class BoardsProvider extends ChangeNotifier {
       _selectionLoaded ? _currentBoardId ?? _boards.firstOrNull?.id : null;
   Board? get currentBoard => _boardIndex[currentBoardId];
   List<Subject> get currentBoardSubjects =>
-      _subjectsByBoard[_subjectsBoardId ?? currentBoardId] ?? const [];
+      subjectsForBoard(_subjectsBoardId ?? currentBoardId);
   String? get subjectsBoardName =>
       _boardIndex[_subjectsBoardId ?? currentBoardId]?.name;
   void _changed() {
@@ -379,8 +385,7 @@ class BoardsProvider extends ChangeNotifier {
   }
 
   Future<bool> reorderBoards(int oldIndex, int newIndex) {
-    if (!workspace.canWrite ||
-        workspace.pendingBoardIds.isNotEmpty ||
+    if (!canReorderBoards ||
         oldIndex < 0 ||
         oldIndex >= boards.length ||
         newIndex < 0 ||
