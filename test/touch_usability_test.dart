@@ -244,6 +244,7 @@ void main() {
       final cardRect = tester.getRect(cardSurface);
       final headerRect = tester.getRect(header);
       final outerInset = platform == TargetPlatform.windows ? 10.0 : 8.0;
+      final contentInset = platform == TargetPlatform.windows ? 14.0 : 12.0;
 
       expect(cardRect.left - columnRect.left, closeTo(outerInset, .1));
       expect(columnRect.right - cardRect.right, closeTo(outerInset, .1));
@@ -272,12 +273,12 @@ void main() {
       final markRect = tester.getRect(mark);
       final dateRect = tester.getRect(date);
       // The visible card perimeter includes its one-pixel border.
-      expect(markRect.left - cardRect.left, closeTo(13, .1));
-      expect(markRect.top - cardRect.top, closeTo(13, .1));
+      expect(markRect.left - cardRect.left, closeTo(contentInset + 1, .1));
+      expect(markRect.top - cardRect.top, closeTo(contentInset + 1, .1));
       expect(dateRect.left, closeTo(markRect.left, .1));
       expect(
         cardRect.right - tester.getTopRight(find.text('!!!')).dx,
-        greaterThanOrEqualTo(12),
+        greaterThanOrEqualTo(contentInset),
       );
       final completionTarget = find
           .descendant(

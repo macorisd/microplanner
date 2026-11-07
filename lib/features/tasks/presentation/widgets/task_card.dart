@@ -194,7 +194,7 @@ class _TaskCardState extends State<TaskCard> {
                 child: Stack(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: EdgeInsets.all(touch ? 12 : 14),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,

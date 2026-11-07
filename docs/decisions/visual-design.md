@@ -117,13 +117,13 @@ user refinements (initial consolidation 2026-11-02; audited against
   over text. Source: [PR #14](https://github.com/macorisd/microplanner/pull/14).
 - Keep task cards compact on Windows and Android. Android uses an 8 logical-pixel
   inset between the column's inner edge and its cards, plus an 8-pixel vertical
-  gap between cards. Windows uses 10 pixels for both outer margins. Both platforms
-  use 12 logical-pixel padding inside each card around the title, date and
-  priority controls. Keep bottom spacing comparable to side spacing, no blank
-  subject row and no extra title/date gap when Subject is absent. Align the
-  checkbox with the date's left edge. Priority has breathing room after the title
-  and aligns vertically with the delete icon. Source: user preference and
-  Windows-only refinement, 2026-11-07.
+  gap between cards. Windows uses 10 pixels for both outer margins and 14 pixels
+  of padding inside each card around the title, date and priority controls;
+  Android keeps 12 pixels of content padding. Keep bottom spacing comparable to
+  side spacing, no blank subject row and no extra title/date gap when Subject is
+  absent. Align the checkbox with the date's left edge. Priority has breathing
+  room after the title and aligns vertically with the delete icon. Source: user
+  preference and Windows-only refinements, 2026-11-07.
 - Subject chips hug their text, including on Windows. Show the subject color in
   the task form selector. Hover/focus effects must not create oversized checkbox
   circles or leave highlights on multiple sidebar boards.
