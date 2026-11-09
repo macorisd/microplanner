@@ -22,6 +22,15 @@ plan choices (for example, restoring each board's column instead of Upcoming).
   requiring a system Back gesture. Keep the menu button and Android Back usable.
 - Tap/click a task to edit on **both** platforms; no edit icon on task cards.
   Checkbox/delete and other nested actions must not also open the editor.
+- After a newly created task is durably accepted, reveal its destination column
+  on Android and animate its task column vertically to the new card on Windows
+  and Android. Aim for the viewport center using a short visible scroll rather
+  than an instant jump. Do not scroll when the list has no excess extent; near
+  the beginning or end, stop at the reachable minimum or maximum scroll offset
+  instead of forcing the card to the center. This applies only to task creation,
+  not editing an existing task, refresh, restore or other list changes. Keep the
+  creation color feedback visible during synchronization and honor reduced
+  motion. Source: explicit user requirement, 2026-11-09.
 - Tapping/clicking the open board heading opens its existing Edit Board dialog;
   the heading's hover/focus Delete action opens the same confirmation as sidebar
   deletion and must not also open the editor. Source: user refinement, 2026-11-04.

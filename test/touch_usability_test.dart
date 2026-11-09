@@ -290,6 +290,16 @@ void main() {
             ),
           )
           .first;
+      if (platform == TargetPlatform.windows) {
+        expect(
+          tester.getRect(completionTarget),
+          markRect,
+          reason:
+              'The completion interaction feedback must align with the visible checkbox.',
+        );
+      } else {
+        expect(tester.getSize(completionTarget), const Size(48, 48));
+      }
       await tester.tap(completionTarget);
       expect(toggles, 1);
       expect(tester.takeException(), isNull);

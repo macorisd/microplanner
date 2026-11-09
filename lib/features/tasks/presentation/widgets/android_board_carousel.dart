@@ -5,6 +5,20 @@ import '../../../../core/data/workspace_controller.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
 
+class AndroidBoardCarouselController {
+  _AndroidBoardCarouselState? _state;
+
+  void selectColumn(int index) => _state?._select(index);
+
+  void _attach(_AndroidBoardCarouselState state) {
+    _state = state;
+  }
+
+  void _detach(_AndroidBoardCarouselState state) {
+    if (identical(_state, state)) _state = null;
+  }
+}
+
 /// Flat layers with depth, ordered Completed | Late | Upcoming.
 /// One controller drives direct selection, gestures and accessibility actions.
 class AndroidBoardCarousel extends StatefulWidget {
@@ -12,12 +26,14 @@ class AndroidBoardCarousel extends StatefulWidget {
   final VoidCallback onAdd;
   final int initialColumn;
   final ValueChanged<int>? onColumnChanged;
+  final AndroidBoardCarouselController? controller;
   const AndroidBoardCarousel({
     super.key,
     required this.columns,
     required this.onAdd,
     this.initialColumn = 2,
     this.onColumnChanged,
+    this.controller,
   });
   @override
   State<AndroidBoardCarousel> createState() => _AndroidBoardCarouselState();
@@ -36,6 +52,21 @@ class _AndroidBoardCarouselState extends State<AndroidBoardCarousel>
   double _dragOrigin = 2;
   double _dragExtent = 1;
   bool _dragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller?._attach(this);
+  }
+
+  @override
+  void didUpdateWidget(covariant AndroidBoardCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._detach(this);
+      widget.controller?._attach(this);
+    }
+  }
 
   void _changed() {
     final visible = _rotation.value.round();
@@ -92,6 +123,7 @@ class _AndroidBoardCarouselState extends State<AndroidBoardCarousel>
 
   @override
   void dispose() {
+    widget.controller?._detach(this);
     _rotation.removeListener(_changed);
     _rotation.dispose();
     _selected.dispose();

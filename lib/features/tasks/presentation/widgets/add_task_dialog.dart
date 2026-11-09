@@ -47,12 +47,14 @@ class AddTaskDialog extends StatefulWidget {
     String? typeId,
   })?
   onSaveWithType;
+  final VoidCallback? onCreated;
 
   const AddTaskDialog({
     super.key,
     required this.onSave,
     this.onSaveWithType,
     this.draft,
+    this.onCreated,
   });
 
   @override
@@ -158,6 +160,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
 
     if (!mounted) return;
     if (saved) {
+      widget.onCreated?.call();
       closeForm();
     }
   }

@@ -142,6 +142,7 @@ class _TaskCardState extends State<TaskCard> {
     final dateColor = task.isLate || urgent
         ? AppColors.error
         : AppColors.textSecondary;
+    final contentInset = touch ? 12.0 : 14.0;
     final completion = Semantics(
       label: task.isCompleted ? 'Mark task incomplete' : 'Mark task complete',
       checked: task.isCompleted,
@@ -191,7 +192,7 @@ class _TaskCardState extends State<TaskCard> {
                 child: Stack(
                   children: [
                     Padding(
-                      padding: EdgeInsets.all(touch ? 12 : 14),
+                      padding: EdgeInsets.all(contentInset),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,8 +372,8 @@ class _TaskCardState extends State<TaskCard> {
                       ),
                     ),
                     Positioned(
-                      top: touch ? 0 : 12,
-                      left: touch ? 0 : 12,
+                      top: touch ? 0 : contentInset,
+                      left: touch ? 0 : contentInset,
                       child: completion,
                     ),
                     if (touch && hasActions)

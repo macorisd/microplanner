@@ -10,6 +10,8 @@ import '../../boards/providers/boards_provider.dart';
 import '../data/models/task.dart';
 import 'task_transitions.dart';
 
+typedef TaskCreationTarget = ({String id, String boardId, int columnIndex});
+
 class TasksProvider extends ChangeNotifier {
   final WorkspaceController workspace;
   final BoardsProvider boards;
@@ -32,6 +34,7 @@ class TasksProvider extends ChangeNotifier {
   String? _startupOwner;
   bool _startupReady = false;
   bool _startupSeeded = false;
+  TaskCreationTarget? _latestCreatedTask;
   TasksProvider(this.workspace, this.boards, {DateTime Function()? now})
     : _now = now ?? DateTime.now {
     workspace.addListener(_changed);
@@ -171,6 +174,7 @@ class TasksProvider extends ChangeNotifier {
   List<Task> get completedTasks => _completed;
   List<Task> get lateTasks => _late;
   List<Task> get upcomingTasks => _upcoming;
+  TaskCreationTarget? get latestCreatedTask => _latestCreatedTask;
   Future<bool> addTask({
     required String name,
     required DateTime deadline,
@@ -200,6 +204,11 @@ class TasksProvider extends ChangeNotifier {
         (type == TaskType.unassigned
             ? null
             : WorkspaceSnapshot.legacyTypeId(boardId, type.index));
+    _latestCreatedTask = (
+      id: task.id,
+      boardId: boardId,
+      columnIndex: TaskTransitions.column(task, _now()).index,
+    );
     return workspace.mutate((s) => s.copyWith(tasks: [...s.tasks, task]));
   }
 
