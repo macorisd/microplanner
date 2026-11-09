@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +10,13 @@ import '../../../../core/theme/app_motion.dart';
 import '../../../../core/utils/input_mode.dart';
 import '../../data/models/task.dart';
 import 'task_card.dart';
+
+class TaskRevealRequest {
+  final String taskId;
+  final int revision;
+
+  const TaskRevealRequest({required this.taskId, required this.revision});
+}
 
 /// A column in the task dashboard displaying tasks of a specific status
 class TaskColumn extends StatelessWidget {
@@ -21,6 +29,7 @@ class TaskColumn extends StatelessWidget {
   final void Function(Task task)? onDeleteTask;
   final void Function(Task task)? onEditTask;
   final Future<void> Function()? onClearCompleted;
+  final ValueListenable<TaskRevealRequest?>? revealRequests;
 
   const TaskColumn({
     super.key,
@@ -33,6 +42,7 @@ class TaskColumn extends StatelessWidget {
     this.onDeleteTask,
     this.onEditTask,
     this.onClearCompleted,
+    this.revealRequests,
   });
 
   @override
@@ -315,6 +325,8 @@ class _TaskListState extends State<_TaskList>
   final _scroll = ScrollController();
   final _anchors = <String, GlobalKey>{};
   late final Ticker _anchorTicker;
+  Timer? _revealTimer;
+  String? _pendingRevealId;
   GlobalKey? _anchor;
   double? _anchorTop;
   late List<Task> _items;
@@ -324,11 +336,16 @@ class _TaskListState extends State<_TaskList>
     super.initState();
     _anchorTicker = createTicker(_preserveAnchor);
     _items = List.of(widget.column.tasks);
+    widget.column.revealRequests?.addListener(_requestedReveal);
   }
 
   @override
   void didUpdateWidget(covariant _TaskList oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.column.revealRequests != widget.column.revealRequests) {
+      oldWidget.column.revealRequests?.removeListener(_requestedReveal);
+      widget.column.revealRequests?.addListener(_requestedReveal);
+    }
     final next = widget.column.tasks;
     if (_items.length == next.length &&
         List.generate(
@@ -336,12 +353,14 @@ class _TaskListState extends State<_TaskList>
           (i) => _items[i].id == next[i].id,
         ).every((same) => same)) {
       _items = List.of(next);
+      _schedulePendingReveal();
       return;
     }
     final state = _listKey.currentState;
     if (state == null) {
       _items = List.of(next);
       _listKey = GlobalKey<AnimatedListState>();
+      _schedulePendingReveal();
       return;
     }
     final ids = next.map((task) => task.id).toSet();
@@ -358,6 +377,7 @@ class _TaskListState extends State<_TaskList>
       // Bulk removal should not create an animation/controller for every row.
       _items = List.of(next);
       _listKey = GlobalKey<AnimatedListState>();
+      _schedulePendingReveal();
       return;
     }
     for (var i = _items.length - 1; i >= 0; i--) {
@@ -380,6 +400,87 @@ class _TaskListState extends State<_TaskList>
         );
       }
     }
+    _schedulePendingReveal();
+  }
+
+  void _requestedReveal() {
+    final request = widget.column.revealRequests?.value;
+    if (request == null || request.taskId == _pendingRevealId) return;
+    _pendingRevealId = request.taskId;
+    _schedulePendingReveal();
+  }
+
+  void _schedulePendingReveal() {
+    final id = _pendingRevealId;
+    if (id == null || !_items.any((task) => task.id == id)) return;
+    _revealTimer?.cancel();
+    _revealTimer = Timer(
+      AppMotion.duration(context, AppMotion.normal),
+      () => _revealTask(id),
+    );
+  }
+
+  Future<void> _revealTask(String id) async {
+    _revealTimer = null;
+    if (!mounted || _pendingRevealId != id) return;
+    if (!_scroll.hasClients) return;
+    final position = _scroll.position;
+    if (position.maxScrollExtent - position.minScrollExtent < 0.5) {
+      _pendingRevealId = null;
+      return;
+    }
+    var target = _cardCenterOffset(id);
+    if (target == null) {
+      // AnimatedList does not build far-away rows. Move proportionally until
+      // the new row exists, then correct its final position below.
+      final index = _items.indexWhere((task) => task.id == id);
+      if (index < 0) {
+        _pendingRevealId = null;
+        return;
+      }
+      final fraction = _items.length <= 1 ? 0.0 : index / (_items.length - 1);
+      target = (position.maxScrollExtent * fraction).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      await _animateScroll(target);
+      if (!mounted || _pendingRevealId != id) return;
+      target = _cardCenterOffset(id);
+    }
+    if (target != null && (target - position.pixels).abs() >= 0.5) {
+      await _animateScroll(target);
+    }
+    if (mounted && _pendingRevealId == id) _pendingRevealId = null;
+  }
+
+  double? _cardCenterOffset(String id) {
+    if (!_scroll.hasClients) return null;
+    final viewport = _viewportKey.currentContext?.findRenderObject();
+    final card = _anchors[id]?.currentContext?.findRenderObject();
+    if (viewport is! RenderBox ||
+        card is! RenderBox ||
+        !viewport.hasSize ||
+        !card.hasSize) {
+      return null;
+    }
+    final position = _scroll.position;
+    final viewportCenter =
+        viewport.localToGlobal(Offset.zero).dy + viewport.size.height / 2;
+    final cardCenter =
+        card.localToGlobal(Offset.zero).dy + card.size.height / 2;
+    return (position.pixels + cardCenter - viewportCenter).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+  }
+
+  Future<void> _animateScroll(double target) async {
+    if (!_scroll.hasClients) return;
+    await _scroll.animateTo(
+      target,
+      duration: AppMotion.duration(context, AppMotion.normal),
+      curve: AppMotion.curve,
+    );
   }
 
   void _captureAnchor(Set<String> remaining) {
@@ -444,6 +545,8 @@ class _TaskListState extends State<_TaskList>
 
   @override
   void dispose() {
+    _revealTimer?.cancel();
+    widget.column.revealRequests?.removeListener(_requestedReveal);
     _anchorTicker.dispose();
     _scroll.dispose();
     super.dispose();
