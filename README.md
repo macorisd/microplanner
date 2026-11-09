@@ -15,9 +15,9 @@ saved copy; editing resumes when you reconnect.
 ### Android
 
 <!-- android-download:start -->
-[Download Android APK (0.11.6)](https://github.com/macorisd/microplanner/releases/download/v0.11.6/microplanner-0.11.6-android.apk)
+[Download Android APK (0.11.7)](https://github.com/macorisd/microplanner/releases/download/v0.11.7/microplanner-0.11.7-android.apk)
 
-[Release notes](https://github.com/macorisd/microplanner/releases/tag/v0.11.6)
+[Release notes](https://github.com/macorisd/microplanner/releases/tag/v0.11.7)
 <!-- android-download:end -->
 
 1. Open [GitHub Releases](https://github.com/macorisd/microplanner/releases)
