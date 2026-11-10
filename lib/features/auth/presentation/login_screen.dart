@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/widgets/form_actions.dart';
 import '../data/auth_service.dart';
@@ -20,10 +19,13 @@ class LoginScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.event_note_rounded,
-                    size: 96,
-                    color: AppColors.primary,
+                  Image.asset(
+                    'assets/images/microplanner_logo.png',
+                    key: const ValueKey('login-app-logo'),
+                    width: 96,
+                    height: 96,
+                    fit: BoxFit.contain,
+                    excludeFromSemantics: true,
                   ),
                   const SizedBox(height: 24),
                   Text(
@@ -31,7 +33,10 @@ class LoginScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.displayMedium,
                   ),
                   const SizedBox(height: 12),
-                  const Text('Your academic tasks, on your devices.'),
+                  const Text(
+                    'A minimalist space for everything you need to\u00A0do.',
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 40),
                   PressFeedback(
                     child: FilledButton.icon(

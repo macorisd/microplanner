@@ -61,6 +61,7 @@ Android downloads appear in Releases after publication.
 <!-- release-history:start -->
 | Version | Changes |
 | --- | --- |
+| [0.11.8](https://github.com/macorisd/microplanner/releases/tag/v0.11.8) | <ul><li>Use the microplanner app artwork and README tagline on the sign-in screen.</li></ul> |
 | [0.11.7](https://github.com/macorisd/microplanner/releases/tag/v0.11.7) | <ul><li>Align the Windows completion checkbox hover feedback with the checkbox itself.</li><li>Reveal a newly created task with a fast scroll toward the center of its column, respecting scroll limits on Windows and Android.</li></ul> |
 | [0.11.6](https://github.com/macorisd/microplanner/releases/tag/v0.11.6) | <ul><li>Use compact task-card spacing on Windows while preserving Android's layout.</li><li>Show only one completion checkbox on each task card.</li></ul> |
 | [0.11.5](https://github.com/macorisd/microplanner/releases/tag/v0.11.5) | <ul><li>Keep the selected task type visible while a newly created task is synchronizing.</li><li>Use the Board's configured Subject order in Create Task and Edit Task.</li><li>Prevent another sidebar board reorder until the previous reorder finishes synchronizing.</li></ul> |
