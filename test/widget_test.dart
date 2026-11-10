@@ -110,6 +110,22 @@ void main() {
           child: const MaterialApp(home: LoginScreen()),
         ),
       );
+      final logo = find.byKey(const ValueKey('login-app-logo'));
+      expect(logo, findsOneWidget);
+      expect(
+        (tester.widget<Image>(logo).image as AssetImage).assetName,
+        'assets/images/microplanner_logo.png',
+      );
+      expect(
+        find.text('A minimalist space for everything you need to\u00A0do.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('A minimalist space for everything you need to do.'),
+        findsNothing,
+      );
+      expect(find.byIcon(Icons.event_note_rounded), findsNothing);
+      expect(find.text('Your academic tasks, on your devices.'), findsNothing);
       expect(find.text('Sign in with Google'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('Sign in with Google'));

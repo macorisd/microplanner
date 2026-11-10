@@ -17,6 +17,12 @@ user refinements (initial consolidation 2026-11-02; audited against
   [AppTheme](../../lib/core/theme/app_theme.dart). Reference colors: background
   `#F5F5F7`, cards `#FFFFFF`, primary `#6FA89F`; Completed `#8DD4A0`, Late
   `#F5D68A`, Upcoming `#8BB8E8`. Do not invent a parallel theme for a new screen.
+- The signed-out and post-sign-out authentication screen uses the original
+  microplanner app artwork in place of a generic calendar icon. Its tagline is
+  exactly "A minimalist space for everything you need to do.", matching the
+  README banner SVG. Keep "to do." together when the tagline wraps so narrow
+  Android screens do not leave a lone second-line word. Source: explicit user
+  refinements, 2026-11-10.
 - Use the shared spacing scale (4/8/16/24/32 logical pixels) and radius tokens
   (8/12/16/20/24). Match neighboring controls in size, alignment and emphasis.
   Keep the soft, minimal, rounded style and readable contrast in every state.
