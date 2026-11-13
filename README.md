@@ -52,6 +52,29 @@ close the app before replacing that complete bundle.
 Both platforms use the hosted service by default. Google sign-in availability
 follows the current OAuth project's access settings.
 
+## Task reminders
+
+Open Profile > Settings > Notifications and enable reminders on each device you
+want to notify you. The account default is 24 hours before a deadline, with an
+optional second reminder at the deadline. Each task can inherit that default,
+use a custom advance time or disable reminders. Quiet hours and hiding task
+details apply only to the current account on this device. Sound, vibration and
+Do Not Disturb follow system settings; use Send test notification to check setup.
+
+Android may ask for notification permission; precise reminder access is optional.
+Without it, delivery may be delayed. Windows registers microplanner in the Start
+Menu for notification activation and keeps the same normal executable/bundle.
+
+Reminders are scheduled locally and can run with the app closed. They use the
+last synchronized tasks: changes on another device take effect after this one
+syncs. Power-off, Android Force stop/battery restrictions, denied permissions and
+OS delivery limits can prevent a reminder. Reopen microplanner to refresh tasks
+and scheduling coverage. The nearest 200 events are scheduled within the current
+sign-in session; the settings page reports partial coverage. No repeated overdue
+alerts are sent. Quiet hours never defer a reminder past its task's deadline.
+After changing the device clock or time zone, reopen microplanner so quiet hours
+and future reminder times are recalculated in the new local time zone.
+
 ## Version history
 
 The table describes changes when each version was introduced. Features may have
@@ -61,6 +84,7 @@ Android downloads appear in Releases after publication.
 <!-- release-history:start -->
 | Version | Changes |
 | --- | --- |
+| 0.12.0 (unreleased) | <ul><li>Receive Android and Windows task deadline reminders, with timing, quiet hours, privacy and device controls in Settings > Notifications.</li></ul> |
 | [0.11.8](https://github.com/macorisd/microplanner/releases/tag/v0.11.8) | <ul><li>Use the microplanner app artwork and README tagline on the sign-in screen.</li></ul> |
 | [0.11.7](https://github.com/macorisd/microplanner/releases/tag/v0.11.7) | <ul><li>Align the Windows completion checkbox hover feedback with the checkbox itself.</li><li>Reveal a newly created task with a fast scroll toward the center of its column, respecting scroll limits on Windows and Android.</li></ul> |
 | [0.11.6](https://github.com/macorisd/microplanner/releases/tag/v0.11.6) | <ul><li>Use compact task-card spacing on Windows while preserving Android's layout.</li><li>Show only one completion checkbox on each task card.</li></ul> |

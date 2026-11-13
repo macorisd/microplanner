@@ -94,6 +94,10 @@ user refinements (initial consolidation 2026-11-02; audited against
 - Task creation and editing forms place Task type immediately after Subject and
   before Deadline and Time on Windows and Android. Source: user refinement,
   2026-11-05.
+  Reminder follows Deadline/Time, using the shared selector and duration editor.
+  Notifications is a sibling Settings page with the existing account-panel style,
+  readable status, device scope and accessible controls. Source: approved 0.12.0
+  plan, 2026-11-13. Preserve every existing form/focus/footer convention.
 - A task card shows exactly one completion checkbox. On Windows, its hover,
   focus and pressed feedback must be centered on and confined to the visible
   24-pixel checkbox rather than the larger transparent interaction target.
