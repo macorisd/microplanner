@@ -26,14 +26,15 @@ class _Journal extends MemoryCache implements WorkspaceJournal {
 class FakeNotifications implements NotificationAdapter {
   final events = <int, Map<String, dynamic>>{};
   final calls = <Map<String, dynamic>>[];
-  bool enabled = true, fail = false;
+  bool enabled = true, precise = true, fail = false;
+  int exactAccessRequests = 0;
   String? activation;
   @override
   void Function()? onActivated;
   @override
   Future<Map<String, dynamic>> status({bool request = false}) async => {
     'enabled': enabled,
-    'precise': true,
+    'precise': precise,
   };
   @override
   Future<void> schedule(Map<String, dynamic> event) async {
@@ -58,7 +59,9 @@ class FakeNotifications implements NotificationAdapter {
   }
 
   @override
-  Future<void> settings({bool exact = false}) async {}
+  Future<void> settings({bool exact = false}) async {
+    if (exact) exactAccessRequests++;
+  }
 }
 
 Task task(
@@ -82,6 +85,26 @@ Task task(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final clock = DateTime(2026, 11, 13, 12);
+  test(
+    'relative deadline dates use local delivery day across midnight and year boundaries',
+    () {
+      expect(
+        reminderDeadline(DateTime(2026, 11, 13, 23, 55), clock),
+        'today, 23:55',
+      );
+      expect(
+        reminderDeadline(
+          DateTime(2027, 1, 1, 0, 1),
+          DateTime(2026, 12, 31, 23, 59),
+        ),
+        'tomorrow, 00:01',
+      );
+      expect(
+        reminderDeadline(DateTime(2026, 11, 15, 10), clock),
+        'Sun 15 Nov, 10:00',
+      );
+    },
+  );
   WorkspaceSnapshot tasks(
     List<Task> values, {
     NotificationPreferences? preferences,
@@ -118,6 +141,8 @@ void main() {
       expect(events.map((e) => e.taskId), ['custom', 'default']);
       expect(events.first.at, clock.add(const Duration(hours: 2)));
       expect(events.last.at, clock.add(const Duration(days: 1)));
+      // The task is two days away when scheduled, but tomorrow when delivered.
+      expect(events.last.body, 'Private board · Due tomorrow, 12:00');
       expect(plan(values, suppressed: {'custom'}).map((e) => e.taskId), [
         'default',
       ]);
@@ -319,6 +344,7 @@ void main() {
         adapter.calls.single['body'],
         '3 tasks have approaching deadlines',
       );
+      expect(adapter.calls.single.containsKey('boardName'), isFalse);
       await controller.reconcile();
       expect(adapter.calls.length, 1);
       controller.dispose();

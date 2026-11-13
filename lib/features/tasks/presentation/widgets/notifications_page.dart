@@ -67,8 +67,21 @@ class _NotificationsPageState extends State<NotificationsPage> {
           value: device.enabled,
           onChanged: controller.busy
               ? null
-              : (value) =>
-                    controller.updateDevice(device.copyWith(enabled: value)),
+              : (value) async {
+                  final android =
+                      Theme.of(context).platform == TargetPlatform.android;
+                  final saved = await controller.updateDevice(
+                    device.copyWith(enabled: value),
+                  );
+                  if (mounted &&
+                      saved &&
+                      value &&
+                      android &&
+                      controller.permitted &&
+                      !controller.precise) {
+                    await controller.adapter.settings(exact: true);
+                  }
+                },
         ),
         const SizedBox(height: 16),
         ReminderSelector(
@@ -154,7 +167,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   : !controller.permitted
                   ? 'Notifications are blocked in system settings.'
                   : !controller.precise
-                  ? 'Reminders are enabled. Timing may be delayed without precise reminder access.'
+                  ? 'Timing is approximate. Android can delay reminders by up to an hour, or longer with battery restrictions. Short deadlines may be missed. Allow precise reminders for alerts at the selected time.'
                   : 'Notifications are enabled.'),
         ),
         if (device.enabled && controller.permitted)

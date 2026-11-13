@@ -61,8 +61,12 @@ use a custom advance time or disable reminders. Quiet hours and hiding task
 details apply only to the current account on this device. Sound, vibration and
 Do Not Disturb follow system settings; use Send test notification to check setup.
 
-Android may ask for notification permission; precise reminder access is optional.
-Without it, delivery may be delayed. Windows registers microplanner in the Start
+Android asks for notification permission and guides you to **Alarms & reminders**
+access for alerts at the selected time. Without precise access, Android can delay
+an alarm by up to an hour, or longer under battery restrictions; a short deadline
+can pass before delivery. Removing the app from recents does not require it to
+stay running. Force stop still prevents alarms until the app is opened again.
+Windows registers microplanner in the Start
 Menu for notification activation and keeps the same normal executable/bundle.
 
 Reminders are scheduled locally and can run with the app closed. They use the

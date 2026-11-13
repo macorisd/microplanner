@@ -20,6 +20,7 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         final h = Harness();
+        final adapter = FakeNotifications()..precise = false;
         late NotificationController controller;
         await tester.runAsync(() async {
           await h.initialize();
@@ -27,7 +28,7 @@ void main() {
           controller = NotificationController(
             workspace: h.workspace,
             storage: h.storage,
-            adapter: FakeNotifications(),
+            adapter: adapter,
           );
           await controller.reconcile();
         });
@@ -58,6 +59,18 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Default reminder'), findsOneWidget);
+        await tester.tap(find.text('Enable notifications on this device'));
+        await tester.runAsync(settleAsync);
+        await tester.pumpAndSettle();
+        expect(controller.device.enabled, isTrue);
+        expect(
+          adapter.exactAccessRequests,
+          platform == TargetPlatform.android ? 1 : 0,
+        );
+        expect(
+          find.textContaining('Short deadlines may be missed.'),
+          findsOneWidget,
+        );
         await tester.ensureVisible(find.text('Quiet hours'));
         await tester.tap(find.text('Quiet hours'));
         await tester.runAsync(settleAsync);

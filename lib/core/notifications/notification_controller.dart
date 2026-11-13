@@ -277,6 +277,7 @@ class NotificationController extends ChangeNotifier
         if (event != immediate.first) continue;
         native['title'] = 'microplanner';
         native['body'] = '${immediate.length} tasks have approaching deadlines';
+        native.remove('boardName');
       }
       try {
         await adapter.schedule(native);

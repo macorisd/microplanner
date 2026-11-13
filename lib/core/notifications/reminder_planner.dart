@@ -6,6 +6,7 @@ import 'notification_preferences.dart';
 
 class ReminderEvent {
   final String key, owner, taskId, boardId, title, body;
+  final String? boardName;
   final DateTime at, deadline, expires;
   final bool atDeadline;
   const ReminderEvent({
@@ -19,6 +20,7 @@ class ReminderEvent {
     required this.deadline,
     required this.expires,
     required this.atDeadline,
+    this.boardName,
   });
   int get proposedId =>
       int.parse(
@@ -37,6 +39,7 @@ class ReminderEvent {
     'title': title,
     'body': body,
     'payload': payload,
+    if (boardName != null) 'boardName': boardName,
   };
   String get fingerprint => jsonEncode([
     at.millisecondsSinceEpoch,
@@ -44,7 +47,22 @@ class ReminderEvent {
     body,
     payload,
     expires.millisecondsSinceEpoch,
+    boardName,
   ]);
+}
+
+String reminderDeadline(DateTime deadline, DateTime delivery) {
+  final local = deadline.toLocal();
+  final reference = delivery.toLocal();
+  final day = DateTime(local.year, local.month, local.day);
+  final today = DateTime(reference.year, reference.month, reference.day);
+  final tomorrow = DateTime(reference.year, reference.month, reference.day + 1);
+  final label = day == today
+      ? 'today'
+      : day == tomorrow
+      ? 'tomorrow'
+      : DateFormat('EEE d MMM').format(local);
+  return '$label, ${DateFormat('HH:mm').format(local)}';
 }
 
 /// Pure planning uses exact deadline instants and the device's local quiet clock.
@@ -107,8 +125,9 @@ List<ReminderEvent> planReminders({
           taskId: task.id,
           boardId: task.boardId!,
           title: device.showDetails ? task.name : 'microplanner',
+          boardName: device.showDetails ? boards[task.boardId] : null,
           body: device.showDetails
-              ? '${boards[task.boardId]} · Due ${DateFormat('EEE d MMM, HH:mm').format(task.deadline.toLocal())}'
+              ? '${boards[task.boardId]} · Due ${reminderDeadline(task.deadline, at)}'
               : 'A task deadline is approaching.',
           at: at,
           deadline: task.deadline,

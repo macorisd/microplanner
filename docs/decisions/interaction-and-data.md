@@ -235,6 +235,15 @@ before their deadline; skip deadline events in quiet hours. Generic content hide
 task details. Sound/vibration/banners and Do Not Disturb belong to system settings.
 Show permission/timing/setup/partial-coverage state and offer a sample notification.
 Page controls persist immediately; custom-duration editors use ordinary save rules.
+Notification deadline text uses "today" and "tomorrow" for those local calendar
+days, retaining the time; other dates retain the abbreviated weekday/day/month.
+Resolve relative dates for the notification's delivery time, including scheduled
+events while the app is closed. Source: user refinement, 2026-11-13.
+On Android, guide activation to precise reminder access when it is missing.
+Explicitly state that inexact alarms can be delayed up to an hour and can miss a
+short deadline. Closing/removing the app from recents must not require Flutter to
+stay running; verify a future OS alarm with the process closed, not only an
+immediate notification or activation of an already displayed one.
 
 Use local OS scheduling with last synchronized data, including closed-app/offline
 delivery where the OS allows it. Cross-device edits apply on the next sync;

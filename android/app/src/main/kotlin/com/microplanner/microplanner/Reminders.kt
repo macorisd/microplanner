@@ -10,7 +10,12 @@ import android.net.Uri
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -98,6 +103,7 @@ object Reminders {
         if (due.size > 1) {
             due.forEach { event -> event.put("delivered", true); preferences(context).edit().putString(event.getInt("id").toString(), encrypt(event.toString())).commit() }
             val summary = JSONObject(due.first().toString()).put("title", "microplanner").put("body", "${due.size} tasks have approaching deadlines").put("delivered", false)
+            summary.remove("boardName")
             deliver(context, summary)
         }
         events.filter { due.size < 2 || !due.contains(it) }.forEach { installAlarm(context, it) }
@@ -116,13 +122,35 @@ object Reminders {
             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val action = PendingIntent.getActivity(context, event.getInt("id"), open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(context, CHANNEL) else Notification.Builder(context)
+        val body = if (event.has("boardName")) "${event.getString("boardName")} · Due ${deadlineLabel(deadline, now)}" else event.getString("body")
         builder.setSmallIcon(R.drawable.ic_notification).setContentTitle(event.getString("title"))
-            .setContentText(event.getString("body")).setStyle(Notification.BigTextStyle().bigText(event.getString("body")))
+            .setLargeIcon(logo(context))
+            .setContentText(body).setStyle(Notification.BigTextStyle().bigText(body))
             .setContentIntent(action).setAutoCancel(true).setGroup("microplanner.reminders")
             .setVisibility(Notification.VISIBILITY_PRIVATE)
         manager.notify(event.getInt("id"), builder.build())
         event.put("delivered", true)
         check(preferences(context).edit().putString(event.getInt("id").toString(), encrypt(event.toString())).commit())
+    }
+    private fun logo(context: Context): Bitmap {
+        val image = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888)
+        context.getDrawable(R.drawable.startup_logo)!!.apply {
+            setBounds(0, 0, image.width, image.height)
+            draw(Canvas(image))
+        }
+        return image
+    }
+    private fun deadlineLabel(deadline: Long, delivery: Long): String {
+        val day = Calendar.getInstance().apply { timeInMillis = deadline }
+        val today = Calendar.getInstance().apply { timeInMillis = delivery }
+        val tomorrow = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
+        fun sameDate(other: Calendar) = day.get(Calendar.YEAR) == other.get(Calendar.YEAR) && day.get(Calendar.DAY_OF_YEAR) == other.get(Calendar.DAY_OF_YEAR)
+        val label = when {
+            sameDate(today) -> "today"
+            sameDate(tomorrow) -> "tomorrow"
+            else -> SimpleDateFormat("EEE d MMM", Locale.ENGLISH).format(day.time)
+        }
+        return "$label, ${SimpleDateFormat("HH:mm", Locale.ENGLISH).format(day.time)}"
     }
     fun settings(activity: Activity, exact: Boolean) {
         val intent = if (exact && Build.VERSION.SDK_INT >= 31) Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${activity.packageName}"))
