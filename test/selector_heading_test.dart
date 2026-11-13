@@ -54,7 +54,7 @@ void main() {
             final dropdowns = tester.widgetList<DropdownButton>(
               find.byWidgetPredicate((w) => w is DropdownButton),
             );
-            expect(dropdowns.length, 2);
+            expect(dropdowns.length, 3);
             for (final dropdown in dropdowns) {
               expect(dropdown.icon, isA<DisclosureIcon>());
             }

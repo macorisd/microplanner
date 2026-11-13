@@ -153,7 +153,8 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
 
 - Weekly Plan is a Coming Soon destination before collapsible Boards. Profile
   contains only Google photo/name/email, Settings and Sign out. Settings contains
-  only Customization > Boards > Default lists of task types; no extra placeholders.
+  Customization > Boards > Default lists of task types and its sibling
+  Notifications destination; no extra placeholders.
 - Back and Escape unwind Settings one level at a time, then Profile, then the
   previous board. Sidebar navigation must not leave stale back-history entries.
 - Boards and task types share the icon catalog; boards and subjects share the
@@ -215,3 +216,42 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
 - The five editable initial lists are Academic tasks, Software development, Work,
   Personal life and Creative projects. Editing/deleting a default never changes
   boards that previously copied it. Preserve the unassigned No type choice.
+
+## Deadline notifications
+
+Source: approved [0.12.0 plan](../plans/plan-20261113T095259660Z-version0.12.0.md),
+2026-11-13. Reminders cover incomplete tasks on every board. The synchronized
+default is 24 hours before, with an optional deadline reminder initially off.
+Tasks inherit the current default, disable both reminders, or override the
+advance (1-10,080 whole minutes). Completing/deleting/editing cancels obsolete
+events; unresolved relevant writes suppress them until the outcome is known.
+No periodic overdue reminders. Catch up once while the deadline is still ahead;
+batch simultaneous catch-up and avoid duplicates after refresh/restart.
+
+Activation is opt-in per account/device, initially off. Quiet hours and content
+privacy are device/account preferences; quiet hours are initially off with a
+22:00-08:00 suggestion. Delay advance reminders to the next allowed time only
+before their deadline; skip deadline events in quiet hours. Generic content hides
+task details. Sound/vibration/banners and Do Not Disturb belong to system settings.
+Show permission/timing/setup/partial-coverage state and offer a sample notification.
+Page controls persist immediately; custom-duration editors use ordinary save rules.
+Notification deadline text uses "today" and "tomorrow" for those local calendar
+days, retaining the time; other dates retain the abbreviated weekday/day/month.
+Resolve relative dates for the notification's delivery time, including scheduled
+events while the app is closed. Source: user refinement, 2026-11-13.
+On Android, guide activation to precise reminder access when it is missing.
+Explicitly state that inexact alarms can be delayed up to an hour and can miss a
+short deadline. Closing/removing the app from recents must not require Flutter to
+stay running; verify a future OS alarm with the process closed, not only an
+immediate notification or activation of an already displayed one.
+
+Use local OS scheduling with last synchronized data, including closed-app/offline
+delivery where the OS allows it. Cross-device edits apply on the next sync;
+each enabled device can notify. Preserve UTC deadline instants. Show scheduling
+capacity/session coverage honestly. Cancel old-account schedules on sign-out and
+reject stale callbacks. Clicking reveals the current task after login/data restore
+without changing it, losing an unsaved draft or bypassing account isolation.
+
+The user authorizes changing Windows distribution if necessary after evaluating
+compatibility, installation and maintenance. Prefer preserving the normal bundle
+when native integration works; closing the app must still exit the process.

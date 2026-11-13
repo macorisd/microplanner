@@ -3,7 +3,7 @@ import { MongoClient, type ClientSession, type Collection } from 'mongodb';
 import { ApiError, assertBoardNames, assertCustomizationChanges, assertUniqueNames, assertWorkspaceSize, dataSchema, type Profile, type Workspace, type WorkspaceData } from './domain.js';
 import { upgradeWorkspace } from './customization-migration.js';
 
-type User = Profile & { _id: string; googleSub: string; revision: number; operations: string[]; workspaceSchemaVersion?: number };
+type User = Profile & { _id: string; googleSub: string; revision: number; operations: string[]; workspaceSchemaVersion?: number; notificationPreferences?: WorkspaceData['notificationPreferences'] };
 type Session = { _id: string; ownerId: string; expiresAt: Date };
 type Owned<T> = T & { _id: string; ownerId: string };
 type OperationReceipt = {
@@ -127,6 +127,7 @@ export class Repository {
     const user = await this.users.findOne({ _id: ownerId }, { session });
     if (!user) throw new ApiError(401, 'unauthorized', 'Please sign in again.');
     const result = { revision: user.revision } as Workspace;
+    if (user.notificationPreferences) result.notificationPreferences = user.notificationPreferences;
     // Operations in one transaction must remain sequential (MongoDB driver rule).
     for (const kind of ['boards', 'subjects', 'tasks'] as const) {
       const rows = await this.collection(kind).find({ ownerId }, {
@@ -217,6 +218,18 @@ export class Repository {
       }
       dataSchema.parse(next);
       const previous = await this.read(ownerId, session);
+      const savedTasks = new Map(previous.tasks.map(task => [task.id, task]));
+      // Omission by an older client preserves new data; null explicitly inherits.
+      next = {
+        ...next,
+        ...(next.notificationPreferences === undefined && previous.notificationPreferences
+          ? { notificationPreferences: previous.notificationPreferences } : {}),
+        tasks: next.tasks.map(task => {
+          const saved = savedTasks.get(task.id);
+          return task.reminderMinutes === undefined && saved?.reminderMinutes !== undefined
+            ? { ...task, reminderMinutes: saved.reminderMinutes } : task;
+        }),
+      };
       assertBoardNames(next, previous);
       assertWorkspaceSize({ ...next, revision: revision + 1 });
       assertUniqueNames(next, previous);
@@ -230,7 +243,10 @@ export class Repository {
       }, { session });
       const updated = await this.users.updateOne({ _id: ownerId, revision }, {
         $inc: { revision: 1 }, $push: { operations: { $each: [operationId], $slice: -50 } },
-        ...(next.schemaVersion === 2 ? { $set: { workspaceSchemaVersion: 2 } } : {}),
+        $set: {
+          ...(next.schemaVersion === 2 ? { workspaceSchemaVersion: 2 } : {}),
+          ...(next.notificationPreferences ? { notificationPreferences: next.notificationPreferences } : {}),
+        },
       }, { session });
       if (updated.modifiedCount !== 1) throw new ApiError(409, 'revision_conflict', 'Reload and try again.');
       for (const kind of ['boards', 'subjects', 'tasks'] as const) {

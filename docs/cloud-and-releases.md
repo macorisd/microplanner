@@ -23,6 +23,12 @@ an app to work around a signing mismatch.
 
 ## Vercel deployment
 
+For 0.12.0, deploy the additive notification API before updating clients. It
+preserves reminder overrides and account defaults when earlier clients omit
+those fields. An explicit task `reminderMinutes: null` restores inheritance.
+Keep this compatibility API or a newer one after notification preferences have
+been saved; rolling back to an older API can reject or lose those preferences.
+
 For 0.11.0, deploy the updated API before installing the updated clients. The
 first successful save upgrades that account's workspace to support board colors,
 icons and custom task types. Earlier clients can still read the workspace, but

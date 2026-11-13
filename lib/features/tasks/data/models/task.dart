@@ -41,6 +41,8 @@ class Task extends HiveObject {
 
   // Kept in workspace JSON; legacy Hive records retain their numeric type.
   String? typeId;
+  // null inherits the account default, zero disables both reminders.
+  int? reminderMinutes;
 
   Task({
     required this.id,
@@ -55,6 +57,7 @@ class Task extends HiveObject {
     this.subjectId,
     this.description,
     this.typeId,
+    this.reminderMinutes,
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -126,6 +129,7 @@ class Task extends HiveObject {
     Object? subjectId = const _Undefined(),
     Object? description = const _Undefined(),
     Object? typeId = const _Undefined(),
+    Object? reminderMinutes = const _Undefined(),
   }) {
     return Task(
       id: id ?? this.id,
@@ -144,6 +148,9 @@ class Task extends HiveObject {
           ? this.description
           : description as String?,
       typeId: typeId is _Undefined ? this.typeId : typeId as String?,
+      reminderMinutes: reminderMinutes is _Undefined
+          ? this.reminderMinutes
+          : reminderMinutes as int?,
     );
   }
 

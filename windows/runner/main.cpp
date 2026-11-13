@@ -4,6 +4,7 @@
 
 #include "flutter_window.h"
 #include "utils.h"
+#include "notifications.h"
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
@@ -16,6 +17,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Initialize COM, so that it is available for use in the library and/or
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+  std::wstring argument(command_line);
+  argument.erase(argument.find_last_not_of(L" \t\r\n") + 1);
+  const std::wstring probe = L"--notification-check=";
+  if (argument.rfind(probe, 0) == 0) return reminders::Probe(argument.substr(probe.size()));
+  // COM activation starts a process only if there is no registered live factory.
+  if (argument.find(L"-ToastActivated") == std::wstring::npos && reminders::ForwardToExisting()) return 0;
+  try { reminders::Initialize(); } catch (...) {
+    // Keep the application usable. The channel reports setup failure on demand.
+  }
 
   flutter::DartProject project(L"data");
 

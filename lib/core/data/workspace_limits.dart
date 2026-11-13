@@ -113,6 +113,10 @@ class WorkspaceLimits {
       return 'You can keep up to $subjects subjects.';
     }
     if (data.tasks.length > tasks) return 'You can keep up to $tasks tasks.';
+    final advance = data.notificationPreferences?.advanceMinutes;
+    if (advance != null && (advance < 1 || advance > 10080)) {
+      return 'Choose a reminder from 1 minute to 7 days.';
+    }
     final duplicate =
         _duplicateError(
           data.boards.map((item) => ('', item.id, item.name)),
@@ -261,6 +265,7 @@ class WorkspaceLimits {
           task.typeIndex > 6 ||
           task.priorityIndex < 0 ||
           task.priorityIndex > 2 ||
+          (task.reminderMinutes != null && (task.reminderMinutes! < 0 || task.reminderMinutes! > 10080)) ||
           !validDate(task.deadline) ||
           !validDate(task.createdAt)) {
         return 'Invalid task data. Refresh and try again.';
