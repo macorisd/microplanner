@@ -147,6 +147,7 @@ class FailedActionsDialog extends StatelessWidget {
                     subjectId,
                     description,
                     typeId,
+                    reminderMinutes,
                   }) => save(
                     reviewedDraft.copyWith(
                       name: name,
@@ -156,6 +157,7 @@ class FailedActionsDialog extends StatelessWidget {
                       subjectId: subjectId,
                       description: description,
                       typeId: typeId,
+                      reminderMinutes: reminderMinutes,
                     ),
                   ),
               onSave:

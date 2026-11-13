@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../notifications/notification_preferences.dart';
 import 'package:crypto/crypto.dart';
 import '../../features/boards/data/models/board.dart';
 import '../../features/boards/data/models/board_task_type.dart';
@@ -14,6 +15,7 @@ class WorkspaceSnapshot {
   final int schemaVersion;
   final List<BoardTaskType> boardTypes;
   final List<TaskTypeList> typeLists;
+  final NotificationPreferences? notificationPreferences;
   const WorkspaceSnapshot({
     this.revision = 0,
     this.boards = const [],
@@ -22,6 +24,7 @@ class WorkspaceSnapshot {
     this.schemaVersion = 1,
     this.boardTypes = const [],
     this.typeLists = const [],
+    this.notificationPreferences,
   });
 
   factory WorkspaceSnapshot.fromJson(
@@ -30,6 +33,11 @@ class WorkspaceSnapshot {
   }) {
     final parsed = WorkspaceSnapshot(
       revision: json['revision'] as int? ?? 0,
+      notificationPreferences: json['notificationPreferences'] == null
+          ? null
+          : NotificationPreferences.fromJson(
+              Map<String, dynamic>.from(json['notificationPreferences'] as Map),
+            ),
       schemaVersion: json['schemaVersion'] as int? ?? 1,
       // Entity deltas update sortOrder without rearranging their backing array.
       // Normalize both cloud and journal/cache snapshots to the saved order.
@@ -76,6 +84,7 @@ class WorkspaceSnapshot {
               description: t['description'] as String?,
               isCompleted: t['isCompleted'] as bool,
               typeId: t['typeId'] as String?,
+              reminderMinutes: t['reminderMinutes'] as int?,
             ),
           )
           .toList(),
@@ -173,6 +182,8 @@ class WorkspaceSnapshot {
   }
 
   Map<String, dynamic> toJson() => {
+    if (notificationPreferences != null)
+      'notificationPreferences': notificationPreferences!.toJson(),
     'revision': revision,
     'boards': boards
         .map(
@@ -211,6 +222,7 @@ class WorkspaceSnapshot {
             'subjectId': t.subjectId,
             'description': t.description,
             if (schemaVersion == 2) 'typeId': t.typeId,
+            'reminderMinutes': t.reminderMinutes,
           },
         )
         .toList(),
@@ -229,6 +241,7 @@ class WorkspaceSnapshot {
     int? schemaVersion,
     List<BoardTaskType>? boardTypes,
     List<TaskTypeList>? typeLists,
+    NotificationPreferences? notificationPreferences,
   }) => WorkspaceSnapshot(
     revision: revision,
     boards: boards ?? this.boards,
@@ -237,6 +250,8 @@ class WorkspaceSnapshot {
     schemaVersion: schemaVersion ?? this.schemaVersion,
     boardTypes: boardTypes ?? this.boardTypes,
     typeLists: typeLists ?? this.typeLists,
+    notificationPreferences:
+        notificationPreferences ?? this.notificationPreferences,
   );
   WorkspaceSnapshot clone() =>
       WorkspaceSnapshot.fromJson(toJson(), upgradeLegacy: false);

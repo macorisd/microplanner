@@ -23,6 +23,7 @@ import '../../../../core/widgets/pending_action.dart';
 import '../../../../core/utils/task_date_range.dart';
 import 'subject_dropdown.dart';
 import 'task_date_picker.dart';
+import 'reminder_selector.dart';
 
 /// Dialog for editing an existing task
 class EditTaskDialog extends StatefulWidget {
@@ -56,6 +57,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
   late TaskPriority _priority;
   String? _selectedSubjectId;
   String? _selectedTypeId;
+  int? _reminderMinutes;
   bool get _isLoading => actionBlocked;
   bool get _canSubmit =>
       !_isLoading &&
@@ -84,6 +86,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
     _priority = draft.priority;
     _selectedSubjectId = draft.subjectId;
     _selectedTypeId = draft.typeId;
+    _reminderMinutes = draft.reminderMinutes;
     _nameController.addListener(_textChanged);
     _descriptionController.addListener(_textChanged);
   }
@@ -122,6 +125,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
       deadline: deadlineWithTime,
       type: _type,
       typeId: _selectedTypeId,
+      reminderMinutes: _reminderMinutes,
       priority: _priority,
       subjectId: _selectedSubjectId,
       description: _descriptionController.text.trim().isEmpty
@@ -161,6 +165,7 @@ class _EditTaskDialogState extends State<EditTaskDialog>
       _selectedDeadline != widget.task.deadline ||
       _type != widget.task.type ||
       _selectedTypeId != widget.task.typeId ||
+      _reminderMinutes != widget.task.reminderMinutes ||
       _priority != widget.task.priority ||
       _selectedSubjectId != widget.task.subjectId;
 
@@ -333,6 +338,22 @@ class _EditTaskDialogState extends State<EditTaskDialog>
                             const SizedBox(height: AppTheme.spacingMedium),
 
                             // Priority selector
+                            ReminderSelector(
+                              value: _reminderMinutes,
+                              defaultMinutes:
+                                  boardsProvider
+                                      .workspace
+                                      .snapshot
+                                      .notificationPreferences
+                                      ?.advanceMinutes ??
+                                  1440,
+                              onChanged: _isLoading
+                                  ? null
+                                  : (value) => setState(
+                                      () => _reminderMinutes = value,
+                                    ),
+                            ),
+                            const SizedBox(height: AppTheme.spacingMedium),
                             _buildPrioritySelector(),
 
                             // The stable status area also provides footer spacing.

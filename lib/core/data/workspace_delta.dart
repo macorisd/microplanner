@@ -10,6 +10,7 @@ class WorkspaceDelta {
     'tasks',
     'boardTypes',
     'typeLists',
+    'notificationPreferences',
   ];
   final List<WorkspaceDeltaItem> items;
   const WorkspaceDelta(this.items);
@@ -189,10 +190,15 @@ class WorkspaceDelta {
     }
     for (final kind in kinds) {
       final rows = indexes[kind]!;
-      result[kind] = [
+      final updatedRows = [
         for (final id in order[kind]!)
           if (rows.containsKey(id)) rows[id]!,
       ];
+      result[kind] = kind == 'notificationPreferences'
+          ? (updatedRows.isEmpty
+                ? null
+                : (Map<String, dynamic>.of(updatedRows.first)..remove('id')))
+          : updatedRows;
     }
     try {
       final snapshot = WorkspaceSnapshot.fromJson(result);
@@ -205,7 +211,11 @@ class WorkspaceDelta {
   }
 
   static List<Map<String, dynamic>> _rows(Object? value) =>
-      (value as List? ?? const [])
+      (value is Map
+              ? [
+                  {'id': 'notifications', ...Map<String, dynamic>.from(value)},
+                ]
+              : value as List? ?? const [])
           .map((row) => Map<String, dynamic>.from(row as Map))
           .toList();
   static bool _equal(Map<String, dynamic> a, Map<String, dynamic> b) =>

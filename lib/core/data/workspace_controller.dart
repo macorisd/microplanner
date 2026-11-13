@@ -15,6 +15,7 @@ class WorkspaceController extends ChangeNotifier {
   final WorkspaceCache cache;
   final LegacyWorkspace legacy;
   WorkspaceSnapshot _snapshot = const WorkspaceSnapshot();
+  WorkspaceSnapshot get confirmedSnapshot => _snapshot;
   String? _ownerId;
   int _generation = 0;
   int _refreshVersion = 0;
