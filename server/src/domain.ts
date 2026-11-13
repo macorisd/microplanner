@@ -19,6 +19,7 @@ export const taskSchema = z.object({
   priorityIndex: z.number().int().min(0).max(2),
   isCompleted: z.boolean(),
   typeId: id.nullable().optional(),
+  reminderMinutes: z.number().int().min(0).max(10080).nullable().optional(),
 }).strict();
 const icon = z.string().min(1).max(50).regex(/^[a-z][a-z0-9_]*$/);
 const boardTypeSchema = z.object({
@@ -35,6 +36,10 @@ export const dataSchema = z.object({
   schemaVersion: z.literal(2).optional(),
   boardTypes: z.array(boardTypeSchema).max(7500).optional(),
   typeLists: z.array(typeListSchema).max(300).optional(),
+  notificationPreferences: z.object({
+    advanceMinutes: z.number().int().min(1).max(10080),
+    atDeadline: z.boolean(),
+  }).strict().optional(),
 }).strict().superRefine((data, ctx) => {
   for (const kind of ['boards', 'subjects', 'tasks'] as const) {
     if (new Set(data[kind].map(item => item.id)).size !== data[kind].length) {

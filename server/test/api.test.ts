@@ -55,6 +55,40 @@ const save = (token: string, workspace: Workspace, operationId = randomUUID()) =
   return app.inject({ method: 'PUT', url: '/workspace', headers: headers(token), payload: { revision, operationId, data } });
 };
 
+test('reminders survive old clients, explicit inheritance, imports and isolated accounts', async () => {
+  // Provision isolated fixtures directly; do not consume the shared auth-route
+  // rate-limit budget that the authentication tests exercise below.
+  const a = await repo.login({sub:randomUUID(),email:'a@example.com'});
+  const b = await repo.login({sub:randomUUID(),email:'b@example.com'});
+  const initial = await state(a.token);
+  initial.notificationPreferences = { advanceMinutes: 60, atDeadline: true };
+  initial.tasks.push({ id: 'reminder-task', name: 'Reminder', boardId: 'default-board',
+    subjectId: null, description: null, deadline: '2027-01-01T12:00:00Z', createdAt: '2026-11-13T00:00:00Z',
+    typeIndex: 0, priorityIndex: 0, isCompleted: false, reminderMinutes: 15 });
+  assert.equal((await save(a.token, initial)).statusCode, 200);
+  const legacy = await state(a.token);
+  delete legacy.notificationPreferences; delete legacy.tasks[0]!.reminderMinutes;
+  legacy.tasks[0]!.name = 'Old client rename';
+  assert.equal((await save(a.token, legacy)).statusCode, 200);
+  const preserved = await state(a.token);
+  assert.deepEqual(preserved.notificationPreferences, { advanceMinutes: 60, atDeadline: true });
+  assert.equal(preserved.tasks[0]!.reminderMinutes, 15);
+  assert.equal(preserved.tasks[0]!.name, 'Old client rename');
+  preserved.tasks[0]!.reminderMinutes = null;
+  assert.equal((await save(a.token, preserved)).statusCode, 200);
+  const inherited = await state(a.token);
+  assert.equal(inherited.tasks[0]!.reminderMinutes, null);
+  const invalid = { ...inherited, notificationPreferences: { advanceMinutes: 0, atDeadline: false } };
+  assert.equal((await save(a.token, invalid)).statusCode, 400);
+  assert.equal((await state(b.token)).notificationPreferences, undefined);
+  assert.equal((await state(b.token)).tasks.length, 0);
+  const legacyImport = {boards:[{id:'imported',name:'Imported',sortOrder:0,createdAt:'2026-01-01T00:00:00Z'}],subjects:[],tasks:[]};
+  const response = await app.inject({method:'POST',url:'/workspace/import',headers:headers(a.token),
+    payload:{revision:inherited.revision,operationId:randomUUID(),sourceId:randomUUID(),data:legacyImport}});
+  assert.equal(response.statusCode,200,response.body);
+  assert.deepEqual((await state(a.token)).notificationPreferences,{advanceMinutes:60,atDeadline:true});
+});
+
 test('customization upgrade preserves task types and rejects stale clients without data loss', async () => {
   const { token } = await login();
   const legacy = await state(token);
