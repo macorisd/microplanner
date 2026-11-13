@@ -98,10 +98,13 @@ user refinements (initial consolidation 2026-11-02; audited against
   Notifications is a sibling Settings page with the existing account-panel style,
   readable status, device scope and accessible controls. Source: approved 0.12.0
   plan, 2026-11-13. Preserve every existing form/focus/footer convention.
-- Android notifications identify microplanner with its own three-panel small
-  icon and its original colored logo as the large icon, preserving Android's
-  monochrome status-bar convention. Do not substitute a generic calendar.
-  Source: user refinement, 2026-11-13.
+- Android notifications identify microplanner in the small icon beside the app
+  name. Preserve the original logo's rounded, overlapping three-panel geometry
+  in a monochrome alpha mask, using transparent seams to distinguish panels.
+  Do not add a large logo beside the notification body. Use native scalable
+  resources supported by the app's minimum Android version and let the system
+  control tint and presentation; launcher/adaptive artwork is not the small
+  notification icon. Source: user clarification, 2026-11-13.
 - A task card shows exactly one completion checkbox. On Windows, its hover,
   focus and pressed feedback must be centered on and confined to the visible
   24-pixel checkbox rather than the larger transparent interaction target.

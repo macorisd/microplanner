@@ -10,8 +10,6 @@ import android.net.Uri
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -124,21 +122,12 @@ object Reminders {
         val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(context, CHANNEL) else Notification.Builder(context)
         val body = if (event.has("boardName")) "${event.getString("boardName")} · Due ${deadlineLabel(deadline, now)}" else event.getString("body")
         builder.setSmallIcon(R.drawable.ic_notification).setContentTitle(event.getString("title"))
-            .setLargeIcon(logo(context))
             .setContentText(body).setStyle(Notification.BigTextStyle().bigText(body))
             .setContentIntent(action).setAutoCancel(true).setGroup("microplanner.reminders")
             .setVisibility(Notification.VISIBILITY_PRIVATE)
         manager.notify(event.getInt("id"), builder.build())
         event.put("delivered", true)
         check(preferences(context).edit().putString(event.getInt("id").toString(), encrypt(event.toString())).commit())
-    }
-    private fun logo(context: Context): Bitmap {
-        val image = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888)
-        context.getDrawable(R.drawable.startup_logo)!!.apply {
-            setBounds(0, 0, image.width, image.height)
-            draw(Canvas(image))
-        }
-        return image
     }
     private fun deadlineLabel(deadline: Long, delivery: Long): String {
         val day = Calendar.getInstance().apply { timeInMillis = deadline }

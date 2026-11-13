@@ -1,3 +1,18 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF" android:pathData="M5,3C3.34,3 2,4.34 2,6V18C2,19.66 3.34,21 5,21H7V3ZM11,3C9.34,3 8,4.34 8,6V18C8,19.66 9.34,21 11,21H13V3ZM18,3C15.79,3 14,4.79 14,7V17C14,19.21 15.79,21 18,21C20.21,21 22,19.21 22,17V7C22,4.79 20.21,3 18,3Z" />
+﻿<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="1548" android:viewportHeight="1548">
+    <!-- Original 1290x1286 logo geometry, with transparent seams replacing color. -->
+    <group android:translateX="129" android:translateY="131">
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M340,0 H543 A340,340 0,0 0,203,340 V946 A340,340 0,0 0,543,1286 H340 A340,340 0,0 1,0,946 V340 A340,340 0,0 1,340,0 Z" />
+        <group android:translateX="267">
+            <path android:fillColor="#FFFFFFFF"
+                android:pathData="M340,0 H535 A340,340 0,0 0,195,340 V946 A340,340 0,0 0,535,1286 H340 A340,340 0,0 1,0,946 V340 A340,340 0,0 1,340,0 Z" />
+        </group>
+        <group android:translateX="526">
+            <path android:fillColor="#FFFFFFFF"
+                android:pathData="M340,0 H424 A340,340 0,0 1,764,340 V946 A340,340 0,0 1,424,1286 H340 A340,340 0,0 1,0,946 V340 A340,340 0,0 1,340,0 Z" />
+        </group>
+    </group>
 </vector>
