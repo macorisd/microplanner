@@ -132,7 +132,8 @@ int64_t Number(const EncodableValue& value) {
   return std::get<int32_t>(value);
 }
 
-void Initialize() {
+bool ready = false;
+void Initialize(bool activation) {
   auto exe = Executable();
   RegistryString(L"Software\\Classes\\CLSID\\" + std::wstring(kClsid) +
       L"\\LocalServer32", nullptr, L"\"" + exe + L"\" -ToastActivated");
@@ -162,9 +163,12 @@ void Initialize() {
   winrt::check_hresult(properties->Commit());
   ComPtr<IPersistFile> file; winrt::check_hresult(link.As(&file));
   winrt::check_hresult(file->Save(shortcut.c_str(), TRUE));
-  ComPtr<IClassFactory> factory = Microsoft::WRL::Make<Factory>();
-  winrt::check_hresult(CoRegisterClassObject(kActivator, factory.Get(),
-      CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE, &registration));
+  if (activation) {
+    ComPtr<IClassFactory> factory = Microsoft::WRL::Make<Factory>();
+    winrt::check_hresult(CoRegisterClassObject(kActivator, factory.Get(),
+        CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE, &registration));
+  }
+  ready = true;
   // Classic unpackaged apps need a first, suppressed notification before Windows
   // exposes scheduling/settings. This matches Microsoft's compatibility toolkit.
   ToastNotification bootstrap(Content("microplanner", "Reminders are ready", "{}"));
@@ -188,7 +192,7 @@ void Bind(flutter::BinaryMessenger* messenger, HWND window) {
   channel->SetMethodCallHandler([](const auto& call, auto result) {
     try {
       const auto& method = call.method_name();
-      if (!registration) Initialize();
+      if (!ready) Initialize();
       if (method == "status" || method == "requestPermission") {
         result->Success(EncodableValue(EncodableMap{
             {EncodableValue("enabled"), EncodableValue(Notifier().Setting() == NotificationSetting::Enabled)},

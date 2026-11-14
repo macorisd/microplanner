@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'core/notifications/notification_controller.dart';
 import 'core/notifications/notification_adapter.dart';
+import 'core/notifications/background_sync.dart';
 import 'core/constants/app_config.dart';
 import 'core/data/api_client.dart';
 import 'core/data/private_storage.dart';
@@ -27,7 +28,15 @@ void main() {
   runApp(AppBootstrap(initialize: _initializeApplication));
 }
 
+@pragma('vm:entry-point')
+Future<void> backgroundReminderSync() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await runBackgroundReminderSync();
+}
+
 Future<Widget> _initializeApplication() async {
+  final background = BackgroundSyncBridge();
+  await background.startForeground();
   if (defaultTargetPlatform == TargetPlatform.android) {
     await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -57,6 +66,7 @@ Future<Widget> _initializeApplication() async {
     workspace: workspace,
     storage: storage,
     adapter: NativeNotificationAdapter(),
+    background: background,
   );
   unawaited(auth.initialize());
   return MultiProvider(

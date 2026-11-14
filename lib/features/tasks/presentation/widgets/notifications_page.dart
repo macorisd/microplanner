@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/notifications/notification_controller.dart';
 import '../../../../core/notifications/notification_preferences.dart';
 import '../../../../core/data/workspace_controller.dart';
@@ -57,9 +58,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Reminders use the last tasks synchronized on this device. Enable each device separately.',
-        ),
+        const Text('Enable reminders on each device separately.'),
         const SizedBox(height: 16),
         SwitchListTile.adaptive(
           contentPadding: EdgeInsets.zero,
@@ -83,6 +82,32 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   }
                 },
         ),
+        const SizedBox(height: 16),
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Background sync'),
+          subtitle: const Text(
+            'Check for task changes about every 30 minutes. The system may delay checks to save power.',
+          ),
+          value: device.backgroundSync,
+          onChanged: controller.busy || !device.enabled
+              ? null
+              : (value) => controller.updateDevice(
+                  device.copyWith(backgroundSync: value),
+                ),
+        ),
+        if (device.enabled && device.backgroundSync) ...[
+          const SizedBox(height: 8),
+          Text(controller.backgroundStatusText),
+          if (controller.lastBackgroundSync != null)
+            Text(
+              'Last reminder sync: ${DateFormat('EEE d MMM, HH:mm').format(controller.lastBackgroundSync!)}',
+            ),
+          const SizedBox(height: 8),
+          const Text(
+            'Checks can be delayed or unavailable offline, so some reminders may use older task data.',
+          ),
+        ],
         const SizedBox(height: 16),
         ReminderSelector(
           value: preferences.advanceMinutes,
@@ -172,7 +197,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ),
         if (device.enabled && controller.permitted)
           Text(
-            '${controller.scheduled} reminders scheduled. Reopen microplanner to refresh coverage and changes from other devices.',
+            '${controller.scheduled} reminders scheduled. Background sync refreshes coverage when possible.',
           ),
         if (controller.eligible > 200)
           const Text(

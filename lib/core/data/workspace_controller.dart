@@ -294,7 +294,7 @@ class WorkspaceController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refresh() async {
+  Future<void> refresh({bool silent = false}) async {
     final owner = _ownerId;
     if (owner == null || auth.token == null || _saving) return;
     final generation = _generation;
@@ -309,7 +309,7 @@ class WorkspaceController extends ChangeNotifier {
     if (token == null) return;
     final refreshVersion = ++_refreshVersion;
     _refreshBarrier ??= Completer<void>();
-    _loading = true;
+    _loading = !silent;
     _outbox?.updateConfirmed(_snapshot, online: false);
     notifyListeners();
     try {
@@ -343,7 +343,7 @@ class WorkspaceController extends ChangeNotifier {
         notifyListeners();
       }
     }
-    if (refreshVersion == _refreshVersion) {
+    if (refreshVersion == _refreshVersion && !silent) {
       await _replaceRetiredColors(generation, owner);
     }
   }

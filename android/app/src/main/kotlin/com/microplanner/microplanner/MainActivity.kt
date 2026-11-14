@@ -13,6 +13,7 @@ class MainActivity : FlutterActivity() {
     private var permissionResult: MethodChannel.Result? = null
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        BackgroundSync.bindForeground(flutterEngine, applicationContext)
         notificationChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "microplanner/notifications").also { channel ->
             channel.setMethodCallHandler { call, result ->
                 try {
@@ -40,6 +41,10 @@ class MainActivity : FlutterActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         notificationChannel?.invokeMethod("activated", null)
+    }
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        BackgroundSync.unbindForeground()
+        super.cleanUpFlutterEngine(flutterEngine)
     }
     override fun onResume() {
         super.onResume()

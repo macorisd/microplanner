@@ -21,6 +21,28 @@ void main() {
     await temporary.delete(recursive: true);
   });
   test(
+    'headless reminder guard survives unreadable or failed journal writes',
+    () async {
+      final secure = MemoryPrivateStorage();
+      final cache = EncryptedWorkspaceCache(secure);
+      await cache.writeJournal('A', '{"operations":[{"failure":null}]}');
+      expect(secure.values['reminders-pending:A'], 'true');
+      await cache.writeJournal(
+        'A',
+        '{"operations":[{"failure":"Review draft"}]}',
+      );
+      expect(secure.values['reminders-pending:A'], 'false');
+      await cache.writeJournal('A', 'unreadable');
+      expect(secure.values['reminders-pending:A'], 'true');
+      await Hive.close();
+      await expectLater(
+        cache.writeJournal('A', '{"operations":[]}'),
+        throwsA(isA<HiveError>()),
+      );
+      expect(secure.values['reminders-pending:A'], 'true');
+    },
+  );
+  test(
     'encrypted cache uses distinct keys and boxes per user and survives reopening',
     () async {
       final secure = MemoryPrivateStorage();

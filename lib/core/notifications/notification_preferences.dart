@@ -17,12 +17,13 @@ class NotificationPreferences {
 }
 
 class DeviceNotificationPreferences {
-  final bool enabled, quietHours, showDetails;
+  final bool enabled, quietHours, showDetails, backgroundSync;
   final int quietStart, quietEnd;
   const DeviceNotificationPreferences({
     this.enabled = false,
     this.quietHours = false,
     this.showDetails = true,
+    this.backgroundSync = true,
     this.quietStart = 1320,
     this.quietEnd = 480,
   });
@@ -31,6 +32,7 @@ class DeviceNotificationPreferences {
         enabled: json['enabled'] == true,
         quietHours: json['quietHours'] == true,
         showDetails: json['showDetails'] != false,
+        backgroundSync: json['backgroundSync'] != false,
         quietStart: json['quietStart'] as int? ?? 1320,
         quietEnd: json['quietEnd'] as int? ?? 480,
       );
@@ -38,6 +40,7 @@ class DeviceNotificationPreferences {
     'enabled': enabled,
     'quietHours': quietHours,
     'showDetails': showDetails,
+    'backgroundSync': backgroundSync,
     'quietStart': quietStart,
     'quietEnd': quietEnd,
   };
@@ -45,12 +48,14 @@ class DeviceNotificationPreferences {
     bool? enabled,
     bool? quietHours,
     bool? showDetails,
+    bool? backgroundSync,
     int? quietStart,
     int? quietEnd,
   }) => DeviceNotificationPreferences(
     enabled: enabled ?? this.enabled,
     quietHours: quietHours ?? this.quietHours,
     showDetails: showDetails ?? this.showDetails,
+    backgroundSync: backgroundSync ?? this.backgroundSync,
     quietStart: quietStart ?? this.quietStart,
     quietEnd: quietEnd ?? this.quietEnd,
   );

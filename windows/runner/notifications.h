@@ -8,7 +8,7 @@
 
 namespace reminders {
 // Register only per-user shell/COM identity; no service or package is installed.
-void Initialize();
+void Initialize(bool activation = true);
 void Shutdown();
 void Bind(flutter::BinaryMessenger* messenger, HWND window);
 bool HandleMessage(UINT message, LPARAM param);

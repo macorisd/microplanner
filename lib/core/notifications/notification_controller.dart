@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import '../data/private_storage.dart';
 import '../data/workspace_controller.dart';
+import '../data/workspace_snapshot.dart';
 import 'notification_preferences.dart';
 import 'notification_adapter.dart';
 import 'reminder_planner.dart';
+import 'reminder_ledger.dart';
+import 'background_sync.dart';
 
 class NotificationTarget {
   final String owner, task, board;
@@ -17,6 +20,26 @@ class NotificationController extends ChangeNotifier
   final WorkspaceController workspace;
   final PrivateStorage storage;
   final NotificationAdapter adapter;
+  final BackgroundSyncBridge? background;
+  Timer? _periodic;
+  DateTime? lastBackgroundSync;
+  String backgroundState = 'waiting';
+  bool backgroundRegistered = false;
+  DateTime? _lastSeenSync;
+  String? backgroundError;
+  String get backgroundStatusText =>
+      backgroundError ??
+      (!backgroundRegistered
+          ? 'Background sync could not be scheduled. Reopen microplanner to retry.'
+          : switch (backgroundState) {
+              'expired' => 'Sign in again to keep reminders up to date.',
+              'offline' =>
+                'The last check could not connect. Existing reminders are kept; the system will try again.',
+              'error' =>
+                'The last check did not finish. The system will try again.',
+              'permission' => 'Allow system notifications to update reminders.',
+              _ => 'Automatic checks are enabled.',
+            });
   final DateTime Function() now;
   DeviceNotificationPreferences device = const DeviceNotificationPreferences();
   String? error;
@@ -27,8 +50,6 @@ class NotificationController extends ChangeNotifier
   NotificationTarget? target;
   String? _owner;
   bool _loaded = false;
-  Map<String, dynamic> _ledger = {};
-  final Set<String> _issued = {};
   Future<void> _tail = Future.value();
   bool _disposed = false;
   int _generation = 0;
@@ -37,11 +58,18 @@ class NotificationController extends ChangeNotifier
     required this.workspace,
     required this.storage,
     required this.adapter,
+    this.background,
     DateTime Function()? now,
   }) : now = now ?? DateTime.now {
     workspace.addListener(_changed);
     WidgetsBinding.instance.addObserver(this);
     adapter.onActivated = readActivation;
+    if (background != null) {
+      background!.onSync = synchronizeInBackground;
+      _periodic = Timer.periodic(const Duration(minutes: 30), (_) {
+        unawaited(synchronizeInBackground());
+      });
+    }
     _changed();
   }
   void _changed() {
@@ -64,20 +92,31 @@ class NotificationController extends ChangeNotifier
     }
   }
 
-  Future<void> _saveLedger() async {
-    if (_owner != null) {
-      await storage.write(
-        'reminders-ledger:$_owner',
-        jsonEncode({'events': _ledger, 'issued': _issued.toList()}),
-      );
-    }
-  }
-
   Future<void> refreshStatus({bool request = false}) async {
     try {
       final status = await adapter.status(request: request);
       permitted = status['enabled'] == true;
       precise = status['precise'] == true;
+      if (background != null) {
+        try {
+          final state = await background!.status();
+          backgroundRegistered = state['registered'] == true;
+          final raw = _owner == null
+              ? null
+              : await storage.read('reminders-sync-status:$_owner');
+          final saved = raw == null
+              ? <String, dynamic>{}
+              : jsonDecode(raw) as Map<String, dynamic>;
+          lastBackgroundSync = DateTime.tryParse(
+            saved['lastSuccess'] as String? ?? '',
+          )?.toLocal();
+          backgroundState = saved['state'] as String? ?? 'waiting';
+          backgroundError = null;
+        } catch (_) {
+          backgroundError =
+              'Background sync status is unavailable. Reopen microplanner to retry.';
+        }
+      }
       error = null;
     } catch (_) {
       permitted = false;
@@ -134,22 +173,24 @@ class NotificationController extends ChangeNotifier
       final previousOwner =
           _owner ?? await storage.read('reminders-active-owner');
       if (previousOwner != null && previousOwner != nextOwner) {
-        final raw = await storage.read('reminders-ledger:$previousOwner');
-        final old = raw == null
-            ? <String, dynamic>{}
-            : (jsonDecode(raw) as Map)['events'] as Map? ?? {};
-        for (final event in old.values) {
-          await adapter.cancel((event as Map)['id'] as int);
-        }
+        await (await ReminderLedger.load(
+          storage,
+          adapter,
+          previousOwner,
+        )).clear();
       }
       if (_disposed || nextOwner != workspace.ownerId) return;
       _owner = nextOwner;
       _loaded = true;
-      _ledger = {};
-      _issued.clear();
       target = null;
       device = const DeviceNotificationPreferences();
+      lastBackgroundSync = null;
+      backgroundState = 'waiting';
       if (nextOwner == null) {
+        if (background != null) {
+          await storage.delete('reminders-sync-context');
+          await background!.configure(false);
+        }
         await storage.delete('reminders-active-owner');
         scheduled = 0;
         return;
@@ -160,12 +201,6 @@ class NotificationController extends ChangeNotifier
         device = DeviceNotificationPreferences.fromJson(
           jsonDecode(settings) as Map<String, dynamic>,
         );
-      }
-      final ledger = await storage.read('reminders-ledger:$nextOwner');
-      if (ledger != null) {
-        final data = jsonDecode(ledger) as Map<String, dynamic>;
-        _ledger = Map<String, dynamic>.from(data['events'] as Map);
-        _issued.addAll((data['issued'] as List).cast<String>());
       }
     }
     if (_owner == null) return;
@@ -179,9 +214,30 @@ class NotificationController extends ChangeNotifier
     await refreshStatus();
     if (!current()) return;
     final clock = now();
-    for (final item in _ledger.entries) {
-      if ((item.value as Map)['at'] as int <= clock.millisecondsSinceEpoch) {
-        _issued.add(item.key);
+    if (background != null) {
+      final enabled =
+          device.enabled &&
+          device.backgroundSync &&
+          workspace.auth.sessionValid;
+      await storage.write(
+        'reminders-sync-context',
+        jsonEncode({
+          'owner': owner,
+          'enabled': enabled,
+          'paused':
+              workspace.isLoading ||
+              (workspace.outbox?.hasPending ?? false) ||
+              workspace.outbox?.storageError != null,
+          'revision': workspace.confirmedSnapshot.revision,
+        }),
+      );
+      try {
+        await background!.configure(enabled);
+        backgroundRegistered = enabled;
+        backgroundError = null;
+      } catch (_) {
+        backgroundError =
+            'Background sync could not be scheduled. Reopen microplanner to retry.';
       }
     }
     final suppressed = <String>{};
@@ -209,100 +265,57 @@ class NotificationController extends ChangeNotifier
       }
     }
     final expires = workspace.auth.sessionExpiresAt ?? clock;
+    if (workspace.isLoading) return;
+    var reminderSnapshot = workspace.confirmedSnapshot;
+    if (background != null) {
+      final raw = await storage.read('reminders-cloud:$owner');
+      if (raw != null) {
+        final latest = WorkspaceSnapshot.fromJson(
+          jsonDecode(raw) as Map<String, dynamic>,
+        );
+        if (latest.revision > reminderSnapshot.revision) {
+          reminderSnapshot = latest;
+        }
+      }
+    }
     outsideSession = planReminders(
-      workspace: workspace.confirmedSnapshot,
+      workspace: reminderSnapshot,
       owner: owner,
       now: clock,
       expires: DateTime(9999),
       device: device,
       suppressed: suppressed,
     ).where((event) => !event.at.isBefore(expires)).length;
-    final plan = planReminders(
-      workspace: workspace.confirmedSnapshot,
-      owner: owner,
-      now: clock,
-      expires: expires,
+    final ledger = await ReminderLedger.load(storage, adapter, owner);
+    final coverage = await ledger.reconcile(
+      snapshot: reminderSnapshot,
       device: device.copyWith(enabled: device.enabled && permitted),
+      clock: clock,
+      expires: expires,
       suppressed: suppressed,
+      current: current,
     );
-    final expected = {for (final event in plan) event.key: event};
-    for (final key in _ledger.keys.toList()) {
-      if (!current()) return;
-      if (!expected.containsKey(key)) {
-        await adapter.cancel((_ledger[key] as Map)['id'] as int);
-        _ledger.remove(key);
-      } else if (_issued.contains(key) && !device.showDetails) {
-        // Privacy changes also remove old detailed content already in the OS tray.
-        await adapter.cancel((_ledger[key] as Map)['id'] as int);
-        _ledger.remove(key);
+    if (coverage != null && current()) {
+      eligible = coverage.eligible;
+      scheduled = coverage.scheduled;
+      coverageEnds = coverage.ends;
+      final seen = workspace.cachedSeenAt;
+      if (background != null &&
+          workspace.isOnline &&
+          seen != null &&
+          seen != _lastSeenSync) {
+        _lastSeenSync = seen;
+        lastBackgroundSync = seen;
+        backgroundState = 'updated';
+        await storage.write(
+          'reminders-sync-status:$owner',
+          jsonEncode({
+            'state': 'updated',
+            'lastSuccess': seen.toUtc().toIso8601String(),
+          }),
+        );
       }
     }
-    final remaining = plan.where((e) => !_issued.contains(e.key)).toList();
-    eligible = remaining.length;
-    final selected = remaining.take(200).toList();
-    final selectedKeys = selected.map((e) => e.key).toSet();
-    for (final key in _ledger.keys.toList()) {
-      if (!_issued.contains(key) && !selectedKeys.contains(key)) {
-        await adapter.cancel((_ledger[key] as Map)['id'] as int);
-        _ledger.remove(key);
-      }
-    }
-    final usedIds = {
-      for (final value in _ledger.values) (value as Map)['id'] as int,
-    };
-    final immediate = selected.where((e) => !e.at.isAfter(clock)).toList();
-    for (final event in selected) {
-      if (!current()) return;
-      final existing = _ledger[event.key] as Map?;
-      if (existing != null && existing['fingerprint'] == event.fingerprint) {
-        continue;
-      }
-      if (_issued.contains(event.key)) continue;
-      var id = existing?['id'] as int? ?? event.proposedId;
-      while (existing == null && usedIds.contains(id)) {
-        id = (id + 1) & 0x7fffffff;
-      }
-      usedIds.add(id);
-      // Reserve before calling the OS: an ambiguous crash must not cause a burst.
-      _ledger[event.key] = {
-        'id': id,
-        'at': event.at.millisecondsSinceEpoch,
-        'fingerprint': event.fingerprint,
-      };
-      await _saveLedger();
-      if (!current()) return;
-      final native = event.native(id);
-      if (immediate.length > 1) {
-        _issued.add(event.key);
-        if (event != immediate.first) continue;
-        native['title'] = 'microplanner';
-        native['body'] = '${immediate.length} tasks have approaching deadlines';
-        native.remove('boardName');
-      }
-      try {
-        await adapter.schedule(native);
-        if (!current()) {
-          await adapter.cancel(id);
-          return;
-        }
-      } catch (_) {
-        _ledger.remove(event.key);
-        _issued.remove(event.key);
-        await _saveLedger();
-        rethrow;
-      }
-    }
-    await _saveLedger();
-    scheduled = selected.where((e) => e.at.isAfter(clock)).length;
-    coverageEnds = selected.isEmpty ? null : selected.last.at;
-    // Bound old deduplication data to currently existing task occurrences.
-    final currentKeys = {
-      for (final task in workspace.confirmedSnapshot.tasks)
-        for (final kind in ['advance', 'deadline'])
-          '$owner:${task.id}:${task.deadline.toUtc().toIso8601String()}:$kind',
-    };
-    _issued.removeWhere((key) => !currentKeys.contains(key));
-    await _saveLedger();
     await readActivation();
   }
 
@@ -324,6 +337,36 @@ class NotificationController extends ChangeNotifier
       }
     } catch (_) {
       /* An old or malformed OS payload cannot navigate. */
+    }
+  }
+
+  bool _syncing = false;
+  Future<void> synchronizeInBackground() async {
+    if (_syncing ||
+        _disposed ||
+        !device.enabled ||
+        !device.backgroundSync ||
+        workspace.auth.isInitializing ||
+        workspace.isLoading ||
+        (workspace.outbox?.hasPending ?? false)) {
+      return;
+    }
+    _syncing = true;
+    try {
+      await workspace.refresh(silent: true);
+      await reconcile();
+      if (_owner != null && workspace.isOnline) {
+        await storage.write(
+          'reminders-sync-status:$_owner',
+          jsonEncode({
+            'state': 'updated',
+            'lastSuccess': now().toUtc().toIso8601String(),
+          }),
+        );
+        await refreshStatus();
+      }
+    } finally {
+      _syncing = false;
     }
   }
 
@@ -361,6 +404,8 @@ class NotificationController extends ChangeNotifier
     _disposed = true;
     _generation++;
     _debounce?.cancel();
+    _periodic?.cancel();
+    background?.onSync = null;
     workspace.removeListener(_changed);
     WidgetsBinding.instance.removeObserver(this);
     adapter.onActivated = null;

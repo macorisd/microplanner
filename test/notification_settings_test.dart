@@ -63,6 +63,16 @@ void main() {
         await tester.runAsync(settleAsync);
         await tester.pumpAndSettle();
         expect(controller.device.enabled, isTrue);
+        expect(controller.device.backgroundSync, isTrue);
+        await tester.ensureVisible(find.text('Background sync'));
+        await tester.tap(find.text('Background sync'));
+        await tester.runAsync(settleAsync);
+        await tester.pumpAndSettle();
+        expect(controller.device.backgroundSync, isFalse);
+        expect(
+          h.storage.values['reminders-device:A'],
+          contains('"backgroundSync":false'),
+        );
         expect(
           adapter.exactAccessRequests,
           platform == TargetPlatform.android ? 1 : 0,

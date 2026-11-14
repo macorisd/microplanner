@@ -246,8 +246,21 @@ stay running; verify a future OS alarm with the process closed, not only an
 immediate notification or activation of an already displayed one.
 
 Use local OS scheduling with last synchronized data, including closed-app/offline
-delivery where the OS allows it. Cross-device edits apply on the next sync;
-each enabled device can notify. Preserve UTC deadline instants. Show scheduling
+delivery where the OS allows it. Add lightweight periodic reminder synchronization
+on both platforms, enabled by default with device notifications and independently
+switchable in Notifications. Use short OS-scheduled work with network/battery
+constraints, not a resident UI, tray app, push service or continuous polling.
+Target roughly 30-minute checks, allow OS delays and preserve local alerts while
+offline. Synchronize reminder scheduling from cloud reads only; never flush or
+overwrite a foreground draft/outbox/cache in a background process. Suspend that
+work while relevant local writes are unresolved. Cancel deleted/completed tasks,
+recalculate changed/new reminders and deduplicate against foreground scheduling.
+Show last successful reminder sync and actionable disabled/expired/error state;
+do not imply immediate propagation or guaranteed delivery. Closing Windows still
+exits its UI; its brief per-user scheduled runs require no administrator access
+and must not wake a sleeping computer. Source: user approval, 2026-11-14.
+Cross-device edits apply on the next successful sync; each enabled device can
+notify. Preserve UTC deadline instants. Show scheduling
 capacity/session coverage honestly. Cancel old-account schedules on sign-out and
 reject stale callbacks. Clicking reveals the current task after login/data restore
 without changing it, losing an unsaved draft or bypassing account isolation.
