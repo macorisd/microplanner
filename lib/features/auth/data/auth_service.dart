@@ -59,6 +59,7 @@ class AuthService extends ChangeNotifier {
   bool get canCancelSignIn => _signingIn && !_cancelRequested;
   String? get error => _error;
   bool get sessionValid => _expiresAt?.isAfter(DateTime.now()) ?? false;
+  DateTime? get sessionExpiresAt => _expiresAt;
 
   Future<void> initialize() async {
     try {

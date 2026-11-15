@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="1548" android:viewportHeight="1548">
+    <!-- Original 1290x1286 logo geometry, with transparent seams replacing color. -->
+    <group android:translateX="129" android:translateY="131">
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M340,0 H543 A340,340 0,0 0,203,340 V946 A340,340 0,0 0,543,1286 H340 A340,340 0,0 1,0,946 V340 A340,340 0,0 1,340,0 Z" />
+        <group android:translateX="267">
+            <path android:fillColor="#FFFFFFFF"
+                android:pathData="M340,0 H535 A340,340 0,0 0,195,340 V946 A340,340 0,0 0,535,1286 H340 A340,340 0,0 1,0,946 V340 A340,340 0,0 1,340,0 Z" />
+        </group>
+        <group android:translateX="526">
+            <path android:fillColor="#FFFFFFFF"
+                android:pathData="M340,0 H424 A340,340 0,0 1,764,340 V946 A340,340 0,0 1,424,1286 H340 A340,340 0,0 1,0,946 V340 A340,340 0,0 1,340,0 Z" />
+        </group>
+    </group>
+</vector>

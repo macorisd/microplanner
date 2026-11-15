@@ -23,6 +23,7 @@ import '../../../../core/widgets/pending_action.dart';
 import '../../../../core/utils/task_date_range.dart';
 import 'subject_dropdown.dart';
 import 'task_date_picker.dart';
+import 'reminder_selector.dart';
 
 /// Dialog for creating a new task
 /// All fields are displayed in a clean, Cashew-inspired form
@@ -45,6 +46,7 @@ class AddTaskDialog extends StatefulWidget {
     String? subjectId,
     String? description,
     String? typeId,
+    int? reminderMinutes,
   })?
   onSaveWithType;
   final VoidCallback? onCreated;
@@ -76,6 +78,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
   TaskPriority _priority = TaskPriority.low;
   String? _selectedSubjectId;
   String? _selectedTypeId;
+  int? _reminderMinutes;
   bool get _isLoading => actionBlocked;
   bool get _canSubmit =>
       !_isLoading &&
@@ -99,6 +102,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
       _priority = draft.priority;
       _selectedSubjectId = draft.subjectId;
       _selectedTypeId = draft.typeId;
+      _reminderMinutes = draft.reminderMinutes;
     }
     _nameController.addListener(_textChanged);
     _descriptionController.addListener(_textChanged);
@@ -145,6 +149,7 @@ class _AddTaskDialogState extends State<AddTaskDialog>
                   ? null
                   : _descriptionController.text.trim(),
               typeId: _selectedTypeId,
+              reminderMinutes: _reminderMinutes,
             )
           : widget.onSave(
               name: _nameController.text.trim(),
@@ -339,6 +344,22 @@ class _AddTaskDialogState extends State<AddTaskDialog>
                             const SizedBox(height: AppTheme.spacingMedium),
 
                             // Priority selector
+                            ReminderSelector(
+                              value: _reminderMinutes,
+                              defaultMinutes:
+                                  boardsProvider
+                                      .workspace
+                                      .snapshot
+                                      .notificationPreferences
+                                      ?.advanceMinutes ??
+                                  1440,
+                              onChanged: _isLoading
+                                  ? null
+                                  : (value) => setState(
+                                      () => _reminderMinutes = value,
+                                    ),
+                            ),
+                            const SizedBox(height: AppTheme.spacingMedium),
                             _buildPrioritySelector(),
 
                             // The stable status area also provides footer spacing.

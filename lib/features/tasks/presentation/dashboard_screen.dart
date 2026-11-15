@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/data/workspace_controller.dart';
+import '../../../core/notifications/notification_controller.dart';
 import '../../../core/widgets/board_sync_glow.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
@@ -36,10 +37,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   BoardsProvider? _navigation;
   LocalHistoryEntry? _history;
   bool _disposing = false;
+  NotificationController? _notifications;
+  bool _notificationScheduled = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final notifications = context.read<NotificationController?>();
+    if (!identical(notifications, _notifications)) {
+      _notifications?.removeListener(_notificationChanged);
+      _notifications = notifications;
+      notifications?.addListener(_notificationChanged);
+    }
+    _notificationChanged();
     final boards = context.read<BoardsProvider>();
     if (identical(_navigation, boards)) return;
     _navigation?.removeListener(_syncHistory);
@@ -64,9 +74,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _back() => _navigation?.navigate(DashboardPage.board);
 
+  void _notificationChanged() {
+    if (_notifications?.target == null || _notificationScheduled || !mounted) {
+      return;
+    }
+    _notificationScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _notificationScheduled = false;
+      if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+      final target = _notifications?.target;
+      if (target == null) return;
+      final workspace = context.read<WorkspaceController>();
+      if (workspace.isLoading || !workspace.hasData) return;
+      _notifications!.consumeTarget();
+      if (target.owner != workspace.ownerId) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This reminder belongs to another account.'),
+          ),
+        );
+        return;
+      }
+      final task = workspace.snapshot.tasks
+          .where((t) => t.id == target.task && t.boardId == target.board)
+          .firstOrNull;
+      if (task == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This task is no longer available.')),
+        );
+        return;
+      }
+      context.read<BoardsProvider>().selectBoard(task.boardId!);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _taskArea.currentState?.revealCreatedTask((
+          id: task.id,
+          boardId: task.boardId!,
+          columnIndex: task.isCompleted
+              ? 0
+              : task.isLate
+              ? 1
+              : 2,
+        ));
+      });
+    });
+  }
+
   @override
   void dispose() {
     _disposing = true;
+    _notifications?.removeListener(_notificationChanged);
     _navigation?.removeListener(_syncHistory);
     _history?.remove();
     super.dispose();

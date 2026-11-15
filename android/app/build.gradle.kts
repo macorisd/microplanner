@@ -38,6 +38,7 @@ android {
     }
 
     defaultConfig {
+        testInstrumentationRunner = "com.microplanner.microplanner.ReminderSyncDeviceTest"
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.microplanner.microplanner"
         // You can update the following values to match your application needs.
@@ -61,11 +62,17 @@ android {
 
     buildTypes {
         release {
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (hasReleaseSigning) signingConfigs.getByName("release") else null
         }
     }
+    testBuildType = "release"
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("androidx.work:work-runtime-ktx:2.10.5")
 }

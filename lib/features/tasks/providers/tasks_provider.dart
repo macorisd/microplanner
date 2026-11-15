@@ -162,7 +162,8 @@ class TasksProvider extends ChangeNotifier {
       a.boardId == b.boardId &&
       a.subjectId == b.subjectId &&
       a.subject == b.subject &&
-      a.description == b.description;
+      a.description == b.description &&
+      a.reminderMinutes == b.reminderMinutes;
   List<Task> get tasks => _tasks;
   int _compare(Task a, Task b) {
     final comparison = a.deadline.compareTo(b.deadline);
@@ -183,6 +184,7 @@ class TasksProvider extends ChangeNotifier {
     String? subjectId,
     String? description,
     String? typeId,
+    int? reminderMinutes,
   }) async {
     final boardId = boards.currentBoardId;
     if (boardId == null) return false;
@@ -204,6 +206,7 @@ class TasksProvider extends ChangeNotifier {
         (type == TaskType.unassigned
             ? null
             : WorkspaceSnapshot.legacyTypeId(boardId, type.index));
+    task.reminderMinutes = reminderMinutes;
     _latestCreatedTask = (
       id: task.id,
       boardId: boardId,

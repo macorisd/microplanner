@@ -80,7 +80,18 @@ class EncryptedWorkspaceCache
   Future<void> writeJournal(String ownerId, String value) {
     final previous = _journalWrites[ownerId] ?? Future<void>.value();
     final next = previous.catchError((Object _) {}).then((_) async {
+      // A headless reminder reader must not open Hive or replay pending writes.
+      // Persist a conservative guard before accepting a journal change.
+      var hasPending = true;
+      try {
+        final pending = (jsonDecode(value) as Map)['operations'] as List;
+        hasPending = pending.any((op) => (op as Map)['failure'] == null);
+      } catch (_) {
+        /* Unreadable journals keep reminder sync suspended. */
+      }
+      await storage.write('reminders-pending:$ownerId', 'true');
       await (await _box(ownerId)).put('journal', value);
+      await storage.write('reminders-pending:$ownerId', '$hasPending');
     });
     _journalWrites[ownerId] = next;
     return next;

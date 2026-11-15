@@ -6,6 +6,16 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/system_bars.dart';
 import 'features/auth/data/auth_service.dart';
 import 'features/auth/presentation/session_gate.dart';
+import 'core/notifications/notification_controller.dart';
+
+class _ReminderRouteObserver extends NavigatorObserver {
+  final VoidCallback onReturn;
+  _ReminderRouteObserver(this.onReturn);
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => onReturn());
+  }
+}
 
 class PlannerApp extends StatelessWidget {
   const PlannerApp({super.key});
@@ -29,6 +39,11 @@ class PlannerApp extends StatelessWidget {
       supportedLocales: const [Locale('en', 'GB'), Locale('en', 'US')],
       locale: const Locale('en', 'GB'),
       home: const SessionGate(),
+      navigatorObservers: [
+        _ReminderRouteObserver(
+          () => context.read<NotificationController?>()?.retryNavigation(),
+        ),
+      ],
     ),
   );
 }

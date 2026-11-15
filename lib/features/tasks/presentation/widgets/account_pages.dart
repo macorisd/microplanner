@@ -1,5 +1,6 @@
 import '../../../../core/widgets/form_actions.dart';
 import 'form_dialog.dart';
+import 'notifications_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -97,6 +98,23 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _disposing = false;
 
   @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addEarlyKeyEventHandler(_escapeKey);
+  }
+
+  KeyEventResult _escapeKey(KeyEvent event) {
+    if (!mounted ||
+        event.logicalKey != LogicalKeyboardKey.escape ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        Scaffold.maybeOf(context)?.isDrawerOpen == true) {
+      return KeyEventResult.ignored;
+    }
+    if (event is KeyDownEvent) _back();
+    return KeyEventResult.handled;
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_rootHistory != null) return;
@@ -111,11 +129,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _open(int page) {
     FocusManager.instance.primaryFocus?.unfocus();
+    final previousPage = _page;
     late final LocalHistoryEntry entry;
     entry = LocalHistoryEntry(
       onRemove: () {
         _history.remove(entry);
-        if (mounted && !_disposing) setState(() => _page = page - 1);
+        if (mounted && !_disposing) setState(() => _page = previousPage);
       },
     );
     ModalRoute.of(context)?.addLocalHistoryEntry(entry);
@@ -134,6 +153,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void dispose() {
     _disposing = true;
+    FocusManager.instance.removeEarlyKeyEventHandler(_escapeKey);
     for (final entry in _history.toList()) {
       entry.remove();
     }
@@ -232,6 +252,7 @@ class _SettingsPageState extends State<SettingsPage> {
       'Customization',
       'Boards',
       'Default lists of task types',
+      'Notifications',
     ][_page];
     return CallbackShortcuts(
       bindings: {const SingleActivator(LogicalKeyboardKey.escape): _back},
@@ -259,6 +280,15 @@ class _SettingsPageState extends State<SettingsPage> {
                       icon: Icons.brush_outlined,
                       onTap: () => _open(1),
                     ),
+                  if (_page == 0) ...[
+                    const SizedBox(height: 8),
+                    SettingsEntry(
+                      title: 'Notifications',
+                      icon: Icons.notifications_none_rounded,
+                      onTap: () => _open(4),
+                    ),
+                  ],
+                  if (_page == 4) const NotificationsPage(),
                   if (_page == 1)
                     SettingsEntry(
                       title: 'Boards',

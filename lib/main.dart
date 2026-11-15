@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'app.dart';
+import 'core/notifications/notification_controller.dart';
+import 'core/notifications/notification_adapter.dart';
+import 'core/notifications/background_sync.dart';
 import 'core/constants/app_config.dart';
 import 'core/data/api_client.dart';
 import 'core/data/private_storage.dart';
@@ -25,7 +28,15 @@ void main() {
   runApp(AppBootstrap(initialize: _initializeApplication));
 }
 
+@pragma('vm:entry-point')
+Future<void> backgroundReminderSync() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await runBackgroundReminderSync();
+}
+
 Future<Widget> _initializeApplication() async {
+  final background = BackgroundSyncBridge();
+  await background.startForeground();
   if (defaultTargetPlatform == TargetPlatform.android) {
     await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -51,6 +62,12 @@ Future<Widget> _initializeApplication() async {
         : null,
   );
   final tasks = TasksProvider(workspace, boards);
+  final notifications = NotificationController(
+    workspace: workspace,
+    storage: storage,
+    adapter: NativeNotificationAdapter(),
+    background: background,
+  );
   unawaited(auth.initialize());
   return MultiProvider(
     providers: [
@@ -58,6 +75,7 @@ Future<Widget> _initializeApplication() async {
       ChangeNotifierProvider.value(value: workspace),
       ChangeNotifierProvider.value(value: boards),
       ChangeNotifierProvider.value(value: tasks),
+      ChangeNotifierProvider.value(value: notifications),
     ],
     child: const PlannerApp(),
   );
