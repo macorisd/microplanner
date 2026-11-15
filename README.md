@@ -15,9 +15,9 @@ saved copy; editing resumes when you reconnect.
 ### Android
 
 <!-- android-download:start -->
-[Download Android APK (0.11.8)](https://github.com/macorisd/microplanner/releases/download/v0.11.8/microplanner-0.11.8-android.apk)
+[Download Android APK (0.12.0)](https://github.com/macorisd/microplanner/releases/download/v0.12.0/microplanner-0.12.0-android.apk)
 
-[Release notes](https://github.com/macorisd/microplanner/releases/tag/v0.11.8)
+[Release notes](https://github.com/macorisd/microplanner/releases/tag/v0.12.0)
 <!-- android-download:end -->
 
 1. Open [GitHub Releases](https://github.com/macorisd/microplanner/releases)
@@ -96,7 +96,7 @@ Android downloads appear in Releases after publication.
 <!-- release-history:start -->
 | Version | Changes |
 | --- | --- |
-| 0.12.0 (unreleased) | <ul><li>Receive Android and Windows task deadline reminders, with timing, quiet hours, privacy and device controls in Settings > Notifications.</li><li>Keep reminders up to date with lightweight background sync on Android and Windows.</li></ul> |
+| [0.12.0](https://github.com/macorisd/microplanner/releases/tag/v0.12.0) | <ul><li>Receive Android and Windows task deadline reminders, with timing, quiet hours, privacy and device controls in Settings > Notifications.</li><li>Keep reminders up to date with lightweight background sync on Android and Windows.</li></ul> |
 | [0.11.8](https://github.com/macorisd/microplanner/releases/tag/v0.11.8) | <ul><li>Use the microplanner app artwork and README tagline on the sign-in screen.</li></ul> |
 | [0.11.7](https://github.com/macorisd/microplanner/releases/tag/v0.11.7) | <ul><li>Align the Windows completion checkbox hover feedback with the checkbox itself.</li><li>Reveal a newly created task with a fast scroll toward the center of its column, respecting scroll limits on Windows and Android.</li></ul> |
 | [0.11.6](https://github.com/macorisd/microplanner/releases/tag/v0.11.6) | <ul><li>Use compact task-card spacing on Windows while preserving Android's layout.</li><li>Show only one completion checkbox on each task card.</li></ul> |
