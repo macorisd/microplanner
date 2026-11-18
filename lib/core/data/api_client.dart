@@ -33,6 +33,7 @@ class ApiClient {
     String path, {
     String? token,
     Map<String, dynamic>? body,
+    bool invalidateSession = true,
   }) async {
     final request = http.Request(method, baseUrl.resolve(path));
     request.headers['Content-Type'] = 'application/json';
@@ -48,7 +49,7 @@ class ApiClient {
         throw const FormatException('Invalid response');
       }
       if (response.statusCode >= 400) {
-        if (response.statusCode == 401 && token != null) {
+        if (response.statusCode == 401 && token != null && invalidateSession) {
           onUnauthorized?.call(token);
         }
         throw ApiException(

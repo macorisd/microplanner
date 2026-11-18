@@ -14,7 +14,12 @@ abstract interface class GoogleAuthenticator {
   void cancel();
 }
 
-class PlatformGoogleAuthenticator implements GoogleAuthenticator {
+abstract interface class AccountDeletionAuthenticator {
+  Future<Map<String, dynamic>?> verifyDeletion(ApiClient api, String token);
+}
+
+class PlatformGoogleAuthenticator
+    implements GoogleAuthenticator, AccountDeletionAuthenticator {
   Future<void>? _initialization;
   Completer<String?>? _callback;
   bool _canceled = false;
@@ -22,9 +27,18 @@ class PlatformGoogleAuthenticator implements GoogleAuthenticator {
     List<int>.generate(32, (_) => Random.secure().nextInt(256)),
   ).replaceAll('=', '');
   @override
-  Future<Map<String, dynamic>?> signIn(ApiClient api) async {
+  Future<Map<String, dynamic>?> signIn(ApiClient api) => _authenticate(api);
+
+  @override
+  Future<Map<String, dynamic>?> verifyDeletion(ApiClient api, String token) =>
+      _authenticate(api, deletionToken: token);
+
+  Future<Map<String, dynamic>?> _authenticate(
+    ApiClient api, {
+    String? deletionToken,
+  }) async {
     _canceled = false;
-    if (Platform.isWindows) return _windows(api);
+    if (Platform.isWindows) return _windows(api, deletionToken);
     if (!Platform.isAndroid) {
       throw const ApiException(
         400,
@@ -37,6 +51,9 @@ class PlatformGoogleAuthenticator implements GoogleAuthenticator {
     );
     await _initialization;
     try {
+      // Require an interactive Google credential for the destructive flow.
+      if (deletionToken != null) await GoogleSignIn.instance.signOut();
+      if (_canceled) return null;
       final account = await GoogleSignIn.instance.authenticate();
       if (_canceled) return null;
       final token = account.authentication.idToken;
@@ -49,7 +66,9 @@ class PlatformGoogleAuthenticator implements GoogleAuthenticator {
       }
       return await api.request(
         'POST',
-        '/auth/google',
+        deletionToken == null ? '/auth/google' : '/account/deletion/google',
+        token: deletionToken,
+        invalidateSession: deletionToken == null,
         body: {'idToken': token, 'platform': 'android'},
       );
     } on GoogleSignInException catch (error) {
@@ -62,7 +81,13 @@ class PlatformGoogleAuthenticator implements GoogleAuthenticator {
     }
   }
 
-  Future<Map<String, dynamic>?> _windows(ApiClient api) async {
+  Future<Map<String, dynamic>?> _windows(
+    ApiClient api,
+    String? deletionToken,
+  ) async {
+    final prefix = deletionToken == null
+        ? '/auth/windows'
+        : '/account/deletion/windows';
     final verifier = _random();
     final state = _random();
     final challenge = base64UrlEncode(
@@ -96,7 +121,9 @@ class PlatformGoogleAuthenticator implements GoogleAuthenticator {
     try {
       final start = await api.request(
         'POST',
-        '/auth/windows/start',
+        '$prefix/start',
+        token: deletionToken,
+        invalidateSession: deletionToken == null,
         body: {
           'redirectUri': 'http://127.0.0.1:${listener.port}/oauth/callback',
           'codeChallenge': challenge,
@@ -130,7 +157,9 @@ class PlatformGoogleAuthenticator implements GoogleAuthenticator {
       if (code == null || _canceled) return null;
       return await api.request(
         'POST',
-        '/auth/windows/complete',
+        '$prefix/complete',
+        token: deletionToken,
+        invalidateSession: deletionToken == null,
         body: {
           'challengeId': start['challengeId'],
           'code': code,

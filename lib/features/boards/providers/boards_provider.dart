@@ -283,6 +283,11 @@ class BoardsProvider extends ChangeNotifier {
         .catchError((Object _) {});
   }
 
+  Future<void> drainPreferences(String owner) async {
+    await _selectionWrites.remove(owner);
+    await _columnWrites.remove(owner);
+  }
+
   void selectBoard(String id) {
     if (!_boardIndex.containsKey(id) ||
         (_currentBoardId == id &&

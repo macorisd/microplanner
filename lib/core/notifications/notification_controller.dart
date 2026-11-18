@@ -51,6 +51,8 @@ class NotificationController extends ChangeNotifier
   String? _owner;
   bool _loaded = false;
   Future<void> _tail = Future.value();
+  Future<void>? _deviceWrite;
+  final Set<String> _deletedOwners = {};
   bool _disposed = false;
   int _generation = 0;
   Timer? _debounce;
@@ -133,7 +135,13 @@ class NotificationController extends ChangeNotifier
     try {
       if (next.enabled && !device.enabled) await refreshStatus(request: true);
       if (owner != _owner || owner != workspace.ownerId) return false;
-      await storage.write('reminders-device:$owner', jsonEncode(next.toJson()));
+      final write = storage.write(
+        'reminders-device:$owner',
+        jsonEncode(next.toJson()),
+      );
+      _deviceWrite = write;
+      await write;
+      if (owner != workspace.ownerId) return false;
       device = next;
       _generation++;
       error = null;
@@ -143,6 +151,7 @@ class NotificationController extends ChangeNotifier
       error = 'Could not save notification settings. Try again.';
       return false;
     } finally {
+      _deviceWrite = null;
       busy = false;
       if (!_disposed) notifyListeners();
     }
@@ -319,6 +328,25 @@ class NotificationController extends ChangeNotifier
     await readActivation();
   }
 
+  Future<void> eraseAccount(String owner) async {
+    _deletedOwners.add(owner);
+    await _tail;
+    await _deviceWrite?.catchError((Object _) {});
+    await (await ReminderLedger.load(storage, adapter, owner)).clear();
+    final context = await storage.read('reminders-sync-context');
+    if (context != null && (jsonDecode(context) as Map)['owner'] == owner) {
+      await storage.delete('reminders-sync-context');
+      await background?.configure(false);
+    }
+    if (await storage.read('reminders-active-owner') == owner) {
+      await storage.delete('reminders-active-owner');
+    }
+    if (target?.owner == owner) target = null;
+    for (final category in ['ledger', 'device', 'cloud', 'sync-status']) {
+      await storage.delete('reminders-$category:$owner');
+    }
+  }
+
   Future<void> readActivation() async {
     if (workspace.auth.isInitializing || workspace.isLoading) return;
     try {
@@ -328,6 +356,7 @@ class NotificationController extends ChangeNotifier
       if (value['owner'] is String &&
           value['task'] is String &&
           value['board'] is String) {
+        if (_deletedOwners.contains(value['owner'])) return;
         target = NotificationTarget(
           value['owner'] as String,
           value['task'] as String,

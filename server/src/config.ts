@@ -14,6 +14,7 @@ const environment = z.object({
   GOOGLE_WINDOWS_CLIENT_ID: z.string().default(windowsClientId),
   GOOGLE_WEB_CLIENT_ID: z.string().default(webClientId),
   GOOGLE_WINDOWS_CLIENT_SECRET: z.string().optional(),
+  ACCOUNT_DELETION_KEY: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   MONGODB_DNS_SERVERS: z.string().refine(value => value.split(',').every(ip => isIP(ip.trim()) > 0)).optional(),
 });
 

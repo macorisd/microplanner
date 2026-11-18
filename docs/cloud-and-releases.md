@@ -23,6 +23,22 @@ an app to work around a signing mismatch.
 
 ## Vercel deployment
 
+For 0.13.0, deploy the account deletion API before enabling the action. Atlas
+showed Backups OFF and no restorable snapshots for the microplanner cluster
+on 2026-11-18. Recheck Atlas and any operator-managed exports before enabling
+account deletion in another deployment. If backups are introduced, reconcile
+their retention and restoration with the permanent-erasure commitment before
+allowing deletions or restoring a copy. Never put a snapshot containing deleted
+accounts back into service.
+
+Set the sensitive Production variable `ACCOUNT_DELETION_KEY` to 32 independent
+random bytes encoded as 64 lowercase hexadecimal characters. The API leaves
+deletion unavailable without this variable. Keep the value stable across
+deployments because devices use its read-only proofs to recognise deletion
+after their sessions have been revoked. A key rotation invalidates old proofs
+until still-active accounts reconnect and receive a fresh one. Keep account
+status and deletion credentials out of logs and request URLs.
+
 For 0.12.0, deploy the additive notification API before updating clients. It
 preserves reminder overrides and account defaults when earlier clients omit
 those fields. An explicit task `reminderMinutes: null` restores inheritance.

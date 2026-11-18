@@ -38,4 +38,5 @@ class PrivateBoardColumnStorage implements BoardColumnStorage {
   @override
   Future<void> write(String ownerId, Map<String, int> columns) =>
       storage.write(_key(ownerId), jsonEncode(columns));
+  Future<void> erase(String ownerId) => storage.delete(_key(ownerId));
 }

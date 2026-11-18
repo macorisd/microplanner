@@ -47,22 +47,39 @@ Future<Widget> _initializeApplication() async {
   if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(SubjectAdapter());
   final api = ApiClient(AppConfig.apiUrl);
   const storage = SecurePrivateStorage();
-  final auth = AuthService(api: api, storage: storage);
+  final cache = EncryptedWorkspaceCache(storage);
+  final legacy = HiveLegacyWorkspace();
+  const selection = PrivateBoardSelectionStorage(storage);
+  const columns = PrivateBoardColumnStorage(storage);
+  late final BoardsProvider boards;
+  late final NotificationController notifications;
+  final auth = AuthService(
+    api: api,
+    storage: storage,
+    purgeAccount: (owner) async {
+      await notifications.eraseAccount(owner);
+      await boards.drainPreferences(owner);
+      await selection.erase(owner);
+      await columns.erase(owner);
+      await legacy.erase(owner);
+      await cache.erase(owner);
+    },
+  );
   final workspace = WorkspaceController(
     auth: auth,
     api: api,
-    cache: EncryptedWorkspaceCache(storage),
-    legacy: HiveLegacyWorkspace(),
+    cache: cache,
+    legacy: legacy,
   );
-  final boards = BoardsProvider(
+  boards = BoardsProvider(
     workspace,
-    selectionStorage: const PrivateBoardSelectionStorage(storage),
+    selectionStorage: selection,
     columnStorage: defaultTargetPlatform == TargetPlatform.android
-        ? const PrivateBoardColumnStorage(storage)
+        ? columns
         : null,
   );
   final tasks = TasksProvider(workspace, boards);
-  final notifications = NotificationController(
+  notifications = NotificationController(
     workspace: workspace,
     storage: storage,
     adapter: NativeNotificationAdapter(),

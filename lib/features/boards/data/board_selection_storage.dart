@@ -18,4 +18,5 @@ class PrivateBoardSelectionStorage implements BoardSelectionStorage {
   @override
   Future<void> write(String ownerId, String boardId) =>
       storage.write(_key(ownerId), boardId);
+  Future<void> erase(String ownerId) => storage.delete(_key(ownerId));
 }

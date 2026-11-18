@@ -153,8 +153,8 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
 
 - Weekly Plan is a Coming Soon destination before collapsible Boards. Profile
   contains only Google photo/name/email, Settings and Sign out. Settings contains
-  Customization > Boards > Default lists of task types and its sibling
-  Notifications destination; no extra placeholders.
+  Customization > Boards > Default lists of task types, Notifications and
+  Account. Notifications and Account are siblings of Customization.
 - Back and Escape unwind Settings one level at a time, then Profile, then the
   previous board. Sidebar navigation must not leave stale back-history entries.
 - Boards and task types share the icon catalog; boards and subjects share the
@@ -216,6 +216,24 @@ Source: [approved 0.11.0 plan](../plans/plan-20261102T143728008Z-version0.11.0.m
 - The five editable initial lists are Academic tasks, Software development, Work,
   Personal life and Creative projects. Editing/deleting a default never changes
   boards that previously copied it. Preserve the unassigned No type choice.
+
+## Account deletion
+
+Source: [approved 0.13.0 plan](../plans/plan-20261118T155816216Z-version0.13.0.md),
+2026-11-18.
+
+- Settings > Account offers permanent erasure of the signed-in microplanner
+  account on Windows and Android. Show its email, require fresh verification
+  with the linked Google identity and obtain a final explicit confirmation.
+  Cancel and Back before submission leave account data intact.
+- Erase all cloud workspace and account records atomically and invalidate all
+  sessions. After verified deletion, remove the account's local data, pending
+  operations, reminder state and attributable legacy data on compatible clients.
+  Explain the impact on unsynced changes and devices that are offline or
+  outdated. A later deliberate Google sign-in can create a fresh account.
+- Resume interrupted cleanup and verify ambiguous requests before reporting
+  success or failure. Sign-out and ordinary session expiry preserve the cache.
+  Permanently delete only disposable accounts and isolated data during tests.
 
 ## Deadline notifications
 

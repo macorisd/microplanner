@@ -16,7 +16,7 @@ let client: MongoClient;
 let repo: Repository;
 let app: Awaited<ReturnType<typeof buildApp>>;
 let currentNonce = '';
-const config = readConfig({ MONGODB_URI: 'mongodb://127.0.0.1/test', MONGODB_DB: 'test' });
+const config = readConfig({ MONGODB_URI: 'mongodb://127.0.0.1/test', MONGODB_DB: 'test', ACCOUNT_DELETION_KEY: 'f'.repeat(64) });
 const fixture = (sub: string, audience = config.GOOGLE_WEB_CLIENT_ID): TokenPayload => ({
   sub, email: `${sub}@example.com`, name: sub, email_verified: true,
   aud: audience, iss: 'https://accounts.google.com', iat: Math.floor(Date.now() / 1000),
@@ -30,6 +30,7 @@ before(async () => {
     verifyGoogle: async (token, audience) => {
       if (token === 'forged') throw new Error('bad signature');
       if (token === 'wrong-audience') return fixture('intruder', 'another-client');
+      if (token.startsWith('stale:')) return { ...fixture(token.slice(6)), iat: 1 };
       if (token === 'expired') return { ...fixture('expired'), exp: 1 };
       if (token === 'wrong-issuer') return { ...fixture('intruder'), iss: 'https://evil.example' };
       if (token === 'unverified') return { ...fixture('unverified'), email_verified: false };
@@ -394,4 +395,120 @@ test('duplicate names are rejected atomically for both schema versions and after
   next.revision = (await state(token)).revision;
   assert.equal((await save(token, next)).statusCode, 400);
   assert.deepEqual((await state(token)).subjects.map(s => s.name).sort(), ['Math', 'Physics']);
+});
+
+
+test('account deletion requires a fresh matching identity, erases every owner record, and cannot replay', async t => {
+  const subject = randomUUID();
+  const a = await repo.login({ sub: subject, email: 'delete@example.com' });
+  const second = await repo.login({ sub: subject, email: 'delete@example.com' });
+  const keeper = await repo.login({ sub: randomUUID(), email: 'keep@example.com' });
+  const ownerId = a.user.id;
+  const request = (path: string, payload: object, token?: string) => app.inject({
+    method: 'POST', url: `/account/deletion/${path}`,
+    headers: token ? headers(token) : {}, payload,
+  });
+  const me = await app.inject({ url: '/auth/me', headers: headers(second.token) });
+  const key = me.json<{ accountStatusKey: string }>().accountStatusKey;
+  const status = () => request('status', { ownerId, key });
+  const authorize = (idToken: string) => request('google', { idToken, platform: 'android' }, a.token);
+  const verify = await authorize(subject);
+  assert.equal(verify.statusCode, 200, verify.body);
+  const { grant } = verify.json<{ grant: string }>();
+  assert.equal((await authorize('stale:' + subject)).statusCode, 401);
+  assert.equal((await authorize(randomUUID())).statusCode, 403);
+  assert.equal((await request('commit', { grant })).statusCode, 401);
+  assert.equal((await request('commit', { grant }, second.token)).statusCode, 403);
+  assert.equal((await request('commit', { grant }, keeper.token)).statusCode, 403);
+  assert.equal((await request('commit', { grant, ownerId: keeper.user.id }, a.token)).statusCode, 400);
+  assert.equal((await request('status', { ownerId: keeper.user.id, key })).statusCode, 403);
+  assert.deepEqual((await status()).json(), { status: 'active' });
+
+  const seed = await state(a.token);
+  seed.subjects.push({ id: 'subject', boardId: 'default-board', name: 'Subject', color: 0xffaabbcc });
+  seed.tasks.push({
+    id: 'task', boardId: 'default-board', name: 'Task', subjectId: 'subject',
+    description: null, deadline: '2027-01-01T12:00:00Z', createdAt: '2026-11-18T12:00:00Z',
+    typeIndex: 0, priorityIndex: 0, isCompleted: false,
+  });
+  const workspace = { ...upgradeWorkspace(seed), revision: seed.revision };
+  assert.equal((await save(a.token, workspace)).statusCode, 200);
+  await repo.db.collection('imports').insertOne({ ownerId });
+  await repo.challenge('http://127.0.0.1:3001/oauth/callback', 'unused', { ownerId, token: a.token });
+
+  // Force failure after workspace rows and sessions have been deleted inside the
+  // transaction. Their real database state must roll back together.
+  const collection = repo.db.collection.bind(repo.db);
+  const failure = t.mock.method(repo.db, 'collection', (name: string) => {
+    const selected = collection(name);
+    if (name === 'imports') {
+      selected.deleteMany = async () => { throw new Error('Simulated deletion failure'); };
+    }
+    return selected;
+  });
+  assert.equal((await request('commit', { grant }, a.token)).statusCode, 503);
+  failure.mock.restore();
+  assert.equal((await state(second.token)).tasks.length, 1);
+  assert.deepEqual((await status()).json(), { status: 'active' });
+
+  const keeperBefore = await state(keeper.token);
+  const revision = await state(a.token);
+  const concurrentImport = app.inject({
+    method: 'POST', url: '/workspace/import', headers: headers(second.token),
+    payload: {
+      sourceId: randomUUID(), operationId: randomUUID(), revision: revision.revision,
+      data: { boards: [], tasks: [], subjects: [] },
+    },
+  });
+  const [deleted, replay, renewed, written, imported] = await Promise.all([
+    request('commit', { grant }, a.token),
+    request('commit', { grant }, a.token),
+    repo.login({ sub: subject, email: 'delete@example.com' }).catch(() => null),
+    save(second.token, revision),
+    concurrentImport,
+  ]);
+  assert.deepEqual([deleted.statusCode, replay.statusCode].sort(), [200, 401]);
+  assert.ok([200, 401, 409].includes(written.statusCode));
+  assert.ok([200, 400, 401, 409].includes(imported.statusCode));
+  assert.deepEqual((await status()).json(), { status: 'deleted' });
+  for (const name of ['boards', 'subjects', 'tasks', 'boardTypes', 'typeLists', 'imports',
+    'sessions', 'operationReceipts', 'oauthChallenges', 'deletionGrants']) {
+    assert.equal(await repo.db.collection(name).countDocuments({ ownerId }), 0, name);
+  }
+  for (const session of [a, second, ...(renewed?.user.id === ownerId ? [renewed] : [])]) {
+    assert.equal((await app.inject({ url: '/workspace', headers: headers(session.token) })).statusCode, 401);
+  }
+  assert.deepEqual(await state(keeper.token), keeperBefore);
+  const fresh = await repo.login({ sub: subject, email: 'delete@example.com' });
+  assert.notEqual(fresh.user.id, ownerId);
+  assert.equal((await state(fresh.token)).tasks.length, 0);
+});
+
+
+test('Windows deletion uses a separate Google challenge bound to its original session', async () => {
+  const user = await repo.login({ sub: 'desktop-user', email: 'desktop-user@example.com' });
+  const otherSession = await repo.login({ sub: 'desktop-user', email: 'desktop-user@example.com' });
+  const verifier = randomBytes(32).toString('base64url');
+  const payload = {
+    redirectUri: 'http://127.0.0.1:24000/oauth/callback',
+    codeChallenge: createHash('sha256').update(verifier).digest('base64url'),
+    state: randomBytes(32).toString('base64url'),
+  };
+  const start = await app.inject({
+    method: 'POST', url: '/account/deletion/windows/start', headers: headers(user.token), payload,
+  });
+  assert.equal(start.statusCode, 200, start.body);
+  const challenge = start.json<{ challengeId: string; authorizationUrl: string }>();
+  currentNonce = new URL(challenge.authorizationUrl).searchParams.get('nonce')!;
+  const complete = (url: string, token: string) => app.inject({
+    method: 'POST', url, headers: headers(token),
+    payload: { challengeId: challenge.challengeId, verifier, code: 'fake-code' },
+  });
+  assert.equal((await complete('/auth/windows/complete', user.token)).statusCode, 401);
+  assert.equal((await complete('/account/deletion/windows/complete', otherSession.token)).statusCode, 401);
+  const result = await complete('/account/deletion/windows/complete', user.token);
+  assert.equal(result.statusCode, 200, result.body);
+  assert.deepEqual(Object.keys(result.json()), ['grant']);
+  assert.equal((await complete('/account/deletion/windows/complete', user.token)).statusCode, 401);
+  assert.equal((await state(user.token)).boards.length, 1);
 });
