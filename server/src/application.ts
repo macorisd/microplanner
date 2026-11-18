@@ -3,6 +3,7 @@ import rateLimit from '@fastify/rate-limit';
 import { OAuth2Client, type TokenPayload } from 'google-auth-library';
 import { z } from 'zod';
 import { isIP } from 'node:net';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Config } from './config.js';
 import { ApiError, importSchema, saveSchema } from './domain.js';
 import type { Repository } from './repository.js';
@@ -32,7 +33,9 @@ export async function buildApp(repo: Repository, config: Config, options: {
       const forwarded = request.headers['x-vercel-forwarded-for'];
       const ip = typeof forwarded === 'string' && isIP(forwarded.trim())
         ? forwarded.trim() : request.ip;
-      const auth = ['/auth/google', '/auth/windows/start', '/auth/windows/complete'].includes(request.url.split('?')[0]!);
+      const path = request.url.split('?')[0]!;
+      const auth = ['/auth/google', '/auth/windows/start', '/auth/windows/complete'].includes(path) ||
+        path.startsWith('/account/deletion/');
       if (!await repo.allowRequest(`requests:${ip}`, 300) ||
           (auth && !await repo.allowRequest(`auth:${ip}`, 20))) {
         reply.header('Retry-After', '60');
@@ -54,13 +57,14 @@ export async function buildApp(repo: Repository, config: Config, options: {
     if (!payload) throw new Error('Missing identity');
     return payload;
   });
-  async function identity(idToken: string, audience: string, nonce?: string) {
+  async function identity(idToken: string, audience: string, nonce?: string, fresh = false) {
     let payload: TokenPayload;
     try {
       payload = await verify(idToken, audience);
       if (!payload.sub || !payload.email || !payload.email_verified ||
           !['accounts.google.com', 'https://accounts.google.com'].includes(payload.iss) ||
           payload.aud !== audience || payload.exp * 1000 <= Date.now() ||
+          (fresh && (!Number.isFinite(payload.iat) || Math.abs(Date.now() / 1000 - payload.iat) > 120)) ||
           (nonce !== undefined && (payload as TokenPayload & { nonce?: string }).nonce !== nonce)) {
         throw new Error('Invalid identity');
       }
@@ -68,7 +72,7 @@ export async function buildApp(repo: Repository, config: Config, options: {
       if (error instanceof ApiError) throw error;
       throw new ApiError(401, 'invalid_google_token', 'Google sign-in could not be verified. Please try again.');
     }
-    return repo.login({ sub: payload.sub, email: payload.email!, name: payload.name, picture: payload.picture });
+    return payload;
   }
   const authenticate = async (request: import('fastify').FastifyRequest) => {
     const auth = request.headers.authorization;
@@ -91,11 +95,39 @@ export async function buildApp(repo: Repository, config: Config, options: {
     return { status: 'ready' };
   });
   const authLimit = { rateLimit: { max: 20, timeWindow: '1 minute' } };
-  app.post('/auth/google', { config: authLimit }, async request => {
-    const body = z.object({ idToken: z.string().min(1).max(12000), platform: z.literal('android') }).strict().parse(request.body);
-    return identity(body.idToken, config.GOOGLE_WEB_CLIENT_ID);
+  const requireDeletion = () => {
+    if (!config.ACCOUNT_DELETION_KEY) {
+      throw new ApiError(503, 'deletion_unavailable', 'Account deletion is currently unavailable.');
+    }
+  };
+  const proof = (ownerId: string) => createHmac('sha256', config.ACCOUNT_DELETION_KEY!)
+    .update(`account-status:${ownerId}`).digest('base64url');
+  const statusCapability = (ownerId: string) =>
+    config.ACCOUNT_DELETION_KEY ? proof(ownerId) : undefined;
+  const signIn = async (payload: TokenPayload) => {
+    const session = await repo.login({ sub: payload.sub, email: payload.email!, name: payload.name, picture: payload.picture });
+    return { ...session, accountStatusKey: statusCapability(session.user.id) };
+  };
+  const androidIdentity = z.object({
+    idToken: z.string().min(1).max(12000), platform: z.literal('android'),
+  }).strict();
+  const deletionContext = (request: import('fastify').FastifyRequest) => ({
+    ownerId: request.ownerId!, token: request.headers.authorization!.slice(7),
   });
-  app.post('/auth/windows/start', { config: authLimit }, async request => {
+
+  app.post('/auth/google', { config: authLimit }, async request => {
+    const body = androidIdentity.parse(request.body);
+    return signIn(await identity(body.idToken, config.GOOGLE_WEB_CLIENT_ID));
+  });
+  app.post('/account/deletion/google', { config: authLimit, preHandler: authenticate }, async request => {
+    requireDeletion();
+    const body = androidIdentity.parse(request.body);
+    const payload = await identity(body.idToken, config.GOOGLE_WEB_CLIENT_ID, undefined, true);
+    const { ownerId, token } = deletionContext(request);
+    return repo.authorizeDeletion(ownerId, token, payload.sub);
+  });
+  async function startWindows(request: import('fastify').FastifyRequest, deletion = false) {
+    if (deletion) requireDeletion();
     if (!config.GOOGLE_WINDOWS_CLIENT_SECRET && !options.exchangeCode) {
       throw new ApiError(503, 'google_not_configured', 'Google sign-in is not configured on this server yet. Please contact support.');
     }
@@ -109,7 +141,7 @@ export async function buildApp(repo: Repository, config: Config, options: {
         uri.search || uri.hash || uri.username || uri.password) {
       throw new ApiError(400, 'invalid_redirect', 'Invalid desktop callback.');
     }
-    const challenge = await repo.challenge(body.redirectUri, body.codeChallenge);
+    const challenge = await repo.challenge(body.redirectUri, body.codeChallenge, deletion ? deletionContext(request) : undefined);
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.search = new URLSearchParams({
       client_id: config.GOOGLE_WINDOWS_CLIENT_ID, redirect_uri: body.redirectUri,
@@ -117,13 +149,14 @@ export async function buildApp(repo: Repository, config: Config, options: {
       code_challenge_method: 'S256', state: body.state, nonce: challenge.nonce, prompt: 'select_account',
     }).toString();
     return { challengeId: challenge._id, authorizationUrl: url.toString() };
-  });
-  app.post('/auth/windows/complete', { config: authLimit }, async request => {
+  }
+  async function completeWindows(request: import('fastify').FastifyRequest, deletion = false) {
+    if (deletion) requireDeletion();
     const body = z.object({
       challengeId: z.uuid(), code: z.string().min(1).max(4000),
       verifier: z.string().regex(/^[A-Za-z0-9_-]{43,128}$/),
     }).strict().parse(request.body);
-    const challenge = await repo.consumeChallenge(body.challengeId, body.verifier);
+    const challenge = await repo.consumeChallenge(body.challengeId, body.verifier, deletion ? deletionContext(request) : undefined);
     let idToken: string;
     try {
       if (options.exchangeCode) {
@@ -145,10 +178,38 @@ export async function buildApp(repo: Repository, config: Config, options: {
     } catch {
       throw new ApiError(401, 'google_exchange_failed', 'Google sign-in failed. Please try again or contact support.');
     }
-    return identity(idToken, config.GOOGLE_WINDOWS_CLIENT_ID, challenge.nonce);
+    const payload = await identity(idToken, config.GOOGLE_WINDOWS_CLIENT_ID, challenge.nonce, deletion);
+    if (!deletion) return signIn(payload);
+    const { ownerId, token } = deletionContext(request);
+    return repo.authorizeDeletion(ownerId, token, payload.sub);
+  }
+  app.post('/auth/windows/start', { config: authLimit }, request => startWindows(request));
+  app.post('/auth/windows/complete', { config: authLimit }, request => completeWindows(request));
+  app.post('/account/deletion/windows/start', { config: authLimit, preHandler: authenticate }, request => startWindows(request, true));
+  app.post('/account/deletion/windows/complete', { config: authLimit, preHandler: authenticate }, request => completeWindows(request, true));
+  app.post('/account/deletion/commit', { config: authLimit, preHandler: authenticate }, async request => {
+    requireDeletion();
+    const body = z.object({ grant: z.string().regex(/^[A-Za-z0-9_-]{43}$/) }).strict().parse(request.body);
+    const { ownerId, token } = deletionContext(request);
+    return repo.deleteAccount(ownerId, token, body.grant);
   });
-  app.get('/auth/me', { preHandler: authenticate }, async request =>
-    repo.authenticate(request.headers.authorization!.slice(7)));
+  // Old clients keep working. Compatible clients retain a read-only capability
+  // to distinguish hard deletion from expiry without retaining server tombstones.
+  app.post('/account/deletion/status', { config: authLimit }, async request => {
+    requireDeletion();
+    const { ownerId, key } = z.object({
+      ownerId: z.uuid(), key: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+    }).strict().parse(request.body);
+    if (!timingSafeEqual(Buffer.from(key), Buffer.from(proof(ownerId)))) {
+      throw new ApiError(403, 'invalid_account_status_key', 'Could not verify account status.');
+    }
+    return { status: (await repo.accountExists(ownerId)) ? 'active' : 'deleted' };
+  });
+  app.get('/auth/me', { preHandler: authenticate }, async request => {
+    const session = await repo.authenticate(request.headers.authorization!.slice(7));
+    if (!session) throw new ApiError(401, 'unauthorized', 'Your session expired. Please sign in again.');
+    return { ...session, accountStatusKey: statusCapability(session.user.id) };
+  });
   app.post('/auth/logout', async request => {
     if (request.headers.authorization?.startsWith('Bearer ')) {
       await repo.logout(request.headers.authorization.slice(7));

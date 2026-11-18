@@ -120,7 +120,11 @@ class WorkspaceController extends ChangeNotifier {
   bool get hasLegacyData => _canImport;
   // Online actions stay available during synchronization; writes wait their turn.
   bool get canWrite =>
-      _online && auth.sessionValid && _outbox?.storageError == null;
+      _online &&
+      auth.sessionValid &&
+      !auth.submittingDeletion &&
+      !auth.recoveringDeletion &&
+      _outbox?.storageError == null;
   String? get error => _error;
   String? get ownerId => _ownerId;
   Future<void> repairStorage() async {
@@ -364,6 +368,7 @@ class WorkspaceController extends ChangeNotifier {
     WorkspaceSnapshot data,
     int generation,
   ) async {
+    if (!_current(generation, owner)) return;
     try {
       await cache.write(owner, data);
     } catch (_) {

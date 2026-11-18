@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../constants/app_config.dart';
+import '../data/account_deletion.dart';
 import '../data/api_client.dart';
 import '../data/private_storage.dart';
 import '../data/workspace_snapshot.dart';
@@ -33,6 +34,7 @@ class BackgroundReminderSync {
     final config = jsonDecode(context) as Map;
     final session = jsonDecode(raw) as Map;
     final owner = (session['user'] as Map)['id'] as String;
+    if (await storage.read(accountDeletionJournal) != null) return 'paused';
     if (config['owner'] != owner || config['enabled'] != true) {
       return 'disabled';
     }
@@ -52,6 +54,7 @@ class BackgroundReminderSync {
     final expires = DateTime.parse(session['expiresAt'] as String);
     var locked = false;
     Future<bool> unchanged() async =>
+        await storage.read(accountDeletionJournal) == null &&
         await storage.read('reminders-sync-context') == context &&
         await storage.read('session') == raw &&
         await storage.read('reminders-pending:$owner') != 'true' &&
@@ -95,6 +98,28 @@ class BackgroundReminderSync {
       locked = locked || await acquire();
       if (!locked || !await unchanged()) return 'superseded';
       if (error.status == 401) {
+        final key =
+            session['accountStatusKey'] as String? ??
+            (await readAccountStatusKeys(storage))[owner];
+        if (key != null) {
+          try {
+            if (await accountWasDeleted(api, owner, key) && await unchanged()) {
+              // The foreground process owns Hive and completes the device purge.
+              await storage.write(
+                accountDeletionJournal,
+                AccountDeletion(owner).encode(),
+              );
+              await (await ReminderLedger.load(
+                storage,
+                notifications,
+                owner,
+              )).clear();
+              return 'deleted';
+            }
+          } on ApiException {
+            // Failure to verify deletion is an ordinary expired session.
+          }
+        }
         await (await ReminderLedger.load(
           storage,
           notifications,

@@ -1,6 +1,7 @@
 import '../../../../core/widgets/form_actions.dart';
 import 'form_dialog.dart';
 import 'notifications_page.dart';
+import 'account_deletion_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -253,6 +254,7 @@ class _SettingsPageState extends State<SettingsPage> {
       'Boards',
       'Default lists of task types',
       'Notifications',
+      'Account',
     ][_page];
     return CallbackShortcuts(
       bindings: {const SingleActivator(LogicalKeyboardKey.escape): _back},
@@ -287,8 +289,15 @@ class _SettingsPageState extends State<SettingsPage> {
                       icon: Icons.notifications_none_rounded,
                       onTap: () => _open(4),
                     ),
+                    const SizedBox(height: 8),
+                    SettingsEntry(
+                      title: 'Account',
+                      icon: Icons.person_outline_rounded,
+                      onTap: () => _open(5),
+                    ),
                   ],
                   if (_page == 4) const NotificationsPage(),
+                  if (_page == 5) const AccountDeletionPage(),
                   if (_page == 1)
                     SettingsEntry(
                       title: 'Boards',

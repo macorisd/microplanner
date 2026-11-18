@@ -30,21 +30,44 @@ class EncryptedWorkspaceCache
   final PrivateStorage storage;
   final Map<String, Future<Box<String>>> _boxes = {};
   final Map<String, Future<void>> _journalWrites = {};
+  final Set<String> _erased = {};
   EncryptedWorkspaceCache(this.storage);
-  Future<Box<String>> _box(String ownerId) =>
-      _boxes.putIfAbsent(ownerId, () async {
-        final suffix = sha256.convert(utf8.encode(ownerId)).toString();
-        final keyName = 'cache_key_$suffix';
-        var key = await storage.read(keyName);
-        if (key == null) {
-          key = base64Encode(Hive.generateSecureKey());
-          await storage.write(keyName, key);
-        }
-        return Hive.openBox<String>(
-          'cloud_cache_$suffix',
-          encryptionCipher: HiveAesCipher(base64Decode(key)),
-        );
-      });
+  Future<Box<String>> _box(String ownerId) {
+    if (_erased.contains(ownerId)) {
+      return Future.error(StateError('Account workspace was deleted.'));
+    }
+    return _boxes.putIfAbsent(ownerId, () async {
+      final suffix = sha256.convert(utf8.encode(ownerId)).toString();
+      final keyName = 'cache_key_$suffix';
+      var key = await storage.read(keyName);
+      if (key == null) {
+        key = base64Encode(Hive.generateSecureKey());
+        await storage.write(keyName, key);
+      }
+      return Hive.openBox<String>(
+        'cloud_cache_$suffix',
+        encryptionCipher: HiveAesCipher(base64Decode(key)),
+      );
+    });
+  }
+
+  Future<void> erase(String ownerId) async {
+    _erased.add(ownerId);
+    await _journalWrites.remove(ownerId)?.catchError((Object _) {});
+    final opening = _boxes.remove(ownerId);
+    if (opening != null) {
+      try {
+        await opening;
+      } catch (_) {
+        // Disk cleanup works even if the box could not be opened.
+      }
+    }
+    final suffix = sha256.convert(utf8.encode(ownerId));
+    await Hive.deleteBoxFromDisk('cloud_cache_$suffix');
+    await storage.delete('cache_key_$suffix');
+    await storage.delete('reminders-pending:$ownerId');
+  }
+
   @override
   Future<WorkspaceSnapshot?> read(String ownerId) async {
     final value = (await _box(ownerId)).get('snapshot');
@@ -78,8 +101,12 @@ class EncryptedWorkspaceCache
 
   @override
   Future<void> writeJournal(String ownerId, String value) {
+    if (_erased.contains(ownerId)) {
+      return Future.error(StateError('Account workspace was deleted.'));
+    }
     final previous = _journalWrites[ownerId] ?? Future<void>.value();
     final next = previous.catchError((Object _) {}).then((_) async {
+      if (_erased.contains(ownerId)) return;
       // A headless reminder reader must not open Hive or replay pending writes.
       // Persist a conservative guard before accepting a journal change.
       var hasPending = true;
@@ -90,6 +117,7 @@ class EncryptedWorkspaceCache
         /* Unreadable journals keep reminder sync suspended. */
       }
       await storage.write('reminders-pending:$ownerId', 'true');
+      if (_erased.contains(ownerId)) return;
       await (await _box(ownerId)).put('journal', value);
       await storage.write('reminders-pending:$ownerId', '$hasPending');
     });
@@ -107,6 +135,8 @@ abstract interface class LegacyWorkspace {
 }
 
 class HiveLegacyWorkspace implements LegacyWorkspace {
+  final Set<String> _erased = {};
+  Future<void> _tail = Future.value();
   Future<Box<String>> get _meta => Hive.openBox<String>('cloud_migration');
   @override
   Future<String> get sourceId async {
@@ -187,9 +217,33 @@ class HiveLegacyWorkspace implements LegacyWorkspace {
   }
 
   @override
-  Future<void> imported(String ownerId) async =>
-      (await _meta).put('importedBy', ownerId);
+  Future<void> imported(String ownerId) =>
+      _update(ownerId, (meta) => meta.put('importedBy', ownerId));
   @override
-  Future<void> dismiss(String ownerId) async =>
-      (await _meta).put('dismissed_$ownerId', 'yes');
+  Future<void> dismiss(String ownerId) =>
+      _update(ownerId, (meta) => meta.put('dismissed_$ownerId', 'yes'));
+
+  Future<void> _update(
+    String ownerId,
+    Future<void> Function(Box<String>) update,
+  ) {
+    if (_erased.contains(ownerId)) return Future.value();
+    return _tail = _tail.catchError((Object _) {}).then((_) async {
+      await update(await _meta);
+    });
+  }
+
+  Future<void> erase(String ownerId) async {
+    _erased.add(ownerId);
+    await _tail.catchError((Object _) {});
+    if (!await Hive.boxExists('cloud_migration')) return;
+    final meta = await _meta;
+    if (meta.get('importedBy') == ownerId) {
+      for (final box in ['boards', 'subjects', 'tasks']) {
+        await Hive.deleteBoxFromDisk(box);
+      }
+      await meta.deleteAll(['sourceId', 'importedBy']);
+    }
+    await meta.delete('dismissed_$ownerId');
+  }
 }

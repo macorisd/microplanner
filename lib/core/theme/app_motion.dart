@@ -113,6 +113,7 @@ final _openDialogs = Expando<bool>();
 Future<T?> showMotionDialog<T>({
   required BuildContext context,
   required WidgetBuilder builder,
+  bool barrierDismissible = true,
 }) async {
   final navigator = Navigator.of(context, rootNavigator: true);
   // A form can open a picker of its own; only repeated taps from the same
@@ -123,7 +124,7 @@ Future<T?> showMotionDialog<T>({
   try {
     return await showGeneralDialog<T>(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: barrierDismissible,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black54,
       transitionDuration: AppMotion.duration(context, AppMotion.normal),

@@ -3,7 +3,7 @@ import { MongoClient, type ClientSession, type Collection } from 'mongodb';
 import { ApiError, assertBoardNames, assertCustomizationChanges, assertUniqueNames, assertWorkspaceSize, dataSchema, type Profile, type Workspace, type WorkspaceData } from './domain.js';
 import { upgradeWorkspace } from './customization-migration.js';
 
-type User = Profile & { _id: string; googleSub: string; revision: number; operations: string[]; workspaceSchemaVersion?: number; notificationPreferences?: WorkspaceData['notificationPreferences'] };
+type User = Profile & { _id: string; googleSub: string; revision: number; operations: string[]; workspaceSchemaVersion?: number; notificationPreferences?: WorkspaceData['notificationPreferences']; sessionWrite?: string };
 type Session = { _id: string; ownerId: string; expiresAt: Date };
 type Owned<T> = T & { _id: string; ownerId: string };
 type OperationReceipt = {
@@ -11,7 +11,10 @@ type OperationReceipt = {
 };
 type Challenge = {
   _id: string; nonce: string; codeChallenge: string; redirectUri: string; expiresAt: Date;
+  ownerId?: string; sessionId?: string;
 };
+type DeletionGrant = { _id: string; ownerId: string; sessionId: string; expiresAt: Date };
+const workspaceCollections = ['boards', 'subjects', 'tasks', 'boardTypes', 'typeLists'] as const;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
 export class Repository {
@@ -29,11 +32,16 @@ export class Repository {
   async initialize() {
     await this.users.createIndex({ googleSub: 1 }, { unique: true });
     await this.sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+    await this.sessions.createIndex({ ownerId: 1 });
     await this.challenges.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+    await this.challenges.createIndex({ ownerId: 1 });
+    await this.db.collection<DeletionGrant>('deletionGrants').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+    await this.db.collection<DeletionGrant>('deletionGrants').createIndex({ ownerId: 1 });
+    await this.db.collection('imports').createIndex({ ownerId: 1 });
     await this.db.collection('requestLimits').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
     await this.db.collection<OperationReceipt>('operationReceipts')
       .createIndex({ ownerId: 1, operationId: 1 }, { unique: true });
-    for (const kind of ['boards', 'subjects', 'tasks', 'boardTypes', 'typeLists']) {
+    for (const kind of workspaceCollections) {
       await this.db.collection(kind).createIndex({ ownerId: 1, id: 1 }, { unique: true });
       await this.db.collection(kind).createIndex({ ownerId: 1, boardId: 1 });
     }
@@ -64,37 +72,41 @@ export class Repository {
   }
 
   async login(google: { sub: string; email: string; name?: string; picture?: string }) {
-    let user = await this.users.findOne({ googleSub: google.sub });
-    if (!user) {
-      const userId = randomUUID();
-      try {
-        await this.client.withSession(session => session.withTransaction(async () => {
-          await this.users.insertOne({
-            _id: userId, id: userId, googleSub: google.sub, email: google.email,
-            displayName: google.name ?? google.email, photoUrl: google.picture ?? null,
-            revision: 0, operations: [],
-          }, { session });
-          await this.collection('boards').insertOne({
-            _id: randomUUID(), ownerId: userId, id: 'default-board',
-            name: 'Board 1', createdAt: new Date().toISOString(), sortOrder: 0,
-          }, { session });
-        }));
-      } catch (error) {
-        if (!(error instanceof Error && 'code' in error && error.code === 11000)) throw error;
-      }
-      user = await this.users.findOne({ googleSub: google.sub });
-    }
-    if (!user) throw new Error('Account creation failed');
-    await this.users.updateOne({ _id: user.id }, { $set: {
-      email: google.email, displayName: google.name ?? google.email, photoUrl: google.picture ?? null,
-    } });
+    const observed = await this.users.findOne({ googleSub: google.sub });
     const token = randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    await this.sessions.insertOne({ _id: hash(token), ownerId: user.id, expiresAt });
-    return { token, expiresAt: expiresAt.toISOString(), user: {
-      ...this.profile(user), email: google.email, displayName: google.name ?? google.email,
-      photoUrl: google.picture ?? null,
-    } };
+    const profile = {
+      email: google.email, displayName: google.name ?? google.email, photoUrl: google.picture ?? null,
+    };
+    const issue = (ownerId?: string) => this.client.withSession(session => session.withTransaction(async () => {
+      let user: User;
+      if (ownerId) {
+        const updated = await this.users.findOneAndUpdate(
+          { _id: ownerId }, { $set: { ...profile, sessionWrite: hash(token) } },
+          { session, returnDocument: 'after' },
+        );
+        if (!updated) throw new ApiError(409, 'account_changed', 'The account changed. Start sign-in again.');
+        user = updated;
+      } else {
+        const id = randomUUID();
+        user = { _id: id, id, googleSub: google.sub, ...profile, revision: 0, operations: [] };
+        await this.users.insertOne(user, { session });
+        await this.collection('boards').insertOne({
+          _id: randomUUID(), ownerId: id, id: 'default-board',
+          name: 'Board 1', createdAt: new Date().toISOString(), sortOrder: 0,
+        }, { session });
+      }
+      await this.sessions.insertOne({ _id: hash(token), ownerId: user.id, expiresAt }, { session });
+      return { token, expiresAt: expiresAt.toISOString(), user: this.profile(user) };
+    }));
+    try {
+      return await issue(observed?.id);
+    } catch (error) {
+      if (observed || !(error instanceof Error && 'code' in error && error.code === 11000)) throw error;
+      const created = await this.users.findOne({ googleSub: google.sub });
+      if (!created) throw new ApiError(409, 'account_changed', 'The account changed. Start sign-in again.');
+      return issue(created.id);
+    }
   }
 
   async authenticate(token: string) {
@@ -106,18 +118,96 @@ export class Repository {
   }
   async logout(token: string) { await this.sessions.deleteOne({ _id: hash(token) }); }
 
-  async challenge(redirectUri: string, codeChallenge: string) {
+  async accountExists(ownerId: string) {
+    return (await this.users.findOne(
+      { _id: ownerId }, { projection: { _id: 1 }, readConcern: { level: 'majority' } },
+    )) !== null;
+  }
+
+  // Touch the account in transactions that issue owner-bound state. This serializes
+  // them with deletion even when the profile has not changed.
+  private async activeSession(ownerId: string, sessionId: string, session: ClientSession) {
+    const active = await this.sessions.findOne({
+      _id: sessionId, ownerId, expiresAt: { $gt: new Date() },
+    }, { session });
+    if (!active) throw new ApiError(401, 'unauthorized', 'Your session expired. Please sign in again.');
+  }
+
+  async authorizeDeletion(ownerId: string, token: string, subject: string) {
+    const grant = randomBytes(32).toString('base64url');
+    const sessionId = hash(token);
+    await this.client.withSession(session => session.withTransaction(async () => {
+      await this.activeSession(ownerId, sessionId, session);
+      const user = await this.users.findOneAndUpdate(
+        { _id: ownerId, googleSub: subject }, { $set: { sessionWrite: hash(grant) } },
+        { session },
+      );
+      if (!user) throw new ApiError(403, 'account_mismatch', 'Choose the Google account shown in Settings.');
+      const grants = this.db.collection<DeletionGrant>('deletionGrants');
+      await grants.deleteMany({ ownerId, sessionId }, { session });
+      await grants.insertOne({
+        _id: hash(grant), ownerId, sessionId, expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      }, { session });
+    }));
+    return { grant };
+  }
+
+  async deleteAccount(ownerId: string, token: string, grant: string) {
+    const sessionId = hash(token);
+    return this.client.withSession(session => session.withTransaction(async () => {
+      await this.activeSession(ownerId, sessionId, session);
+      // Serialize even a rejected retry with a previous deletion that might
+      // still be committing, so the client can distinguish rollback from loss.
+      const account = await this.users.updateOne(
+        { _id: ownerId }, { $set: { sessionWrite: randomUUID() } }, { session },
+      );
+      if (!account.matchedCount) throw new ApiError(401, 'unauthorized', 'Please sign in again.');
+      const verified = await this.db.collection<DeletionGrant>('deletionGrants').findOne({
+        _id: hash(grant), ownerId, sessionId, expiresAt: { $gt: new Date() },
+      }, { session });
+      if (!verified) throw new ApiError(403, 'deletion_not_authorized', 'Verify your Google account again to delete it.');
+      const { deletedCount } = await this.users.deleteOne({ _id: ownerId }, { session });
+      if (deletedCount !== 1) throw new ApiError(401, 'unauthorized', 'Your session expired. Please sign in again.');
+      for (const kind of workspaceCollections) {
+        await this.collection(kind).deleteMany({ ownerId }, { session });
+      }
+      for (const name of ['sessions', 'operationReceipts', 'imports', 'oauthChallenges', 'deletionGrants']) {
+        await this.db.collection(name).deleteMany({ ownerId }, { session });
+      }
+      return { status: 'deleted' };
+    }, { writeConcern: { w: 'majority' } }));
+  }
+
+  async challenge(redirectUri: string, codeChallenge: string, deletion?: { ownerId: string; token: string }) {
     const challenge: Challenge = {
       _id: randomUUID(), nonce: randomBytes(32).toString('base64url'), redirectUri,
       codeChallenge, expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     };
-    await this.challenges.insertOne(challenge);
+    if (!deletion) {
+      await this.challenges.insertOne(challenge);
+    } else {
+      const { ownerId, token } = deletion;
+      const sessionId = hash(token);
+      Object.assign(challenge, { ownerId, sessionId });
+      await this.client.withSession(session => session.withTransaction(async () => {
+        await this.activeSession(ownerId, sessionId, session);
+        const result = await this.users.updateOne(
+          { _id: ownerId }, { $set: { sessionWrite: challenge._id } }, { session },
+        );
+        if (!result.matchedCount) throw new ApiError(401, 'unauthorized', 'Please sign in again.');
+        await this.challenges.insertOne(challenge, { session });
+      }));
+    }
     return challenge;
   }
-  async consumeChallenge(challengeId: string, verifier: string) {
+
+  async consumeChallenge(challengeId: string, verifier: string, deletion?: { ownerId: string; token: string }) {
     const challenge = await this.challenges.findOneAndDelete({
       _id: challengeId, codeChallenge: createHash('sha256').update(verifier).digest('base64url'),
       expiresAt: { $gt: new Date() },
+      ...(deletion
+        ? { ownerId: deletion.ownerId, sessionId: hash(deletion.token) }
+        : { ownerId: { $exists: false } }),
     });
     if (!challenge) throw new ApiError(401, 'invalid_challenge', 'Sign-in expired. Please try again.');
     return challenge;
